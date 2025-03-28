@@ -8,7 +8,7 @@ class Order:
     """ Class defining a trade order. """
     price: float
     quantity: float
-    direction: bool # (Long or Neutral)
+    is_long: bool
 
 
 class Strategy(ABC):
@@ -26,8 +26,9 @@ class Strategy(ABC):
             name: A name that the strategy will identefy as
         """
 
+        self.active: bool = False
         self._name = name
-        self._position = False # (Long or not)
+        self._is_long = False # (Long or not)
         self._position_size = 0.0
         self._entry_price = 0.0
         self._stop_loss = 0.0
@@ -36,6 +37,31 @@ class Strategy(ABC):
         # For order management
         self._order_pending = False
         self._pending_order = None
+
+
+    @property
+    def is_long(self):
+        return self._is_long
+    
+    @property
+    def position_size(self):
+        return self._position_size
+    
+    @property
+    def stop_loss(self):
+        return self._stop_loss
+    
+    @property
+    def take_profit(self):
+        return self._take_profit
+    
+    @stop_loss.setter
+    def stop_loss(self, new_stop_loss: float) -> None:
+        self._stop_loss = new_stop_loss
+    
+    @take_profit.setter
+    def take_profit(self, new_take_profit: float) -> None:
+        self._take_profit = new_take_profit
 
 
     @abstractmethod
@@ -60,6 +86,43 @@ class Strategy(ABC):
             A tuple containing the posistion (long) signal (True or False) and the signal strength (0.0 to 1.0)
         """
         pass
+    
+    @abstractmethod
+    def calculate_position_size(self, signal_strength: float) -> float:
+        """
+        Calculate the position size based on signal strength.
+        
+        Args:
+            signal_strength: A value between 0.0 and 1.0 indicating the strength of the signal
+            
+        Returns:
+            The position size to use
+        """
+        pass
+
+    @abstractmethod       
+    def close(self) -> None:
+        """Close the current position."""
+        pass
+
+
+    def go_long(self, size: float, entry_price: float, stop_loss: Optional[float] = None, 
+             take_profit: Optional[float] = None) -> None:
+        """
+        Strategy goes long position.
+        
+        Args:
+            size: Position size
+            entry_price: Entry price
+            stop_loss: Optional stop loss price
+            take_profit: Optional take profit price
+        """
+        
+        self._is_long = True
+        self._position_size = size
+        self._entry_price = entry_price
+        self._stop_loss = stop_loss
+        self._take_profit = take_profit
 
     def execute_strategy(self, data: Dict[str, Any]) -> Optional[Order]:
         """
@@ -80,84 +143,18 @@ class Strategy(ABC):
         # Determine position size based on signal strength
         size = self.calculate_position_size(strength)
         
-        if signal == True and self._position != True:
-            if self._position == False:
-                self.close()
-            self.long(size, current_price)
-            order = Order(price = current_price, quantity = size, direction = True)
+        if signal == True and self._is_long == False:
+            self.go_long(size, current_price)
+            order = Order(price = current_price, quantity = size, is_long = True)
             self._order_pending = True
             self._pending_order = order
             return order
             
         elif signal == False and self._position != False:
             self.close()
-            order = Order(price = current_price, quantity = self._position_size, direction = False)
+            order = Order(price = current_price, quantity = self._position_size, is_long = False)
             self._order_pending = True
             self._pending_order = order
             return order
             
         return None
-    
-    @abstractmethod
-    def calculate_position_size(self, signal_strength: float) -> float:
-        """
-        Calculate the position size based on signal strength.
-        
-        Args:
-            signal_strength: A value between 0.0 and 1.0 indicating the strength of the signal
-            
-        Returns:
-            The position size to use
-        """
-        pass
-    
-    def long(self, size: float, entry_price: float, stop_loss: Optional[float] = None, 
-             take_profit: Optional[float] = None) -> None:
-        """
-        Enter a long position.
-        
-        Args:
-            size: Position size
-            entry_price: Entry price
-            stop_loss: Optional stop loss price
-            take_profit: Optional take profit price
-        """
-        self._position = True
-        self._position_size = size
-        self._entry_price = entry_price
-        self._stop_loss = stop_loss
-        self._take_profit = take_profit
-        print(f"LONG: Size = {size}, Entry = {entry_price}, SL = {stop_loss}, TP = {take_profit}")
-    
-    @abstractmethod       
-    def close(self) -> None:
-        """Close the current position."""
-        pass
-    
-    def adjust_stop_loss(self, new_stop_loss: float) -> None:
-        """
-        Adjust the stop loss level for the current position.
-        
-        Args:
-            new_stop_loss: New stop loss price
-        """
-        self._stop_loss = new_stop_loss
-        print(f"ADJUSTED SL: New stop loss = {new_stop_loss}")
-    
-    def adjust_take_profit(self, new_take_profit: float) -> None:
-        """
-        Adjust the take profit level for the current position.
-        
-        Args:
-            new_take_profit: New take profit price
-        """
-        self._take_profit = new_take_profit
-        print(f"ADJUSTED TP: New take profit = {new_take_profit}")
-    
-    def is_in_position(self) -> bool:
-        """Check if the strategy is currently in a position."""
-        return self._position != False
-    
-    def get_position(self) -> bool:
-        """Get the current position state."""
-        return self._position
