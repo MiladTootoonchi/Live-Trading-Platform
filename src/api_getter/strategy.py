@@ -26,13 +26,14 @@ class Strategy(ABC):
             name: A name that the strategy will identefy as
         """
 
-        self.active: bool = False
-        self._name = name
+        self.active = False
+        self._name: str = name
         self._is_long = False # (Long or not)
         self._position_size = 0.0
         self._entry_price = 0.0
         self._stop_loss = 0.0
         self._take_profit = 0.0
+        self._pnl = 0.0
 
         # For order management
         self._order_pending = False
@@ -54,6 +55,14 @@ class Strategy(ABC):
     @property
     def take_profit(self):
         return self._take_profit
+    
+    @property
+    def pnl(self):
+        return self._pnl
+    
+    @pnl.setter
+    def pnl(self, new_pnl):
+        self._pnl = new_pnl
     
     @stop_loss.setter
     def stop_loss(self, new_stop_loss: float) -> None:
