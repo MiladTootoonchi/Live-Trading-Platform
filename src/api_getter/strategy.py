@@ -92,8 +92,8 @@ class Strategy(ABC):
         elif signal == False and self._position != False:
             self.close()
             order = Order(price = current_price, quantity = self._position_size, direction = False)
-            self.order_pending = True
-            self.pending_order = order
+            self._order_pending = True
+            self._pending_order = order
             return order
             
         return None
@@ -141,7 +141,7 @@ class Strategy(ABC):
         Args:
             new_stop_loss: New stop loss price
         """
-        self.stop_loss = new_stop_loss
+        self._stop_loss = new_stop_loss
         print(f"ADJUSTED SL: New stop loss = {new_stop_loss}")
     
     def adjust_take_profit(self, new_take_profit: float) -> None:
@@ -151,7 +151,7 @@ class Strategy(ABC):
         Args:
             new_take_profit: New take profit price
         """
-        self.take_profit = new_take_profit
+        self._take_profit = new_take_profit
         print(f"ADJUSTED TP: New take profit = {new_take_profit}")
     
     def is_in_position(self) -> bool:
