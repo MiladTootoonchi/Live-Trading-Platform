@@ -67,43 +67,32 @@ class Trader:
             is_long = strategy.is_long
             is_active = strategy.is_active
             size = strategy.position_size
-            entry_price = strategy.entry_price
 
-            # Handle position opening
+            # Save position opening
             if is_long and not is_active:
-                self._open_long(name, size, current_price, strategy.stop_loss, strategy.take_profit)
-            
-            # Handle position closing
+                trade = {
+                    'strategy': strategy.name,
+                    'action': 'open_long',
+                    'size': size,
+                    'price': current_price,
+                    'stop_loss': strategy.stop_loss,
+                    'take_profit': strategy.take_profit
+                }
+                self._trade_history.append(trade)
+
+                print(f"Opened long strategy, {strategy.name}, Size = {size}, Price = {current_price}")
+
+            # Save position closing
             elif not is_long and is_active:
                 self._close_position(name, current_price)
 
             # Update position info if still active
-            if is_active and is_long:
-                strategy.pnl= (current_price - entry_price) * size
-            
+            if is_active:
+                strategy.current_position_price = current_price
+                if is_long:
+                    strategy.pnl = (current_price - strategy.entry_price) * size
 
-    def _open_long(self, symbol: str, quantity: int, price: float) -> None:
-        """
-        Open a long position for the trader.
-
-        Args:
-            symbol (str): The symbol of the stock
-            quantity (int): The number of shares to buy
-            price (float): The price at which to buy the shares.
-        """
-        if price * quantity > self._current_capital:
-            print("Insufficient funds to open long position.")
-            return
-        
-        self._current_positions = {
-            "symbol": symbol,
-            "quantity": quantity,
-            "entry_price": price,
-        }
-
-        self._current_capital -= price * quantity
-
-        print(f"Opened long position: {quantity} shares of {symbol} at ${price} each.")
+                self._check_exit_conditions(name, current_price)
 
 
     def execute_trade(self, data: Dict[str, Any]) -> None:
