@@ -50,7 +50,7 @@ class Trader:
         except:
             print(f"Strategy not found: {strategy_name}")
 
-    def update(self, data: Dict[str, Any]):
+    def update(self, data: Dict[str, Any]) -> None:
         """
         Update the trader's strategy with new market data.
         This method does not execute trades, just updates the strategy.
@@ -92,7 +92,7 @@ class Trader:
                 if is_long:
                     strategy.pnl = (current_price - strategy.entry_price) * size
 
-                self._check_exit_conditions(strategy)
+                self._check_exit_conditions(strategy, current_price)
 
     def _close_position(self, strategy, price = None):
         """
@@ -146,7 +146,7 @@ class Trader:
         strategy.stop_loss = None
         strategy.take_profit = None
 
-    def _check_exit_conditions(self, strategy_name, current_price):
+    def _check_exit_conditions(self, strategy, current_price):
         """
         Check if stop loss or take profit conditions are met.
         
@@ -154,35 +154,57 @@ class Trader:
             strategy_name: Name of the strategy
             current_price: Current price of the market
         """
-        position = self.positions[strategy_name]
         
-        if not position['active']:
+        if not strategy.active:
             return
             
         # Check stop loss
-        if position['stop_loss'] is not None:
-            if (position['type'] == 'long' and current_price <= position['stop_loss']) or \
-               (position['type'] == 'short' and current_price >= position['stop_loss']):
-                print(f"STOP LOSS TRIGGERED: Strategy={strategy_name}, Price={current_price}")
-                self._close_position(strategy_name, current_price)
+        if strategy.stop_loss is not None:
+            if strategy.is_long and current_price <= strategy.stop_loss:
+                print(f"STOP LOSS TRIGGERED: Strategy = {strategy.name}, Price={current_price}")
+                self._close_position(strategy, current_price)
                 return
                 
         # Check take profit
-        if position['take_profit'] is not None:
-            if (position['type'] == 'long' and current_price >= position['take_profit']) or \
-               (position['type'] == 'short' and current_price <= position['take_profit']):
-                print(f"TAKE PROFIT TRIGGERED: Strategy={strategy_name}, Price={current_price}")
-                self._close_position(strategy_name, current_price)
+        if strategy.take_profit is not None:
+            if strategy.is_long and current_price >= strategy.take_profit:
+                print(f"TAKE PROFIT TRIGGERED: Strategy = {strategy.name}, Price = {current_price}")
+                self._close_position(strategy, current_price)
                 return
+    
+    def get_performance_summary(self) -> dict:
+        """
+        Generate a performance summary for all strategies.
+        
+        Returns:
+            Dictionary containing performance metrics
+        """
+        total_trades = len([t for t in self.trade_history if t['action'] == 'close'])
+        winning_trades = len([t for t in self.trade_history if t['action'] == 'close' and t.get('net_pnl', 0) > 0])
+        losing_trades = len([t for t in self.trade_history if t['action'] == 'close' and t.get('net_pnl', 0) <= 0])
+        
+        win_rate = winning_trades / total_trades if total_trades > 0 else 0
+        
+        total_profit = sum([t.get('net_pnl', 0) for t in self.trade_history if t['action'] == 'close' and t.get('net_pnl', 0) > 0])
+        total_loss = sum([t.get('net_pnl', 0) for t in self.trade_history if t['action'] == 'close' and t.get('net_pnl', 0) <= 0])
+        
+        profit_factor = abs(total_profit / total_loss) if total_loss != 0 else float('inf')
+        
+        return {
+            'initial_capital': self.initial_capital,
+            'current_capital': self.capital,
+            'total_return': (self.capital - self.initial_capital) / self.initial_capital * 100,
+            'total_trades': total_trades,
+            'winning_trades': winning_trades,
+            'losing_trades': losing_trades,
+            'win_rate': win_rate * 100,
+            'profit_factor': profit_factor,
+            'total_commission': sum([t.get('commission', 0) for t in self.trade_history if t['action'] == 'close'])
+        }
 
+
+    """
     def execute_trade(self, data: Dict[str, Any]) -> None:
-        """
-        Uses the strategy to analyze the market and execute a trade
-        based on the analysis.
-
-        Args:
-        data (Dict): A dictionary containing market data
-        """
 
         if self._positions:
             order = self._positions.execute_strategy(data)
@@ -227,14 +249,4 @@ class Trader:
                     }
 
                     print(f"Sold {order.quantity} shares of {data['symbol']} at ${order.price}")
-
-    def get_portfolio_summary(self):
-        """
-        Return a summary of the trader's portfolio (capital and positions).
-        """
-        portfolio_summary = {
-        "current_capital": self._current_capital,
-        "current_position": self._current_positions,
-        "trade_history": self._trade_history,
-        }
-        return portfolio_summary
+    """
