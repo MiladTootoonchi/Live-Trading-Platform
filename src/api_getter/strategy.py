@@ -28,7 +28,7 @@ class Strategy(ABC):
 
         self._name: str = name
 
-        self.active = False
+        self._active = False
         self._is_long = False # (Long or not)
         self._position_size = 0.0
         self._entry_price = 0.0
@@ -41,6 +41,13 @@ class Strategy(ABC):
         self._order_pending = False
         self._pending_order = None
 
+    @property
+    def entry_price(self):
+        return self._entry_price
+
+    @property
+    def active(self):
+        return self._active
 
     @property
     def name(self):
@@ -73,17 +80,33 @@ class Strategy(ABC):
     @pnl.setter
     def pnl(self, new_pnl):
         self._pnl = new_pnl
+
+    @is_long.setter
+    def is_long(self, new_state):
+        self._is_long = new_state
+
+    @active.setter
+    def active(self, new_state):
+        self._active = new_state
+
+    @entry_price.setter
+    def entry_price(self, new_price):
+        self._entry_price = new_price
     
     @current_position_price.setter
     def current_position_price(self, new_price):
         self._current_position_price = new_price
 
+    @position_size.setter
+    def position_size(self, new_size):
+        self._position_size = new_size
+
     @stop_loss.setter
-    def stop_loss(self, new_stop_loss: float) -> None:
+    def stop_loss(self, new_stop_loss):
         self._stop_loss = new_stop_loss
     
     @take_profit.setter
-    def take_profit(self, new_take_profit: float) -> None:
+    def take_profit(self, new_take_profit):
         self._take_profit = new_take_profit
 
 
