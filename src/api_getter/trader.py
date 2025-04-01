@@ -61,11 +61,11 @@ class Trader:
 
         current_price = data.get('price', 0.0)
 
-        for name, strategy in self._positions.items():
+        for _, strategy in self._positions.items():
             strategy.update(data)
             
             is_long = strategy.is_long
-            is_active = strategy.is_active
+            is_active = strategy.active
             size = strategy.position_size
 
             # Save position opening
@@ -84,7 +84,7 @@ class Trader:
 
             # Save position closing
             elif not is_long and is_active:
-                self._close_position(name, current_price)
+                self._close_position(strategy, current_price)
 
             # Update position info if still active
             if is_active:
@@ -92,8 +92,88 @@ class Trader:
                 if is_long:
                     strategy.pnl = (current_price - strategy.entry_price) * size
 
-                self._check_exit_conditions(name, current_price)
+                self._check_exit_conditions(strategy)
 
+    def _close_position(self, strategy, price = None):
+        """
+        Close a position for a strategy.
+        
+        Args:
+            strategy_name: Name of the strategy
+            price: Optional closing price (uses current price if not provided)
+        """
+        
+        if not strategy.active:
+            return
+            
+        if price is None:
+            price = strategy.current_position_price
+            
+        # Calculate P&L
+        if strategy.is_long:
+            pnl = (price - strategy.entry_price * strategy.position_size)
+        else:  # short
+            pnl = (strategy.entry_price - price) * strategy.position_size
+            
+        # Apply commission
+        commission = price * strategy.position_size * self.commission_rate
+        net_pnl = pnl - commission
+        
+        # Update capital
+        self.capital += net_pnl
+        
+        # Record the trade
+        trade = {
+            'strategy': strategy.name,
+            'action': 'close',
+            'size': strategy.position_size,
+            'price': price,
+            'pnl': pnl,
+            'commission': commission,
+            'net_pnl': net_pnl
+        }
+        self._trade_history.append(trade)
+        
+        print(f"Closed strategy, {strategy.name}, Price = {price}, PnL = {net_pnl:.2f}")
+        
+        # Reset position
+        strategy.active = False
+        strategy.is_long = None
+        strategy.position_size = 0.0
+        strategy.entry_price = 0.0
+        strategy.current_position_price = 0.0
+        strategy.pnl = 0.0
+        strategy.stop_loss = None
+        strategy.take_profit = None
+
+    def _check_exit_conditions(self, strategy_name, current_price):
+        """
+        Check if stop loss or take profit conditions are met.
+        
+        Args:
+            strategy_name: Name of the strategy
+            current_price: Current price of the market
+        """
+        position = self.positions[strategy_name]
+        
+        if not position['active']:
+            return
+            
+        # Check stop loss
+        if position['stop_loss'] is not None:
+            if (position['type'] == 'long' and current_price <= position['stop_loss']) or \
+               (position['type'] == 'short' and current_price >= position['stop_loss']):
+                print(f"STOP LOSS TRIGGERED: Strategy={strategy_name}, Price={current_price}")
+                self._close_position(strategy_name, current_price)
+                return
+                
+        # Check take profit
+        if position['take_profit'] is not None:
+            if (position['type'] == 'long' and current_price >= position['take_profit']) or \
+               (position['type'] == 'short' and current_price <= position['take_profit']):
+                print(f"TAKE PROFIT TRIGGERED: Strategy={strategy_name}, Price={current_price}")
+                self._close_position(strategy_name, current_price)
+                return
 
     def execute_trade(self, data: Dict[str, Any]) -> None:
         """
@@ -103,6 +183,7 @@ class Trader:
         Args:
         data (Dict): A dictionary containing market data
         """
+
         if self._positions:
             order = self._positions.execute_strategy(data)
             if order:
