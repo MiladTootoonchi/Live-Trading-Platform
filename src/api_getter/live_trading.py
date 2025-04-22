@@ -3,8 +3,13 @@ from order import OrderData
 import time
 
 # Config
-ALPACA_SECRET_KEY = "8AvhehTd5g7tZnsRNN1wZlMSedp5Q9UD5TA1UHSf"
-ALPACA_KEY = "PKATID8G6ZWXSCDRSJZ3"
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY")
+ALPACA_KEY = os.getenv("ALPACA_KEY")
 
 # Package
 class AlpacaTrader:
@@ -113,5 +118,3 @@ class AlpacaTrader:
 
 if __name__ == "__main__":
     trader = AlpacaTrader(ALPACA_KEY, ALPACA_SECRET_KEY)
-    
-    trader.cancel_all_orders()
