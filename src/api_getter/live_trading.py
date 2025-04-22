@@ -1,9 +1,10 @@
 import requests
 from order import OrderData
+import time
 
 # Config
-ALPACA_SECRET_KEY = "jLwj0J33MMhcGVP9oFTZngMTXDbowMpLj2VN8dmL"
-ALPACA_KEY = "PKIAS4EHSEJ45519IHHC"
+ALPACA_SECRET_KEY = "8AvhehTd5g7tZnsRNN1wZlMSedp5Q9UD5TA1UHSf"
+ALPACA_KEY = "PKATID8G6ZWXSCDRSJZ3"
 
 # Package
 class AlpacaTrader:
@@ -15,14 +16,13 @@ class AlpacaTrader:
     Get all the posistions.
     """
 
-    def __init__(self, key: str, secret_key: str, order_data: OrderData) -> None:
+    def __init__(self, key: str, secret_key: str) -> None:
         """
         Initialize the trader.
         
         Args:
             key: The key given by Alpaca
-            secret_ket: The secret ket alpaca key
-            order_data: An OrderData object with the necessary information
+            secret_key: The secret ket alpaca key
         """
 
         self._HEADERS = {
@@ -30,21 +30,58 @@ class AlpacaTrader:
             "APCA-API-SECRET-KEY": secret_key,
         }
 
-        self._data = order_data.get_dict()
-
         self._APCA_API_BASE_URL =  "https://paper-api.alpaca.markets"
 
 
 
-    def createMarketOrder(self):
+    def createMarketOrder(self, order_data: OrderData):
         """
         This method will create an order that will either buy or sell positions given
         by the order information from the order data.
+
+        Args:
+            order_data: An OrderData object with the necessary information for making a trade.
         """
+        data = order_data.get_dict()
 
         ORDERS_URL = "{}/v2/orders".format(self._APCA_API_BASE_URL)
-        response = requests.post(ORDERS_URL, json = self._data, headers = self._HEADERS)
+        response = requests.post(ORDERS_URL, json = data, headers = self._HEADERS)
+
+        print("Sending Order Data:", data)
+        print("Headers:", self._HEADERS, "\n")
+
         return response.content
+    
+    def wait_until_order_filled(self, order_data: OrderData) -> None:
+        """
+        A method that will pause the run till the order is filled.
+
+        Args:
+            order_data: An OrderData object with the necessary information for making a trade.
+        """
+
+        data = order_data.get_dict()
+
+        while True:
+            orders = self.getOrders()
+            for order in orders:
+                if order["symbol"] == data and order["status"] == "filled":
+                    print("Buy order filled.")
+                    return
+                
+            print("Waiting for order to fill...")
+            time.sleep()
+
+    def cancel_all_orders(self) -> None:
+        """
+        A method that will cancel all orders.
+        """
+
+        url = f"{self._APCA_API_BASE_URL}/v2/orders"
+        response = requests.delete(url, headers = self._HEADERS)
+        print("Cancel response:", response.content)
+
+
 
     def getOrders(self):
         """
@@ -64,3 +101,17 @@ class AlpacaTrader:
         url = f"{self._APCA_API_BASE_URL}/v2/positions"
         response = requests.get(url, headers = self._HEADERS)
         return response.json()
+    
+
+"""data = {
+    "symbol" : "AAPL",
+    "qty" : 2,
+    "side" : "buy",
+    "type" : "market",
+    "time_in_force" : "day"
+}"""
+
+if __name__ == "__main__":
+    trader = AlpacaTrader(ALPACA_KEY, ALPACA_SECRET_KEY)
+    
+    trader.cancel_all_orders()

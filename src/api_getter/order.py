@@ -20,10 +20,3 @@ class OrderData:
 
         return data
     
-"""data = {
-    "symbol" : "AAPL",
-    "qty" : 2,
-    "side" : "buy",
-    "type" : "market",
-    "time_in_force" : "day"
-}"""
