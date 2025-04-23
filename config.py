@@ -1,6 +1,6 @@
-# Config
 from dotenv import load_dotenv
 import os
+import toml
 
 load_dotenv()
 
@@ -18,4 +18,12 @@ class Config:
         """
         Initialize configuration reader
         """
-        pass
+        try:
+            with open(config_file, "r") as file:
+                conf = toml.load(file)
+        except:
+            raise FileNotFoundError(f"The {config_file} toml file does not exist")
+
+        # Makes the folder with config files name
+        self._folder_name = os.path.splitext(os.path.basename(config_file))[0]
+        os.makedirs(self._folder_name, exist_ok = True)
