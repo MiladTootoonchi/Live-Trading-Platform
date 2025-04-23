@@ -2,16 +2,6 @@ import requests
 from order import OrderData
 import time
 
-# Config
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-
-ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY")
-ALPACA_KEY = os.getenv("ALPACA_KEY")
-
-# Package
 class AlpacaTrader:
     """
     A class to handle the Alpaca trading given API keys and the order data.
@@ -106,15 +96,3 @@ class AlpacaTrader:
         url = f"{self._APCA_API_BASE_URL}/v2/positions"
         response = requests.get(url, headers = self._HEADERS)
         return response.json()
-    
-
-"""data = {
-    "symbol" : "AAPL",
-    "qty" : 2,
-    "side" : "buy",
-    "type" : "market",
-    "time_in_force" : "day"
-}"""
-
-if __name__ == "__main__":
-    trader = AlpacaTrader(ALPACA_KEY, ALPACA_SECRET_KEY)

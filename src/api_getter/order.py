@@ -2,12 +2,22 @@ from dataclasses import dataclass
 
 @dataclass
 class OrderData:
-    """Class representing a trading order."""
+    """
+    A data class representing a trading order.
+
+    Args:
+        symbol: The stock ticker symbol (e.g., "AAPL" for Apple).
+        quantity: The number of shares to trade.
+        side: The side of the order, either "buy" or "sell".
+        type: The type of order, typically "market" or "limit".
+        time_in_force: Duration the order remains active. Default is "day".
+    """
+
     symbol: str
     quantity: int
     side: str
     type: str
-    time_in_force = "day"
+    time_in_force: str = "day"
 
     def get_dict(self) -> dict:
         data = {
