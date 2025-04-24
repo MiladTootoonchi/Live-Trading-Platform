@@ -29,7 +29,7 @@ class AlpacaTrader:
 
 
 
-    def createMarketOrder(self, order_data: OrderData):
+    def sendMarketOrder(self, order_data: OrderData):
         """
         This method will create an order that will either buy or sell positions given
         by the order information from the order data.
