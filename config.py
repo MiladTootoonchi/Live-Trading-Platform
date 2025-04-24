@@ -4,8 +4,6 @@ import toml
 
 load_dotenv()
 
-# LAGE ARGUMENTS FOR Å SNAKKE MED ORDERS
-
 def load_api_keys(config_file: str = "config.toml") -> tuple:
     """
     Load API keys from a TOML config file, with fallback to environment variables.
