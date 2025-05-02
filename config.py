@@ -19,7 +19,7 @@ def load_api_keys(config_file: str = "config.toml") -> tuple:
     alpaca_secret = os.getenv("ALPACA_SECRET_KEY")
 
     try:
-        with open(config_file, "rb") as file:  # "rb" for tomli, use "r" for toml
+        with open(config_file, "r") as file:
             conf = toml.load(file)
             keys = conf.get("keys", {})
             alpaca_key = keys.get("alpaca_key", alpaca_key)
