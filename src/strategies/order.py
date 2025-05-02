@@ -20,6 +20,13 @@ class OrderData:
     time_in_force: str = "day"
 
     def get_dict(self) -> dict:
+        """
+        Makes a market dictionary that the API can read
+
+        Returns:
+            A dictionary of the order information
+        """
+
         data = {
             "symbol" : self.symbol,
             "qty" : self.quantity,
@@ -37,8 +44,7 @@ def createOrder() -> OrderData:
     """
 
     symbol = input("Which market do you want to buy from (symbol)? ")
-    side = input("\nDo you want to buy or sell stock? ")
-    qty = input("\nHow much do you want to buy / sell (quantity)? ")
+    qty = input("\nHow much do you want to buy (quantity)? ")
     market_type = input("\nWhat type of order do you want (f.eks. market or limit)? ")
 
-    return OrderData(symbol, qty, side, market_type)
+    return OrderData(symbol = symbol, quantity = qty, side = "buy", market_type = market_type)

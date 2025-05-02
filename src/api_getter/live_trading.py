@@ -1,6 +1,7 @@
 import requests
-from order import OrderData
 import time
+from ..strategies.order import OrderData
+from ..strategies.strategy import StrategyForOrder
 
 class AlpacaTrader:
     """
@@ -27,9 +28,10 @@ class AlpacaTrader:
 
         self._APCA_API_BASE_URL =  "https://paper-api.alpaca.markets"
 
+        self._strategies = []
 
 
-    def sendMarketOrder(self, order_data: OrderData):
+    def send_order_to_market(self, order_data: OrderData):
         """
         This method will create an order that will either buy or sell positions given
         by the order information from the order data.
@@ -58,7 +60,7 @@ class AlpacaTrader:
         data = order_data.get_dict()
 
         while True:
-            orders = self.getOrders()
+            orders = self.get_orders()
             for order in orders:
                 if order["symbol"] == data and order["status"] == "filled":
                     print("Buy order filled.")
@@ -78,7 +80,7 @@ class AlpacaTrader:
 
 
 
-    def getOrders(self):
+    def get_orders(self) -> list[dict]:
         """
         This method will return a list of order objects.
         Each one of them includes id, symbol, quantity, side, status and a timestamp of order creation
@@ -88,7 +90,7 @@ class AlpacaTrader:
         response = requests.get(url, headers = self._HEADERS)
         return response.json()
 
-    def getPositions(self):
+    def get_positions(self) -> list[dict]:
         """
         This method shows you the symbol, quantity, market value and the pl so far
         """
@@ -96,3 +98,28 @@ class AlpacaTrader:
         url = f"{self._APCA_API_BASE_URL}/v2/positions"
         response = requests.get(url, headers = self._HEADERS)
         return response.json()
+    
+
+
+    def order(self, strategy: StrategyForOrder) -> None:
+        """
+        This method will buy the order, then append it to a list of strategies with positions
+
+        Args:
+            strategy: a strategy object with an order inforamtion.
+        """
+
+        order = strategy.order
+        self.send_order_to_market(order)
+
+        self._strategies.append(strategy)
+
+    def update(self):
+        """
+        A method that will get a marketorder from the strategies.
+        """
+        for strategy in self._strategies:
+            order = strategy.generate_new_order()
+            
+            if order is not None:
+                self.send_order_to_market(order)
