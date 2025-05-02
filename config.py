@@ -15,8 +15,11 @@ def load_api_keys(config_file: str = "config.toml") -> tuple:
         tuple: (ALPACA_KEY, ALPACA_SECRET_KEY)
     """
 
-    alpaca_key = os.getenv("ALPACA_KEY")
-    alpaca_secret = os.getenv("ALPACA_SECRET_KEY")
+    try:
+        alpaca_key = os.getenv("ALPACA_KEY")
+        alpaca_secret = os.getenv("ALPACA_SECRET_KEY")
+    except: # Can not find the .env file, or the right variables in the file.
+        pass
 
     try:
         with open(config_file, "r") as file:
