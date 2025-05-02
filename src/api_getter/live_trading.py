@@ -1,7 +1,7 @@
 import requests
 import time
+
 from ..strategies.order import OrderData
-from ..strategies.strategy import StrategyForOrder
 
 class AlpacaTrader:
     """
@@ -10,6 +10,7 @@ class AlpacaTrader:
     This class will create market orders that will either buy or sell positions,
     Get the order object from Alpaca and
     Get all the posistions.
+    Get orders from a strategy and send it.
     """
 
     def __init__(self, key: str, secret_key: str) -> None:
@@ -28,10 +29,8 @@ class AlpacaTrader:
 
         self._APCA_API_BASE_URL =  "https://paper-api.alpaca.markets"
 
-        self._strategies = []
 
-
-    def send_order_to_market(self, order_data: OrderData):
+    def place_order(self, order_data: OrderData):
         """
         This method will create an order that will either buy or sell positions given
         by the order information from the order data.
@@ -101,25 +100,33 @@ class AlpacaTrader:
     
 
 
-    def order(self, strategy: StrategyForOrder) -> None:
+    def create_buy_order(self) -> None:
         """
-        This method will buy the order, then append it to a list of strategies with positions
+        A method that creates a buy orders from question inputs.
+        """
+
+        symbol = input("Which market do you want to buy from (symbol)? ")
+        qty = input("\nHow much do you want to buy (quantity)? ")
+        market_type = input("\nWhat type of order do you want (f.eks. market or limit)? ")
+
+        order = OrderData(symbol = symbol, quantity = qty, side = "buy", market_type = market_type)
+        
+        self.place_order(order)
+
+
+    def update(self, strategy: function) -> None:
+        """
+        A method that will get a generated signal from a strategy function (buy, sell or hold)
+        and a quantity for the order,
+        then it will place a order based on the signal and quantity.
 
         Args:
-            strategy: a strategy object with an order inforamtion.
+            strategy: a function that will generate a signal with quantity based on position information.
         """
 
-        order = strategy.order
-        self.send_order_to_market(order)
+        for position in self.get_positions():
+            signal, qty  = strategy(position)
 
-        self._strategies.append(strategy)
-
-    def update(self):
-        """
-        A method that will get a marketorder from the strategies.
-        """
-        for strategy in self._strategies:
-            order = strategy.generate_new_order()
-            
-            if order is not None:
-                self.send_order_to_market(order)
+            if signal is not None:   # if not holding
+                order = OrderData(symbol = position.get("symbol"), quantity = qty, side = signal, type = "market")
+                self.place_order(order)

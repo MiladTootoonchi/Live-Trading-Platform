@@ -7,8 +7,8 @@ def main():
 
     # If argument = strategy: velg strategy basert på svar.
         # Man skal kunne velge hvilken strategy som skal generere et signal
-        # signalen skal sendes til trader, f.eks.
-        # trader.read_signal(signal)
+        # signalen lager en order som skal sendes til trader, f.eks.
+        # trader.update(rsa())
 
     
 

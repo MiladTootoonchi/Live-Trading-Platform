@@ -36,15 +36,3 @@ class OrderData:
         }
 
         return data
-
-
-def createOrder() -> OrderData:
-    """
-    A function that creates orders from question inputs.
-    """
-
-    symbol = input("Which market do you want to buy from (symbol)? ")
-    qty = input("\nHow much do you want to buy (quantity)? ")
-    market_type = input("\nWhat type of order do you want (f.eks. market or limit)? ")
-
-    return OrderData(symbol = symbol, quantity = qty, side = "buy", market_type = market_type)
