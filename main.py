@@ -6,7 +6,9 @@ def main():
     trader = AlpacaTrader(key, secret_key)
 
     # If argument = strategy: velg strategy basert på svar.
-        # Man skal kunne velge hvilken strategy som skal kalkulere om den skal buy, sell eller holde.
+        # Man skal kunne velge hvilken strategy som skal generere et signal
+        # signalen skal sendes til trader, f.eks.
+        # trader.read_signal(signal)
 
     
 
