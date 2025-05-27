@@ -42,7 +42,7 @@ class AlpacaTrader:
         data = order_data.get_dict()
 
         ORDERS_URL = "{}/v2/orders".format(self._APCA_API_BASE_URL)
-        response = requests.post(ORDERS_URL, json = data, headers = self._HEADERS)
+        response = await asyncio.to_thread(requests.post, ORDERS_URL, json = data, headers = self._HEADERS)
 
         print("Sending Order Data:", data)
         print("Headers:", self._HEADERS, "\n")
@@ -60,9 +60,9 @@ class AlpacaTrader:
         data = order_data.get_dict()
 
         while True:
-            orders = self.get_orders()
+            orders = await self.get_orders()
             for order in orders:
-                if order["symbol"] == data and order["status"] == "filled":
+                if order["symbol"] == data["symbol"] and order["status"] == "filled":
                     print("Buy order filled.")
                     return
                 
@@ -75,7 +75,7 @@ class AlpacaTrader:
         """
 
         url = f"{self._APCA_API_BASE_URL}/v2/orders"
-        response = requests.delete(url, headers = self._HEADERS)
+        response = await asyncio.to_thread(requests.delete, url, headers = self._HEADERS)
         print("Cancel response:", response.content)
 
 
@@ -87,7 +87,7 @@ class AlpacaTrader:
         """
 
         url = f"{self._APCA_API_BASE_URL}/v2/orders"
-        response = requests.get(url, headers = self._HEADERS)
+        response = await asyncio.to_thread(requests.get, url, headers = self._HEADERS)
         return response.json()
 
     async def get_positions(self) -> list[dict]:
@@ -96,7 +96,7 @@ class AlpacaTrader:
         """
 
         url = f"{self._APCA_API_BASE_URL}/v2/positions"
-        response = requests.get(url, headers = self._HEADERS)
+        response = await asyncio.to_thread(requests.get, url, headers = self._HEADERS)
         return response.json()
     
 
@@ -124,8 +124,9 @@ class AlpacaTrader:
         Args:
             strategy: a function that will generate a signal with quantity based on position information.
         """
-
-        for position in self.get_positions():
+        
+        positions = await self.get_positions()
+        for position in positions:
             signal, qty  = strategy(position)
 
             if signal is not None:   # if not holding
