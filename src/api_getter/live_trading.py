@@ -1,5 +1,5 @@
 import requests
-import time
+import asyncio
 from typing import Callable
 
 from ..strategies.order import OrderData
@@ -31,7 +31,7 @@ class AlpacaTrader:
         self._APCA_API_BASE_URL =  "https://paper-api.alpaca.markets"
 
 
-    def place_order(self, order_data: OrderData):
+    async def place_order(self, order_data: OrderData):
         """
         This method will create an order that will either buy or sell positions given
         by the order information from the order data.
@@ -49,7 +49,7 @@ class AlpacaTrader:
 
         return response.content
     
-    def wait_until_order_filled(self, order_data: OrderData) -> None:
+    async def wait_until_orders_filled(self, order_data: OrderData) -> None:
         """
         A method that will pause the run till the order is filled.
 
@@ -67,9 +67,9 @@ class AlpacaTrader:
                     return
                 
             print("Waiting for order to fill...")
-            time.sleep()
+            await asyncio.sleep(3600) # Waits 1 hour to check again
 
-    def cancel_all_orders(self) -> None:
+    async def cancel_all_orders(self) -> None:
         """
         A method that will cancel all orders.
         """
@@ -80,7 +80,7 @@ class AlpacaTrader:
 
 
 
-    def get_orders(self) -> list[dict]:
+    async def get_orders(self) -> list[dict]:
         """
         This method will return a list of order objects.
         Each one of them includes id, symbol, quantity, side, status and a timestamp of order creation
@@ -90,7 +90,7 @@ class AlpacaTrader:
         response = requests.get(url, headers = self._HEADERS)
         return response.json()
 
-    def get_positions(self) -> list[dict]:
+    async def get_positions(self) -> list[dict]:
         """
         This method shows you the symbol, quantity, market value and the pl so far
         """
@@ -101,7 +101,7 @@ class AlpacaTrader:
     
 
 
-    def create_buy_order(self) -> None:
+    async def create_buy_order(self) -> None:
         """
         A method that creates a buy orders from question inputs.
         """
@@ -112,10 +112,10 @@ class AlpacaTrader:
 
         order = OrderData(symbol = symbol, quantity = qty, side = "buy", market_type = market_type)
         
-        self.place_order(order)
+        await self.place_order(order)
 
 
-    def update(self, strategy: Callable) -> None:
+    async def update(self, strategy: Callable) -> None:
         """
         A method that will get a generated signal from a strategy function (buy, sell or hold)
         and a quantity for the order,
@@ -130,4 +130,4 @@ class AlpacaTrader:
 
             if signal is not None:   # if not holding
                 order = OrderData(symbol = position.get("symbol"), quantity = qty, side = signal, type = "market")
-                self.place_order(order)
+                await self.place_order(order)

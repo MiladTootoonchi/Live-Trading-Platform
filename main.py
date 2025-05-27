@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 
 from config import load_api_keys
 from src.api_getter.live_trading import AlpacaTrader
