@@ -1,5 +1,6 @@
 import requests
 import time
+from typing import Callable
 
 from ..strategies.order import OrderData
 
@@ -114,7 +115,7 @@ class AlpacaTrader:
         self.place_order(order)
 
 
-    def update(self, strategy: function) -> None:
+    def update(self, strategy: Callable) -> None:
         """
         A method that will get a generated signal from a strategy function (buy, sell or hold)
         and a quantity for the order,

@@ -4,7 +4,7 @@ import toml
 
 load_dotenv()
 
-def load_api_keys(config_file: str = "config.toml") -> tuple:
+def load_api_keys(config_file: str = "settings.toml") -> tuple:
     """
     Load API keys from a TOML config file, with fallback to environment variables.
 
