@@ -34,7 +34,7 @@ def parseInput():
                         help = "Analyzes the specified position(s) to determine whether to buy "
                         "or sell based on current strategy. " \
                         "Automatically places an order based on the result. " \
-                        "Leave blank to update all positions. " \
+                        "Type 'ALL' (all uppercase) to update all positions. " \
                         "Only one position can be specified at a time.")
     
     args = parser.parse_args()

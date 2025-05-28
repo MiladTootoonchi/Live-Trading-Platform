@@ -155,26 +155,27 @@ class AlpacaTrader:
         try:
             positions = await self.get_positions()
             positions_to_update = (
-                positions if symbol == "" else [p for p in positions if p.get("symbol") == symbol]
+                positions if symbol == "ALL" else [p for p in positions if p.get("symbol") == symbol]
             )
 
-            if symbol == "": print("Updating all positions")
+            if symbol == "ALL": print("Updating all positions")
             else: print(f"Updating: {symbol}")
 
             for position in positions_to_update:
+                symbol_i = position.get("symbol")
                 signal, qty = strategy(position)
 
                 if signal is not None:
                     print(signal)
                     order = OrderData(
-                        symbol = position.get("symbol"),
+                        symbol = symbol_i,
                         quantity = qty,
                         side = signal,
                         type = "market"
                     )
                     await self.place_order(order)
 
-                else: print("Holding")
+                else: print(f"Holding {symbol_i}")
 
         except Exception:
             print(f"Failed to update position(s) for symbol {symbol}")
