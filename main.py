@@ -40,21 +40,25 @@ def parseInput():
     return args
 
 
-def main():
+async def main():
     args = parseInput()
 
     key, secret_key = load_api_keys()
     trader = AlpacaTrader(key, secret_key)
     
+    if args.cancel:
+        await trader.cancel_all_orders()
+
     if args.order:
-        trader.create_buy_order()
+        await trader.create_buy_order()
 
-    # If argument = strategy: velg strategy basert på svar.
-        # Man skal kunne velge hvilken strategy som skal generere et signal
-        # signalen lager en order som skal sendes til trader, f.eks.
-        # trader.update(rsa())
-
+    if args.live:
+        interations = int(args.live)
+        if interations > 0:
+            for _ in range(interations):
+                await trader.update(strategy.rule_based_strategy)
+                await asyncio.sleep(86400)  # sleep for a day
     
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

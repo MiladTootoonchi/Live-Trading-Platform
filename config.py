@@ -29,10 +29,10 @@ def load_api_keys(config_file: str = "settings.toml") -> tuple:
             alpaca_secret = keys.get("alpaca_secret_key", alpaca_secret)
 
     except FileNotFoundError:
-        print(f"Config file not found: {config_file}, falling back to environment variables.")
+        print(f"Config file not found: {config_file}, falling back to environment variables.\n")
 
     except Exception:
-        print(f"Error reading config, using environment variables as fallback.")
+        print(f"Error reading config, using environment variables as fallback.\n")
 
     return alpaca_key, alpaca_secret
 

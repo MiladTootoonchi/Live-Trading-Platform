@@ -106,11 +106,35 @@ class AlpacaTrader:
         A method that creates a buy orders from question inputs.
         """
 
-        symbol = input("Which market do you want to buy from (symbol)? ")
-        qty = input("\nHow much do you want to buy (quantity)? ")
-        market_type = input("\nWhat type of order do you want (f.eks. market or limit)? ")
+        # Asking for stock
+        while True:
+            symbol = input("Which stock do you want to buy (symbol)? ").strip().upper()
+            if symbol.isalpha() and len(symbol) <= 5:  # most stock symbols are 1–5 characters
+                break
+            print("Invalid symbol. Please enter a valid stock ticker (e.g. AAPL, TSLA).")
 
-        order = OrderData(symbol = symbol, quantity = qty, side = "buy", market_type = market_type)
+
+        # Asking for quantity
+        while True:
+            try:
+                qty = int(input("How much do you want to buy (quantity)? "))
+                if qty > 0:
+                    break
+                else:
+                    print("Quantity must be a positive integer.")
+            except ValueError:
+                print("Please enter a valid integer.")
+
+
+        # Asking for order type
+        valid_order_types = ['market', 'limit', 'stop', 'stop_limit', 'trailing_stop']
+        while True:
+            order_type = input("What type of order do you want (e.g. market, limit, stop, stop_limit, trailing_stop)? ").lower()
+            if order_type in valid_order_types:
+                break
+            print("Invalid order type. Please enter one of the following:", ", ".join(valid_order_types))
+
+        order = OrderData(symbol = symbol, quantity = qty, side = "buy", type = order_type)
         
         await self.place_order(order)
 
