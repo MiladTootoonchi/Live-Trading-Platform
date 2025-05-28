@@ -18,13 +18,6 @@ def parseInput():
                         action = "store_true", 
                         help = "places an order. The program will ask questions about the order " \
                         "and send it to Alpaca")
-
-    parser.add_argument("--strategy", 
-                        "-s", 
-                        help = "Executes the specified strategy for the live trading " \
-                        "If the strategy does not exist or is not specified, " \
-                        "the rule based strategy will run as default.",
-                        default = strategy.rule_based_strategy)
     
     parser.add_argument("--cancel", 
                         "-c", 
@@ -35,9 +28,18 @@ def parseInput():
                         "-l",
                         help = "Activates live trading. Loops through updater multiple times with" \
                         "different strategies chosen by ML. Sells after given number og iterations.")
+
+    parser.add_argument("--update",
+                        "-u",
+                        help = "Analyzes the specified position(s) to determine whether to buy "
+                        "or sell based on current strategy. " \
+                        "Automatically places an order based on the result. " \
+                        "Leave blank to update all positions. " \
+                        "Only one position can be specified at a time.")
     
     args = parser.parse_args()
     return args
+
 
 
 async def main():
@@ -57,8 +59,12 @@ async def main():
         if interations > 0:
             for _ in range(interations):
                 await trader.update(strategy.rule_based_strategy)
-                await asyncio.sleep(86400)  # sleep for a day
-    
+                await asyncio.sleep(60)  # sleep for a minute
+
+    if args.update:
+        symbol = args.update
+        await trader.update(strategy.rule_based_strategy, symbol)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

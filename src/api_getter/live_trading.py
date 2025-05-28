@@ -1,6 +1,6 @@
 import requests
 import asyncio
-from typing import Callable
+from typing import Callable, Dict, Any
 
 from ..strategies.order import OrderData
 
@@ -109,7 +109,7 @@ class AlpacaTrader:
         # Asking for stock
         while True:
             symbol = input("Which stock do you want to buy (symbol)? ").strip().upper()
-            if symbol.isalpha() and len(symbol) <= 5:  # most stock symbols are 1–5 characters
+            if symbol.isalpha() and len(symbol) <= 5:  # normally, stock symbols are 1–5 characters
                 break
             print("Invalid symbol. Please enter a valid stock ticker (e.g. AAPL, TSLA).")
 
@@ -128,31 +128,53 @@ class AlpacaTrader:
 
         # Asking for order type
         valid_order_types = ['market', 'limit', 'stop', 'stop_limit', 'trailing_stop']
+
         while True:
             order_type = input("What type of order do you want (e.g. market, limit, stop, stop_limit, trailing_stop)? ").lower()
             if order_type in valid_order_types:
                 break
+
             print("Invalid order type. Please enter one of the following:", ", ".join(valid_order_types))
 
+
         order = OrderData(symbol = symbol, quantity = qty, side = "buy", type = order_type)
-        
         await self.place_order(order)
 
 
-    async def update(self, strategy: Callable) -> None:
-        """
-        A method that will get a generated signal from a strategy function (buy, sell or hold)
-        and a quantity for the order,
-        then it will place a order based on the signal and quantity.
 
-        Args:
-            strategy: a function that will generate a signal with quantity based on position information.
+    async def update(self, strategy: Callable[[Dict[str, Any]], tuple[str, int]], symbol: str) -> None:
         """
+        Updates one or all positions using the provided strategy function.
+        The strategy should return a tuple of (signal, quantity), where signal is "buy", "sell", or None.
         
-        positions = await self.get_positions()
-        for position in positions:
-            signal, qty  = strategy(position)
+        Args:
+            strategy: A function that takes a position and returns (signal, quantity).
+            symbol: The stock symbol to update. If empty, updates all positions.
+        """
 
-            if signal is not None:   # if not holding
-                order = OrderData(symbol = position.get("symbol"), quantity = qty, side = signal, type = "market")
-                await self.place_order(order)
+        try:
+            positions = await self.get_positions()
+            positions_to_update = (
+                positions if symbol == "" else [p for p in positions if p.get("symbol") == symbol]
+            )
+
+            if symbol == "": print("Updating all positions")
+            else: print(f"Updating: {symbol}")
+
+            for position in positions_to_update:
+                signal, qty = strategy(position)
+
+                if signal is not None:
+                    print(signal)
+                    order = OrderData(
+                        symbol = position.get("symbol"),
+                        quantity = qty,
+                        side = signal,
+                        type = "market"
+                    )
+                    await self.place_order(order)
+
+                else: print("Holding")
+
+        except Exception:
+            print(f"Failed to update position(s) for symbol {symbol}")

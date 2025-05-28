@@ -13,9 +13,10 @@ def rule_based_strategy(position_data: dict) -> Optional[tuple]:
 
     Returns:
         tuple or None:
-            ('buy' or 'sell', qty: int) if action is needed,
+            ("buy" or "sell", qty: int) if action is needed,
             None if holding the position.
     """
+
     try:
         qty = int(float(position_data["qty"]))
         avg_entry_price = float(position_data["avg_entry_price"])
@@ -23,7 +24,7 @@ def rule_based_strategy(position_data: dict) -> Optional[tuple]:
         change_today = float(position_data["change_today"])
 
         if qty == 0:
-            return None  # Nothing to do
+            return None, 0  # Nothing to do
 
         unrealized_return_pct = (current_price - avg_entry_price) / avg_entry_price * 100
 
@@ -35,12 +36,12 @@ def rule_based_strategy(position_data: dict) -> Optional[tuple]:
         if change_today < -3 and unrealized_return_pct < 0:
             return ("buy", qty)
 
-        return None  # Hold
+        return None, 0  # Hold
 
     except KeyError:
         print("Missing key in position data")
-        return None
+        return None, 0
     
     except Exception:
         print("Error evaluating position")
-        return None
+        return None, 0
