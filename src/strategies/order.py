@@ -20,6 +20,13 @@ class OrderData:
     time_in_force: str = "day"
 
     def get_dict(self) -> dict:
+        """
+        Makes a market dictionary that the API can read
+
+        Returns:
+            A dictionary of the order information
+        """
+
         data = {
             "symbol" : self.symbol,
             "qty" : self.quantity,
@@ -29,4 +36,3 @@ class OrderData:
         }
 
         return data
-    
