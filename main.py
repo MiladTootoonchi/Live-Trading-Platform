@@ -58,7 +58,7 @@ async def main():
         interations = int(args.live)
         if interations > 0:
             for _ in range(interations):
-                await trader.update(strategy.rule_based_strategy)
+                await trader.update(strategy.rule_based_strategy, "ALL")
                 await asyncio.sleep(60)  # sleep for a minute
 
     if args.update:
