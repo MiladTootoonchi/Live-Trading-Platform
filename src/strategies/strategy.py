@@ -21,8 +21,8 @@ def rule_based_strategy(position_data: dict) -> tuple[SideSignal, int]:
 
     Returns:
         tuple:
-            ("buy" or "sell", qty: int) if action is needed,
-            (None, 0) if holding the position.
+            (SideSignal.BUY or SideSignal.SELL, qty: int) if action is needed,
+            (SideSignal.HOLD, 0) if holding the position.
     """
 
     try:
