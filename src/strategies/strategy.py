@@ -2,9 +2,17 @@
 Different functions with strategies that will generate a signal for buying, selling or holding
 given position information. Then it will return a signal with quantity of order.
 """
-from typing import Optional
 
-def rule_based_strategy(position_data: dict) -> Optional[tuple]:
+from enum import Enum
+
+class SideSignal(Enum):
+    """Enum representing possible order sides."""
+    BUY = "buy"
+    SELL = "sell"
+    HOLD = "hold"
+
+
+def rule_based_strategy(position_data: dict) -> tuple[SideSignal, int]:
     """
     Evaluates a trading position from an Alpaca JSON response and recommends an action.
 
@@ -12,9 +20,9 @@ def rule_based_strategy(position_data: dict) -> Optional[tuple]:
         position_data (dict): JSON object from Alpaca API containing position details.
 
     Returns:
-        tuple or None:
+        tuple:
             ("buy" or "sell", qty: int) if action is needed,
-            None if holding the position.
+            (None, 0) if holding the position.
     """
 
     try:
@@ -29,19 +37,19 @@ def rule_based_strategy(position_data: dict) -> Optional[tuple]:
         unrealized_return_pct = (current_price - avg_entry_price) / avg_entry_price * 100
 
         # Decision rules
-        if unrealized_return_pct > 20:
-            return ("sell", qty)
-        if unrealized_return_pct < -15:
-            return ("sell", qty)
+        if unrealized_return_pct > 2:
+            return (SideSignal.SELL, qty)
+        if unrealized_return_pct < -1.5:
+            return (SideSignal.SELL, qty)
         if change_today < -3 and unrealized_return_pct < 0:
-            return ("buy", qty)
+            return (SideSignal.BUY, qty)
 
-        return None, 0  # Hold
+        return SideSignal.HOLD, 0  # Hold
 
     except KeyError:
         print("Missing key in position data")
-        return None, 0
+        return SideSignal.HOLD, 0
     
     except Exception:
         print("Error evaluating position")
-        return None, 0
+        return SideSignal.HOLD, 0

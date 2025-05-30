@@ -2,7 +2,8 @@ import requests
 import asyncio
 from typing import Callable, Dict, Any
 
-from ..strategies.order import OrderData
+from .order import OrderData
+from ..strategies.strategy import SideSignal
 
 class AlpacaTrader:
     """
@@ -41,7 +42,7 @@ class AlpacaTrader:
         """
         data = order_data.get_dict()
 
-        ORDERS_URL = "{}/v2/orders".format(self._APCA_API_BASE_URL)
+        ORDERS_URL = f"{self._APCA_API_BASE_URL}/v2/orders"
         response = await asyncio.to_thread(requests.post, ORDERS_URL, json = data, headers = self._HEADERS)
 
         print("Sending Order Data:", data)
@@ -107,11 +108,7 @@ class AlpacaTrader:
         """
 
         # Asking for stock
-        while True:
-            symbol = input("Which stock do you want to buy (symbol)? ").strip().upper()
-            if symbol.isalpha() and len(symbol) <= 5:  # normally, stock symbols are 1–5 characters
-                break
-            print("Invalid symbol. Please enter a valid stock ticker (e.g. AAPL, TSLA).")
+        symbol = input("Which stock do you want to buy (symbol)? ").strip().upper()
 
 
         # Asking for quantity
@@ -142,10 +139,10 @@ class AlpacaTrader:
 
 
 
-    async def update(self, strategy: Callable[[Dict[str, Any]], tuple[str, int]], symbol: str) -> None:
+    async def update(self, strategy: Callable[[Dict[str, Any]], tuple[SideSignal, int]], symbol: str) -> None:
         """
         Updates one or all positions using the provided strategy function.
-        The strategy should return a tuple of (signal, quantity), where signal is "buy", "sell", or None.
+        The strategy should return a tuple of (signal, quantity), where signal is "BUY", "SELL" or "HOLD".
         
         Args:
             strategy: A function that takes a position and returns (signal, quantity).
@@ -165,8 +162,11 @@ class AlpacaTrader:
                 symbol_i = position.get("symbol")
                 signal, qty = strategy(position)
 
-                if signal is not None:
+                if signal != SideSignal.HOLD:
                     print(signal)
+                    if signal == SideSignal.BUY: signal = "buy"
+                    if signal == SideSignal.SELL: signal = "sell"
+
                     order = OrderData(
                         symbol = symbol_i,
                         quantity = qty,
