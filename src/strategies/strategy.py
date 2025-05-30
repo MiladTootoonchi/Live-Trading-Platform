@@ -3,7 +3,6 @@ Different functions with strategies that will generate a signal for buying, sell
 given position information. Then it will return a signal with quantity of order.
 """
 
-from ..api_getter.order import SideSignal
 from enum import Enum
 
 class SideSignal(Enum):
