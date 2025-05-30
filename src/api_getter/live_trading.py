@@ -2,7 +2,7 @@ import requests
 import asyncio
 from typing import Callable, Dict, Any
 
-from ..strategies.order import OrderData
+from .order import OrderData
 
 class AlpacaTrader:
     """
@@ -108,7 +108,7 @@ class AlpacaTrader:
 
         # Asking for stock
         symbol = input("Which stock do you want to buy (symbol)? ").strip().upper()
-        
+
 
         # Asking for quantity
         while True:
