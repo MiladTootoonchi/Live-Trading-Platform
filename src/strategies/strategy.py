@@ -3,7 +3,17 @@ Different functions with strategies that will generate a signal for buying, sell
 given position information. Then it will return a signal with quantity of order.
 """
 
-def rule_based_strategy(position_data: dict) -> tuple:
+from ..api_getter.order import SideSignal
+from enum import Enum
+
+class SideSignal(Enum):
+    """Enum representing possible order sides."""
+    BUY = "buy"
+    SELL = "sell"
+    HOLD = "hold"
+
+
+def rule_based_strategy(position_data: dict) -> tuple[SideSignal, int]:
     """
     Evaluates a trading position from an Alpaca JSON response and recommends an action.
 
@@ -29,18 +39,18 @@ def rule_based_strategy(position_data: dict) -> tuple:
 
         # Decision rules
         if unrealized_return_pct > 2:
-            return ("sell", qty)
+            return (SideSignal.SELL, qty)
         if unrealized_return_pct < -1.5:
-            return ("sell", qty)
+            return (SideSignal.SELL, qty)
         if change_today < -3 and unrealized_return_pct < 0:
-            return ("buy", qty)
+            return (SideSignal.BUY, qty)
 
-        return None, 0  # Hold
+        return SideSignal.HOLD, 0  # Hold
 
     except KeyError:
         print("Missing key in position data")
-        return None, 0
+        return SideSignal.HOLD, 0
     
     except Exception:
         print("Error evaluating position")
-        return None, 0
+        return SideSignal.HOLD, 0

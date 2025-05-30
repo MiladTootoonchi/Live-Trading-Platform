@@ -3,6 +3,7 @@ import asyncio
 from typing import Callable, Dict, Any
 
 from .order import OrderData
+from ..strategies.strategy import SideSignal
 
 class AlpacaTrader:
     """
@@ -138,10 +139,10 @@ class AlpacaTrader:
 
 
 
-    async def update(self, strategy: Callable[[Dict[str, Any]], tuple[str, int]], symbol: str) -> None:
+    async def update(self, strategy: Callable[[Dict[str, Any]], tuple[SideSignal, int]], symbol: str) -> None:
         """
         Updates one or all positions using the provided strategy function.
-        The strategy should return a tuple of (signal, quantity), where signal is "buy", "sell", or None.
+        The strategy should return a tuple of (signal, quantity), where signal is "BUY", "SELL" or "HOLD".
         
         Args:
             strategy: A function that takes a position and returns (signal, quantity).
@@ -161,8 +162,11 @@ class AlpacaTrader:
                 symbol_i = position.get("symbol")
                 signal, qty = strategy(position)
 
-                if signal is not None:
+                if signal != SideSignal.HOLD:
                     print(signal)
+                    if signal == SideSignal.BUY: signal = "buy"
+                    if signal == SideSignal.SELL: signal = "sell"
+
                     order = OrderData(
                         symbol = symbol_i,
                         quantity = qty,
