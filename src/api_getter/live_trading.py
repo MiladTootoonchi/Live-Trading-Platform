@@ -107,12 +107,8 @@ class AlpacaTrader:
         """
 
         # Asking for stock
-        while True:
-            symbol = input("Which stock do you want to buy (symbol)? ").strip().upper()
-            if symbol.isalpha() and len(symbol) <= 5:  # normally, stock symbols are 1–5 characters
-                break
-            print("Invalid symbol. Please enter a valid stock ticker (e.g. AAPL, TSLA).")
-
+        symbol = input("Which stock do you want to buy (symbol)? ").strip().upper()
+        
 
         # Asking for quantity
         while True:
