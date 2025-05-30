@@ -41,7 +41,7 @@ class AlpacaTrader:
         """
         data = order_data.get_dict()
 
-        ORDERS_URL = "{}/v2/orders".format(self._APCA_API_BASE_URL)
+        ORDERS_URL = f"{self._APCA_API_BASE_URL}/v2/orders"
         response = await asyncio.to_thread(requests.post, ORDERS_URL, json = data, headers = self._HEADERS)
 
         print("Sending Order Data:", data)

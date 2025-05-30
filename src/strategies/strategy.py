@@ -2,9 +2,8 @@
 Different functions with strategies that will generate a signal for buying, selling or holding
 given position information. Then it will return a signal with quantity of order.
 """
-from typing import Optional
 
-def rule_based_strategy(position_data: dict) -> Optional[tuple]:
+def rule_based_strategy(position_data: dict) -> tuple:
     """
     Evaluates a trading position from an Alpaca JSON response and recommends an action.
 
@@ -12,9 +11,9 @@ def rule_based_strategy(position_data: dict) -> Optional[tuple]:
         position_data (dict): JSON object from Alpaca API containing position details.
 
     Returns:
-        tuple or None:
+        tuple:
             ("buy" or "sell", qty: int) if action is needed,
-            None if holding the position.
+            (None, 0) if holding the position.
     """
 
     try:
