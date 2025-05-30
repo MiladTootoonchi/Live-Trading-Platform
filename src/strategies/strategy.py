@@ -29,9 +29,9 @@ def rule_based_strategy(position_data: dict) -> Optional[tuple]:
         unrealized_return_pct = (current_price - avg_entry_price) / avg_entry_price * 100
 
         # Decision rules
-        if unrealized_return_pct > 20:
+        if unrealized_return_pct > 2:
             return ("sell", qty)
-        if unrealized_return_pct < -15:
+        if unrealized_return_pct < -1.5:
             return ("sell", qty)
         if change_today < -3 and unrealized_return_pct < 0:
             return ("buy", qty)
