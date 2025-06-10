@@ -50,20 +50,15 @@ class AlpacaTrader:
 
         return response.content
     
-    async def wait_until_orders_filled(self, order_data: OrderData) -> None:
+    async def wait_until_orders_filled(self) -> None:
         """
-        A method that will pause the run till the order is filled.
-
-        Args:
-            order_data: An OrderData object with the necessary information for making a trade.
+        A method that will pause the run till all the order are filled.
         """
-
-        data = order_data.get_dict()
 
         while True:
             orders = await self.get_orders()
             for order in orders:
-                if order["symbol"] == data["symbol"] and order["status"] == "filled":
+                if order["status"] == "filled":
                     print("Buy order filled.")
                     return
                 
