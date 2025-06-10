@@ -3,7 +3,7 @@ import asyncio
 
 from config import load_api_keys
 from src.api_getter.live_trading import AlpacaTrader
-from src.strategies import strategy
+from src.strategies.strategy import find_strategy
 
 
 def parseInput():
@@ -26,6 +26,7 @@ def parseInput():
 
     parser.add_argument("--live",
                         "-l",
+                        default = 5,
                         help = "Activates live trading. Loops through updater multiple times with" \
                         "different strategies chosen by ML. Sells after given number og iterations.")
 
@@ -57,13 +58,15 @@ async def main():
     if args.live:
         interations = int(args.live)
         if interations > 0:
+            strategy = find_strategy()
             for _ in range(interations):
-                await trader.update(strategy.rule_based_strategy, "ALL")
+                await trader.update(strategy, "ALL")
                 await asyncio.sleep(60)  # sleep for a minute
 
     if args.update:
         symbol = args.update
-        await trader.update(strategy.rule_based_strategy, symbol)
+        strategy = find_strategy()
+        await trader.update(strategy, symbol)
 
 
 if __name__ == "__main__":

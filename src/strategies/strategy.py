@@ -4,6 +4,7 @@ given position information. Then it will return a signal with quantity of order.
 """
 
 from enum import Enum
+from typing import Callable, Dict, Any
 
 class SideSignal(Enum):
     """Enum representing possible order sides."""
@@ -53,3 +54,28 @@ def rule_based_strategy(position_data: dict) -> tuple[SideSignal, int]:
     except Exception:
         print("Error evaluating position")
         return SideSignal.HOLD, 0
+
+
+strategies = {
+    "rule_based_strategy": rule_based_strategy,
+}
+
+
+def find_strategy() -> Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
+    """
+    Goes through the strategies dictionary to call on the strategy function 
+    that matches the promt the user inputs.
+
+    Returns:
+        Callable: the strategy function asked for.
+
+    Raises:
+        KeyError: If the strategy name is not found.
+    """
+    name = input("Which strategy do you want to use? ")
+
+    try:
+        return strategies[name]
+    
+    except KeyError:
+        raise KeyError(f"Strategy {name!r} was not found in the strategies dictionary.")
