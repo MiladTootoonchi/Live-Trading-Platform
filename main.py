@@ -60,7 +60,7 @@ async def main():
     if args.live:
         interations = int(args.live)
         if interations > 0:
-            await trader.wait_until_orders_filled(trader.get_orders)
+            await trader.wait_until_orders_filled()
             strategy = find_strategy()
             for _ in range(interations):
                 await trader.update(strategy, "ALL")
