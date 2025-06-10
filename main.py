@@ -17,7 +17,7 @@ def parseInput():
                         "-o", 
                         action = "store_true", 
                         help = "places an order. The program will ask questions about the order " \
-                        "and send it to Alpaca")
+                        "and sends it to Alpaca")
     
     parser.add_argument("--cancel", 
                         "-c", 
@@ -26,14 +26,16 @@ def parseInput():
 
     parser.add_argument("--live",
                         "-l",
+                        type = int,
                         default = 5,
-                        help = "Activates live trading. Loops through updater multiple times with" \
-                        "different strategies chosen by ML. Sells after given number og iterations.")
+                        help = "Specifie the number of iterations for the live loop." \
+                        " If you wish to use the default number of iterations, " \
+                        "you will not need this argument (run main.py).")
 
     parser.add_argument("--update",
                         "-u",
                         help = "Analyzes the specified position(s) to determine whether to buy "
-                        "or sell based on current strategy. " \
+                        "or sell based on strategy prompt given by the user. " \
                         "Automatically places an order based on the result. " \
                         "Type 'ALL' (all uppercase) to update all positions. " \
                         "Only one position can be specified at a time.")
