@@ -1,47 +1,47 @@
 
 from strategy import SideSignal
 
-def mean_reversion_strategy(position_data: dict) -> tuple[SideSignal, int]:
+def mean_reversion_strategy(position_data: dict, moving_avg_price: float) -> tuple[SideSignal, int]:
     """
-    A simple mean reversion trading strategy.
+   Mean reversion strategy based on market moving average (SMA).
 
     Logic:
-    - If the currrent price is significally below average entry price, 
-    we assume undervaluation and buy.
-    - If the price is significally above average, we assume overevaluation and sell.
-    - Also cut losses if price drops too far.
-    - Otherwise, hold the position
+    - Buy when the price is significantly below the SMA (assumed undervalued).
+    - Sell when the price is significantly above the SMA (assumed overvalued).
+    - Stop-loss if the price falls too far below the SMA after buying.
+    - Otherwise, hold the position.
 
-    Args: 
-        position_data (dict): Position details from the trading API.
+    Args:
+        position_data (dict): Position details from trading API, expects keys: "qty", "current_price".
+        moving_avg_price (float): Market moving average price (e.g., 20-period SMA).
 
     Returns:
-        tuple: (SideSignal.BUY or SideSignal.SELL, quantity), or (SideSignal.HOLD, 0).
+        tuple: (SideSignal, quantity)
 
     """
     try: 
-        qty = int(float(position_data["qty"]))
-        avg_entry_price = float(position_data["avg_entry_price"])
+        qty = int(float(position_data.get("qty", 0)))
         current_price = float(position_data["current_price"])
 
-        if avg_entry_price == 0:
-            return SideSignal.HOLD, 0 # Avoid divison by zero
+        if moving_avg_price == 0:
+            return SideSignal.HOLD, 0 # Avoid division by zero
         
-        deviation = (current_price - avg_entry_price) / avg_entry_price * 100
+        deviation = (current_price - moving_avg_price) / moving_avg_price * 100
 
-        # Buy if current price is much lower than historical (entry) price
+        # buy if price is more than 3% below SMA
         if qty == 0 and deviation < -3:
             return SideSignal.BUY, 10      
 
-        # Sell if price has gone much lower than historical (entry) price
-        if deviation > 4:
+        # sell if price is more than 4% above SMA
+        if qty > 0 and deviation > 4:
             return SideSignal.SELL, qty
 
         # Stop-loss if price drops too far
-        if deviation < -6:
+        if qty > 0 and deviation < -6:
             return SideSignal.SELL, qty
 
         return SideSignal.HOLD, 0
-    except KeyError as e:
+
+    except (KeyError, ValueError) as e:
         print(f"[Mean Reversion Strategy] Error: {e}")
         return SideSignal.HOLD, 0  
