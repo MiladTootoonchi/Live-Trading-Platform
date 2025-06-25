@@ -57,13 +57,14 @@ class AlpacaTrader:
 
         while True:
             orders = await self.get_orders()
+            if orders == []: return # Stops if there is an empty list of orders
             for order in orders:
                 if order["status"] == "filled":
-                    print("Buy order filled.")
+                    print(f"{order['symbol']} filled.")
                     return
                 
-            print("Waiting for order to fill...")
-            await asyncio.sleep(3600) # Waits 1 hour to check again
+            print(f"Waiting for all orders to fill...")
+            await asyncio.sleep(60) # Waits 1 minute to check again
 
     async def cancel_all_orders(self) -> None:
         """
