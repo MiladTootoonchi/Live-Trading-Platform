@@ -104,8 +104,20 @@ class AlpacaTrader:
         """
 
         # Asking for stock
-        symbol = input("Which stock do you want to buy (symbol)? ").strip().upper()
+        while True:
+            symbol = input("Which stock do you want to buy (symbol)? ").strip().upper()
 
+            url = f"{self._APCA_API_BASE_URL}/v2/assets/{symbol}"
+            response = requests.get(url, headers = self._HEADERS)
+
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("tradable", False):
+                    break
+                else:
+                    print(f"The symbol '{symbol}' is not valid. Please try another.")
+            else:
+                print(f"The symbol '{symbol}' is not valid or not found. Please try again.")
 
         # Asking for quantity
         while True:
