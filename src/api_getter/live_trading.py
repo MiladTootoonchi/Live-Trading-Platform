@@ -32,13 +32,21 @@ class AlpacaTrader:
         self._APCA_API_BASE_URL =  "https://paper-api.alpaca.markets"
 
 
-    async def place_order(self, order_data: OrderData):
+    async def place_order(self, order_data: OrderData) -> bytes:
         """
-        This method will create an order that will either buy or sell positions given
-        by the order information from the order data.
+        Submits an order to buy or sell assets based on the provided order data.
+
+        Sends a POST request to the Alpaca API with the order details encapsulated
+        in the `OrderData` object. The order can represent either a buy or sell
+        action, including specifics such as symbol, quantity, and order type.
 
         Args:
-            order_data: An OrderData object with the necessary information for making a trade.
+            order_data (OrderData): An object containing all necessary fields to
+                                    execute a trade order (e.g., symbol, quantity,
+                                    side, type).
+
+        Returns:
+            bytes: The raw response content returned by the API after submitting the order.
         """
         data = order_data.get_dict()
 
@@ -52,7 +60,11 @@ class AlpacaTrader:
     
     async def wait_until_orders_filled(self) -> None:
         """
-        A method that will pause the run till all the order are filled.
+        Waits asynchronously until all open orders have been filled.
+
+        This method repeatedly checks the status of all current orders.
+        It pauses execution in 60-second intervals until no open orders remain
+        or until at least one order is marked as 'filled'.
         """
 
         while True:
@@ -68,7 +80,10 @@ class AlpacaTrader:
 
     async def cancel_all_orders(self) -> None:
         """
-        A method that will cancel all orders.
+        Cancels all open orders for the account.
+
+        Sends a request to the Alpaca API to delete all active orders.
+        Upon completion, prints the response content for confirmation or debugging purposes.
         """
 
         url = f"{self._APCA_API_BASE_URL}/v2/orders"
@@ -79,8 +94,14 @@ class AlpacaTrader:
 
     async def get_orders(self) -> list[dict]:
         """
-        This method will return a list of order objects.
-        Each one of them includes id, symbol, quantity, side, status and a timestamp of order creation
+        Retrieves and returns a list of recent order objects from the trading account.
+
+        This method sends an asynchronous request to the Alpaca API to fetch order data.
+        Each order dictionary in the returned list contains details such as the order ID,
+        stock symbol, quantity, side (buy/sell), current status, and the timestamp of order creation.
+
+        Returns:
+            list[dict]: A list of dictionaries, each representing an individual order.
         """
 
         url = f"{self._APCA_API_BASE_URL}/v2/orders"
@@ -89,7 +110,15 @@ class AlpacaTrader:
 
     async def get_positions(self) -> list[dict]:
         """
-        This method shows you the symbol, quantity, market value and the pl so far
+        Retrieves and returns all current account positions.
+
+        This method sends an asynchronous request to the Alpaca API to fetch the user's
+        current stock positions. Each position in the returned list includes details
+        such as the stock symbol, quantity held, current market value, and unrealized 
+        profit or loss.
+
+        Returns:
+            list[dict]: A list of dictionaries representing each position.
         """
 
         url = f"{self._APCA_API_BASE_URL}/v2/positions"
@@ -100,7 +129,14 @@ class AlpacaTrader:
 
     async def create_buy_order(self) -> None:
         """
-        A method that creates a buy orders from question inputs.
+        Prompts the user for input to create and submit a buy order.
+
+        This method interactively gathers required details from the user,
+        including the stock symbol, quantity, and order type. It validates
+        the stock symbol via an external API to ensure the asset is tradable,
+        checks that the quantity is a positive integer, and confirms the order
+        type is one of the supported options. Once all inputs are validated,
+        it constructs an OrderData object and submits the order using place_order().
         """
 
         # Asking for stock
@@ -149,12 +185,19 @@ class AlpacaTrader:
 
     async def update(self, strategy: Callable[[Dict[str, Any]], tuple[SideSignal, int]], symbol: str) -> None:
         """
-        Updates one or all positions using the provided strategy function.
-        The strategy should return a tuple of (signal, quantity), where signal is "BUY", "SELL" or "HOLD".
-        
+        Updates one or all positions based on the provided trading strategy.
+
+        The 'strategy' function should accept a position dictionary and return a tuple:
+        (signal, quantity), where 'signal' is one of the SideSignal enum values 
+        (BUY, SELL, HOLD), and 'quantity' is the number of shares to trade.
+
         Args:
-            strategy: A function that takes a position and returns (signal, quantity).
-            symbol: The stock symbol to update. If empty, updates all positions.
+            strategy (Callable[[Dict[str, Any]], Tuple[SideSignal, int]]): 
+                A function that takes a position dict and returns a (signal, quantity) tuple.
+            symbol (str): The stock symbol to update. Use "ALL" to update all positions.
+
+        Raises:
+            Exception: Catches and logs any exceptions that occur during update.
         """
 
         try:
