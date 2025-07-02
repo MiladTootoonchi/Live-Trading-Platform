@@ -18,7 +18,7 @@ def momentum_strategy(position_data: dict) -> tuple[SideSignal, int]:
     Returns:
         tuple: (SideSignal.BUY or SideSignal.SELL, quantity), or (SideSignal.HOLD, 0) to hold.
     """
-    try:
+    try: 
         qty = int(float(position_data["qty"]))
         avg_entry_price = float(position_data["avg_entry_price"])
         current_price = float(position_data["current_price"])
