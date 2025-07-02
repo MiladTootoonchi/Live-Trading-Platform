@@ -6,6 +6,8 @@ given position information. Then it will return a signal with quantity of order.
 from enum import Enum
 from typing import Callable, Dict, Any
 
+from . import bollinger_bands_strategy, macd, mean_reversion, momentum, moving_average_strategy, rsi
+
 class SideSignal(Enum):
     """Enum representing possible order sides."""
     BUY = "buy"
@@ -22,8 +24,8 @@ def rule_based_strategy(position_data: dict) -> tuple[SideSignal, int]:
 
     Returns:
         tuple:
-            ("buy" or "sell", qty: int) if action is needed,
-            (None, 0) if holding the position.
+            (SideSignal.BUY or SideSignal.SELL, qty: int) if action is needed,
+            (SideSignal.HOLD, 0) if holding the position.
     """
 
     try:
