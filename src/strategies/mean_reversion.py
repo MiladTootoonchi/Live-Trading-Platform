@@ -44,4 +44,4 @@ def mean_reversion_strategy(position_data: dict, moving_avg_price: float) -> tup
 
     except (KeyError, ValueError) as e:
         print(f"[Mean Reversion Strategy] Error: {e}")
-        return SideSignal.HOLD, 0  
+        return SideSignal.HOLD, 0 
