@@ -47,30 +47,27 @@ def parseInput():
 
 async def main():
     args = parseInput()
-
     key, secret_key = load_api_keys()
     trader = AlpacaTrader(key, secret_key)
+
     
     if args.cancel:
         await trader.cancel_all_orders()
-
     if args.order:
         await trader.create_buy_order()
 
-    if args.live:
-        interations = int(args.live)
-        if interations > 0:
-            await trader.wait_until_orders_filled()
-            strategy = find_strategy()
-            for _ in range(interations):
-                await trader.update(strategy, "ALL")
-                await asyncio.sleep(60)  # sleep for a minute
 
     if args.update:
         symbol = args.update
         strategy = find_strategy()
         await trader.update(strategy, symbol)
 
+    elif args.live:
+        interations = int(args.live)
+        if interations > 0:
+            strategy = find_strategy()
+            for _ in range(interations):
+                await trader.update(strategy, "ALL")
 
 if __name__ == "__main__":
     asyncio.run(main())

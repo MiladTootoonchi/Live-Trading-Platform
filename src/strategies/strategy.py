@@ -78,4 +78,4 @@ def find_strategy() -> Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
         return strategies[name]
     
     except KeyError:
-        raise KeyError(f"Strategy {name!r} was not found in the strategies dictionary.")
+        print(f"Strategy {name!r} was not found in the strategies dictionary.")

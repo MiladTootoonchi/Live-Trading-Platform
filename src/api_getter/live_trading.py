@@ -1,6 +1,6 @@
 import requests
 import asyncio
-from typing import Callable, Dict, Any
+from typing import Callable, List, Dict, Any
 
 from .order import OrderData
 from ..strategies.strategy import SideSignal
@@ -21,7 +21,7 @@ class AlpacaTrader:
         
         Args:
             key: The key given by Alpaca
-            secret_key: The secret ket alpaca key
+            secret_key: The secret key alpaca key
         """
 
         self._HEADERS = {
@@ -32,67 +32,8 @@ class AlpacaTrader:
         self._APCA_API_BASE_URL =  "https://paper-api.alpaca.markets"
 
 
-    async def place_order(self, order_data: OrderData) -> bytes:
-        """
-        Submits an order to buy or sell assets based on the provided order data.
 
-        Sends a POST request to the Alpaca API with the order details encapsulated
-        in the `OrderData` object. The order can represent either a buy or sell
-        action, including specifics such as symbol, quantity, and order type.
-
-        Args:
-            order_data (OrderData): An object containing all necessary fields to
-                                    execute a trade order (e.g., symbol, quantity,
-                                    side, type).
-
-        Returns:
-            bytes: The raw response content returned by the API after submitting the order.
-        """
-        data = order_data.get_dict()
-
-        ORDERS_URL = f"{self._APCA_API_BASE_URL}/v2/orders"
-        response = await asyncio.to_thread(requests.post, ORDERS_URL, json = data, headers = self._HEADERS)
-
-        print("Sending Order Data:", data)
-        print("Headers:", self._HEADERS, "\n")
-
-        return response.content
-    
-    async def wait_until_orders_filled(self) -> None:
-        """
-        Waits asynchronously until all open orders have been filled.
-
-        This method repeatedly checks the status of all current orders.
-        It pauses execution in 60-second intervals until no open orders remain
-        or until at least one order is marked as 'filled'.
-        """
-
-        while True:
-            orders = await self.get_orders()
-            if orders == []: return # Stops if there is an empty list of orders
-            for order in orders:
-                if order["status"] == "filled":
-                    print(f"{order['symbol']} filled.")
-                    return
-                
-            print(f"Waiting for all orders to fill...")
-            await asyncio.sleep(60) # Waits 1 minute to check again
-
-    async def cancel_all_orders(self) -> None:
-        """
-        Cancels all open orders for the account.
-
-        Sends a request to the Alpaca API to delete all active orders.
-        Upon completion, prints the response content for confirmation or debugging purposes.
-        """
-
-        url = f"{self._APCA_API_BASE_URL}/v2/orders"
-        response = await asyncio.to_thread(requests.delete, url, headers = self._HEADERS)
-        print("Cancel response:", response.content)
-
-
-
-    async def get_orders(self) -> list[dict]:
+    async def get_orders(self) -> List[Dict]:
         """
         Retrieves and returns a list of recent order objects from the trading account.
 
@@ -108,7 +49,7 @@ class AlpacaTrader:
         response = await asyncio.to_thread(requests.get, url, headers = self._HEADERS)
         return response.json()
 
-    async def get_positions(self) -> list[dict]:
+    async def get_positions(self) -> List[Dict]:
         """
         Retrieves and returns all current account positions.
 
@@ -124,8 +65,45 @@ class AlpacaTrader:
         url = f"{self._APCA_API_BASE_URL}/v2/positions"
         response = await asyncio.to_thread(requests.get, url, headers = self._HEADERS)
         return response.json()
-    
 
+
+
+    async def place_order(self, order_data: OrderData) -> None:
+        """
+        Submits an order to buy or sell assets based on the provided order data.
+
+        Sends a POST request to the Alpaca API with the order details encapsulated
+        in the 'OrderData' object. The order can represent either a buy or sell
+        action, including specifics such as symbol, quantity, and order type.
+
+        Args:
+            order_data (OrderData): An object containing all necessary fields to
+                                    execute a trade order (e.g., symbol, quantity,
+                                    side, type).
+        """
+        data = order_data.get_dict()
+
+        ORDERS_URL = f"{self._APCA_API_BASE_URL}/v2/orders"
+        response = await asyncio.to_thread(requests.post, ORDERS_URL, json = data, headers = self._HEADERS)
+
+        print("Sending Order Data:", data)
+        print("Headers:", self._HEADERS, "\n")
+
+        response_json = response.json()
+        order_id = response_json["id"]
+        await self._wait_until_order_filled(order_id)
+    
+    async def cancel_all_orders(self) -> None:
+        """
+        Cancels all open orders for the account.
+
+        Sends a request to the Alpaca API to delete all active orders.
+        Upon completion, prints the response content for confirmation or debugging purposes.
+        """
+
+        url = f"{self._APCA_API_BASE_URL}/v2/orders"
+        response = await asyncio.to_thread(requests.delete, url, headers = self._HEADERS)
+        print("Cancel response:", response.content)
 
     async def create_buy_order(self) -> None:
         """
@@ -183,6 +161,33 @@ class AlpacaTrader:
 
 
 
+    async def _wait_until_order_filled(self, order_id: str) -> None:
+        """
+        Asynchronously waits until a specific order is marked as 'filled'.
+
+        This method gets the order status from the Alpaca API 
+        for the given 'order_id'. It checks the status every minute by 
+        making a GET request to the order endpoint. Once the order is detected 
+        as 'filled'.
+
+        Args:
+            order_id (str): The ID of the order to monitor.
+            seconds (int): How many 
+        """
+
+        url = f"{self._APCA_API_BASE_URL}/v2/orders/{order_id}"
+        while True:
+            response = await asyncio.to_thread(requests.get, url, headers=self._HEADERS)
+            order = response.json()
+
+            if order.get("status") == "filled":
+                print(f"Order {order_id} filled for {order['symbol']}.")
+                return
+            print(f"Waiting for order {order_id} to fill...")
+            await asyncio.sleep(60)
+
+
+
     async def update(self, strategy: Callable[[Dict[str, Any]], tuple[SideSignal, int]], symbol: str) -> None:
         """
         Updates one or all positions based on the provided trading strategy.
@@ -212,21 +217,18 @@ class AlpacaTrader:
             for position in positions_to_update:
                 symbol_i = position.get("symbol")
                 signal, qty = strategy(position)
+                print(f"{symbol_i}: {signal.value}\n")
 
                 if signal != SideSignal.HOLD:
-                    print(signal)
-                    if signal == SideSignal.BUY: signal = "buy"
-                    if signal == SideSignal.SELL: signal = "sell"
-
                     order = OrderData(
                         symbol = symbol_i,
                         quantity = qty,
-                        side = signal,
+                        side = signal.value,
                         type = "market"
                     )
                     await self.place_order(order)
 
-                else: print(f"Holding {symbol_i}")
+                else: await asyncio.sleep(60)  # sleep for a minute
 
-        except Exception:
-            print(f"Failed to update position(s) for symbol {symbol}")
+        except Exception as e:
+            print(f"Failed to update position(s) for {symbol}: {e}\n")
