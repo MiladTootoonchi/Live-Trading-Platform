@@ -2,8 +2,7 @@ import requests
 import asyncio
 from typing import Callable, List, Dict, Any
 
-from .order import OrderData
-from ..strategies.strategy import SideSignal
+from .order import OrderData, SideSignal
 
 class AlpacaTrader:
     """

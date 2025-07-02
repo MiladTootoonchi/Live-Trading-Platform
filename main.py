@@ -3,7 +3,7 @@ import asyncio
 
 from config import load_api_keys
 from src.api_getter.live_trading import AlpacaTrader
-from src.strategies.strategy import find_strategy
+from src.strategies.strategies import find_strategy
 
 
 def parseInput():

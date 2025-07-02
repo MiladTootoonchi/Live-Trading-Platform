@@ -1,8 +1,9 @@
+from ..api_getter.order import SideSignal
+
 import requests
 from datetime import datetime, timedelta, timezone
 from typing import Tuple
 from config import load_api_keys
-from .strategy_basics import SideSignal
 
 def exponential_moving_average(data, period):
     if not data or period <= 0:
