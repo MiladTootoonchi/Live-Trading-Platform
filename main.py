@@ -2,7 +2,7 @@ import argparse
 import asyncio
 
 from config import load_api_keys
-from src.api_getter.live_trading import AlpacaTrader
+from src.alpaca_trader.live_trading import AlpacaTrader
 from src.strategies.strategies import find_strategy
 
 

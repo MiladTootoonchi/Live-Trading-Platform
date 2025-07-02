@@ -1,4 +1,4 @@
-from ..api_getter.order import SideSignal
+from ..alpaca_trader.order import SideSignal
 
 def mean_reversion_strategy(position_data: dict, moving_avg_price: float) -> tuple[SideSignal, int]:
     """

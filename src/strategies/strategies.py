@@ -1,8 +1,7 @@
 from typing import Callable, Dict, Any
 
-from ..api_getter.order import SideSignal
+from ..alpaca_trader.order import SideSignal
 
-from .strategy_basics import rule_based_strategy
 from .bollinger_bands_strategy import bollinger_bands_strategy
 from .macd import macd_strategy
 from .mean_reversion import mean_reversion_strategy

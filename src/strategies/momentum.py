@@ -1,4 +1,4 @@
-from ..api_getter.order import SideSignal
+from ..alpaca_trader.order import SideSignal
 
 def momentum_strategy(position_data: dict) -> tuple[SideSignal, int]:
     """

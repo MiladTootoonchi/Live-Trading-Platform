@@ -1,4 +1,4 @@
-from ..api_getter.order import SideSignal
+from ..alpaca_trader.order import SideSignal
 
 import requests
 from datetime import datetime, timedelta, timezone
