@@ -1,5 +1,5 @@
 
-from strategy import SideSignal
+from .strategy_basics import SideSignal
 
 def mean_reversion_strategy(position_data: dict, moving_avg_price: float) -> tuple[SideSignal, int]:
     """

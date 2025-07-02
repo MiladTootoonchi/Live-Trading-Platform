@@ -1,7 +1,7 @@
 import requests
 from datetime import datetime, timedelta, timezone
 from typing import Tuple
-from strategy import SideSignal
+from .strategy_basics import SideSignal
 from config import load_api_keys
 
 def moving_average_strategy(position: dict) -> Tuple[SideSignal, int]:

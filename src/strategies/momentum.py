@@ -1,5 +1,5 @@
 
-from strategy import SideSignal
+from .strategy_basics import SideSignal
 
 def momentum_strategy(position_data: dict) -> tuple[SideSignal, int]:
     """
