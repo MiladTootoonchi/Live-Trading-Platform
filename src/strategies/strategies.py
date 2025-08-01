@@ -1,6 +1,7 @@
 from typing import Callable, Dict, Any
 
 from ..alpaca_trader.order import SideSignal
+from config import make_logger
 
 from .bollinger_bands_strategy import bollinger_bands_strategy
 from .macd import macd_strategy
@@ -9,7 +10,7 @@ from .momentum import momentum_strategy
 from .moving_average_strategy import moving_average_strategy
 from .rsi import rsi_strategy
 
-
+logger = make_logger()
 
 def rule_based_strategy(position_data: dict) -> tuple[SideSignal, int]:
     """
@@ -46,11 +47,11 @@ def rule_based_strategy(position_data: dict) -> tuple[SideSignal, int]:
         return SideSignal.HOLD, 0  # Hold
 
     except KeyError:
-        print("Missing key in position data")
+        logger.error("Missing key in position data\n")
         return SideSignal.HOLD, 0
     
     except Exception:
-        print("Error evaluating position")
+        logger.error("Error evaluating position\n")
         return SideSignal.HOLD, 0
 
 
@@ -84,4 +85,4 @@ def find_strategy() -> Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
             return strategies[name]
         
         except KeyError:
-            print(f"Strategy {name!r} was not found in the strategies dictionary. Try again...")
+            print(f"\nStrategy {name!r} was not found in the strategies dictionary. Try again...")
