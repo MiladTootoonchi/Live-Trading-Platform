@@ -26,11 +26,10 @@ def parseInput():
 
     parser.add_argument("--live",
                         "-l",
-                        type = int,
-                        default = 5,
-                        help = "Specifie the number of iterations for the live loop." \
-                        " If you wish to use the default number of iterations, " \
-                        "you will not need this argument (run main.py).")
+                        action = "store_true", 
+                        help = "Activates the live loop. " \
+                        "The loop runs until there is a keyboard interruption. " \
+                        "Updates every positions for ALL symbols.")
 
     parser.add_argument("--update",
                         "-u",
@@ -42,7 +41,6 @@ def parseInput():
     
     args = parser.parse_args()
     return args
-
 
 
 async def main():
@@ -61,13 +59,20 @@ async def main():
         symbol = args.update
         strategy = find_strategy()
         await trader.update(strategy, symbol)
-
+    
     elif args.live:
-        interations = int(args.live)
-        if interations > 0:
-            strategy = find_strategy()
-            for _ in range(interations):
+        strategy = find_strategy()
+        try:
+            while True:
                 await trader.update(strategy, "ALL")
+                await asyncio.sleep(60) # sleep for a minute
+
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            print("\nKeyboard says stop. So I stop :) ")
+
+        finally:
+            pass
+
 
 if __name__ == "__main__":
     asyncio.run(main())
