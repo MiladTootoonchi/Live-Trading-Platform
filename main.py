@@ -28,7 +28,7 @@ def parseInput():
                         "-l",
                         action = "store_true", 
                         help = "Activates the live loop. " \
-                        "The loop runs until there is a keyboard interruption. " \
+                        "The loop runs until user presses Ctrl + c. " \
                         "Updates every positions for ALL symbols.")
 
     parser.add_argument("--update",
@@ -60,7 +60,7 @@ async def main():
         strategy = find_strategy()
         await trader.update(strategy, symbol)
     
-    elif args.live:
+    if args.live:
         strategy = find_strategy()
         try:
             while True:
@@ -68,7 +68,7 @@ async def main():
                 await asyncio.sleep(60) # sleep for a minute
 
         except (KeyboardInterrupt, asyncio.CancelledError):
-            print("\nKeyboard says stop. So I stop :) ")
+            print("\nShutting down... ")
 
         finally:
             pass

@@ -210,6 +210,10 @@ class AlpacaTrader:
                 positions if symbol == "ALL" else [p for p in positions if p.get("symbol") == symbol]
             )
 
+            if len(positions_to_update) == 0:
+                print("Did not find any positions, try --order or -o to place an order... ")
+                raise KeyboardInterrupt
+
             if symbol == "ALL": print("Updating all positions")
             else: print(f"Updating: {symbol}")
 
