@@ -213,6 +213,7 @@ class AlpacaTrader:
             if symbol == "ALL": print("Updating all positions")
             else: print(f"Updating: {symbol}")
 
+            tasks = []
             for position in positions_to_update:
                 symbol_i = position.get("symbol")
                 signal, qty = strategy(position)
@@ -225,9 +226,9 @@ class AlpacaTrader:
                         side = signal.value,
                         type = "market"
                     )
-                    await self.place_order(order)
+                    tasks.append(self.place_order(order))
 
-                else: await asyncio.sleep(60)  # sleep for a minute
+            await asyncio.gather(*tasks)
 
         except Exception as e:
             print(f"Failed to update position(s) for {symbol}: {e}\n")
