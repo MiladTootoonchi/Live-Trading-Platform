@@ -77,10 +77,11 @@ def find_strategy() -> Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
     Raises:
         KeyError: If the strategy name is not found.
     """
-    name = input("Which strategy do you want to use? ")
+    while True:
+        name = input("Which strategy do you want to use? ")
 
-    try:
-        return strategies[name]
-    
-    except KeyError:
-        print(f"Strategy {name!r} was not found in the strategies dictionary.")
+        try:
+            return strategies[name]
+        
+        except KeyError:
+            print(f"Strategy {name!r} was not found in the strategies dictionary. Try again...")
