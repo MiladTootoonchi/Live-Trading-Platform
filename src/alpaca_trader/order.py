@@ -1,4 +1,11 @@
 from dataclasses import dataclass
+from enum import Enum
+
+class SideSignal(Enum):
+    """Enum representing possible order sides."""
+    BUY = "buy"
+    SELL = "sell"
+    HOLD = "hold"
 
 @dataclass
 class OrderData:

@@ -1,5 +1,7 @@
+from ..alpaca_trader.order import SideSignal
+from config import make_logger
 
-from strategy import SideSignal
+logger = make_logger()
 
 def mean_reversion_strategy(position_data: dict, moving_avg_price: float) -> tuple[SideSignal, int]:
     """
@@ -43,5 +45,5 @@ def mean_reversion_strategy(position_data: dict, moving_avg_price: float) -> tup
         return SideSignal.HOLD, 0
 
     except (KeyError, ValueError) as e:
-        print(f"[Mean Reversion Strategy] Error: {e}")
+        logger.error(f"[Mean Reversion Strategy] Error: {e}\n")
         return SideSignal.HOLD, 0 

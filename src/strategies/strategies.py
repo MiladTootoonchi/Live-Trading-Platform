@@ -1,10 +1,7 @@
-"""
-Different functions with strategies that will generate a signal for buying, selling or holding
-given position information. Then it will return a signal with quantity of order.
-"""
-
-from enum import Enum
 from typing import Callable, Dict, Any
+
+from ..alpaca_trader.order import SideSignal
+from config import make_logger
 
 from .bollinger_bands_strategy import bollinger_bands_strategy
 from .macd import macd_strategy
@@ -13,12 +10,7 @@ from .momentum import momentum_strategy
 from .moving_average_strategy import moving_average_strategy
 from .rsi import rsi_strategy
 
-class SideSignal(Enum):
-    """Enum representing possible order sides."""
-    BUY = "buy"
-    SELL = "sell"
-    HOLD = "hold"
-
+logger = make_logger()
 
 def rule_based_strategy(position_data: dict) -> tuple[SideSignal, int]:
     """
@@ -55,12 +47,13 @@ def rule_based_strategy(position_data: dict) -> tuple[SideSignal, int]:
         return SideSignal.HOLD, 0  # Hold
 
     except KeyError:
-        print("Missing key in position data")
+        logger.error("Missing key in position data\n")
         return SideSignal.HOLD, 0
     
     except Exception:
-        print("Error evaluating position")
+        logger.error("Error evaluating position\n")
         return SideSignal.HOLD, 0
+
 
 
 strategies = {
@@ -85,10 +78,11 @@ def find_strategy() -> Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
     Raises:
         KeyError: If the strategy name is not found.
     """
-    name = input("Which strategy do you want to use? ")
+    while True:
+        name = input("Which strategy do you want to use? ")
 
-    try:
-        return strategies[name]
-    
-    except KeyError:
-        print(f"Strategy {name!r} was not found in the strategies dictionary.")
+        try:
+            return strategies[name]
+        
+        except KeyError:
+            print(f"\nStrategy {name!r} was not found in the strategies dictionary. Try again...")

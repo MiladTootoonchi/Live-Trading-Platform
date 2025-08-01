@@ -9,5 +9,5 @@ dependencies = [
     "numpy",
     "requests",
     "python-dotenv",
+    "toml",
 ]
-

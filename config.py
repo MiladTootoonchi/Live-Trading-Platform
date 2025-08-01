@@ -1,8 +1,29 @@
 from dotenv import load_dotenv
 import os
 import toml
+import logging
+import os
 
 load_dotenv()
+
+def make_logger():
+    log_dir = "logfiles"
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    file_name = os.path.join(log_dir, "live_trading")
+
+    logger = logging.getLogger(file_name)
+    handler = logging.FileHandler(f"{file_name}.log", mode = "a")
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s -%(message)s")
+
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    
+    return logger
+
+logger = make_logger()
 
 def load_api_keys(config_file: str = "settings.toml") -> tuple:
     """
@@ -29,10 +50,10 @@ def load_api_keys(config_file: str = "settings.toml") -> tuple:
             alpaca_secret = keys.get("alpaca_secret_key", alpaca_secret)
 
     except FileNotFoundError:
-        print(f"Config file not found: {config_file}, falling back to environment variables.\n")
+        logger.info(f"Config file not found: {config_file}, falling back to environment variables.\n")
 
     except Exception:
-        print(f"Error reading config, using environment variables as fallback.\n")
+        logger.error(f"Error reading config, using environment variables as fallback.\n")
 
     return alpaca_key, alpaca_secret
 

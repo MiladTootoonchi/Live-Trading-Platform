@@ -1,18 +1,21 @@
+from ..alpaca_trader.order import SideSignal
+
 import requests
 from datetime import datetime, timedelta, timezone
 from typing import Tuple
-from strategy import SideSignal
-from config import load_api_keys 
+from config import load_api_keys, make_logger
+
+logger = make_logger()
 
 def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
     symbol = position.get("symbol")
     if not symbol:
-        print("No symbol provided in position")
+        logger.error("No symbol provided in position\n")
         return SideSignal.HOLD, 0
 
     alpaca_key, alpaca_secret = load_api_keys()
     if not alpaca_key or not alpaca_secret:
-        print("Missing API keys")
+        logger.error("Missing API keys\n")
         return SideSignal.HOLD, 0
 
     headers = {
@@ -34,12 +37,12 @@ def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
     except requests.RequestException as e:
-        print(f"Failed to fetch data for {symbol}: {e}")
+        logger.error(f"Failed to fetch data for {symbol}: {e}\n")
         return SideSignal.HOLD, 0
 
     bars = response.json().get("bars", [])
     if len(bars) < 20:
-        print(f"Not enough data for {symbol}")
+        logger.info(f"Not enough data for {symbol}\n")
         return SideSignal.HOLD, 0
 
     closes = [bar["c"] for bar in bars]
@@ -55,7 +58,7 @@ def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
     lower_band = sma20 - (2 * stddev)
     current_price = closes[-1]
 
-    print(f"[{symbol}] Price: {current_price:.2f}, SMA20: {sma20:.2f}, Upper: {upper_band:.2f}, Lower: {lower_band:.2f}")
+    logger.info(f"[{symbol}] Price: {current_price:.2f}, SMA20: {sma20:.2f}, Upper: {upper_band:.2f}, Lower: {lower_band:.2f}")
 
     qty = int(float(position.get("qty", 0)))
 
@@ -63,10 +66,8 @@ def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
     # Buy when price crosses below the lower Bollinger Band (oversold signal)
     # Sell when price crosses above the upper Bollinger Band (overbought signal)
     if current_price < lower_band:
-        print(f"[{symbol}] Price below lower Bollinger Band - BUY signal")
         return SideSignal.BUY, 1
     elif current_price > upper_band and qty > 0:
-        print(f"[{symbol}] Price above upper Bollinger Band - SELL signal")
         return SideSignal.SELL, qty
     else:
         return SideSignal.HOLD, 0
