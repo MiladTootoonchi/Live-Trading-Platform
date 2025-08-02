@@ -44,8 +44,11 @@ def load_strategy_name(config_file: str = "settings.toml") -> str:
             strategy = live.get("strategy", strategy)
         
     except Exception:
-        strategy = input("Which strategy do you want to use? ")
-
+        logger.info(f"Could not find strategy name in {config_file}, falling back to environment variables.\n")
+        strategy = os.getenv("STRATEGY")
+        if strategy == None:
+            logger.info(f"strategy name string missing from environment variables")
+ 
     return strategy
 
 
@@ -70,8 +73,13 @@ def load_api_keys(config_file: str = "settings.toml") -> tuple:
             alpaca_key = keys.get("alpaca_key", alpaca_key)
             alpaca_secret = keys.get("alpaca_secret_key", alpaca_secret)
 
-    except Exception:
+    except FileNotFoundError:
         logger.info(f"Config file not found: {config_file}, falling back to environment variables.\n")
+        alpaca_key = os.getenv("ALPACA_KEY")
+        alpaca_secret = os.getenv("ALPACA_SECRET_KEY")
+
+    except Exception:
+        logger.info(f"Could not find Alpaca API credentials in {config_file}, falling back to environment variables.\n")
         alpaca_key = os.getenv("ALPACA_KEY")
         alpaca_secret = os.getenv("ALPACA_SECRET_KEY")
 

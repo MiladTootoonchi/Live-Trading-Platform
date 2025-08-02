@@ -71,22 +71,21 @@ def find_strategy() -> Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
     """
     Goes through the strategies dictionary to call on the strategy function 
     that matches the promt the user inputs.
-    
-    Args:
-        name: The name of the strategy the user want to use.
 
     Returns:
-        Callable: The strategy function asked for.
+        Callable: the strategy function asked for.
 
     Raises:
         KeyError: If the strategy name is not found.
     """
     while True:
+        name = load_strategy_name()
+
+        if name not in strategies:
+            name = input("Which strategy do you want to use? ")
+
         try:
-            name = load_strategy_name()
-            strategy = strategies[name]
-            logger.info(f"Strategy in use: {strategy}\n")
-            return strategy
+            return strategies[name]
         
         except KeyError:
             print(f"\nStrategy {name!r} was not found in the strategies dictionary. Try again...")
