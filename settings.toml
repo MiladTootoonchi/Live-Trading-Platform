@@ -1,3 +1,6 @@
 [keys]
 alpaca_key =
 alpaca_secret_key =
+
+[live]
+strategy =

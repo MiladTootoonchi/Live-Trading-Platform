@@ -14,16 +14,43 @@ def make_logger():
     file_name = os.path.join(log_dir, "live_trading")
 
     logger = logging.getLogger(file_name)
-    handler = logging.FileHandler(f"{file_name}.log", mode = "a")
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s -%(message)s")
 
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+    if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+        handler = logging.FileHandler(f"{file_name}.log", mode = "a")
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s -%(message)s")
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
     
     return logger
 
 logger = make_logger()
+
+
+
+def load_strategy_name(config_file: str = "settings.toml") -> str:
+    """
+    Load the name of the strategy the user want to use for the live trading.
+    If the strategy is not given, the program will ask for an input.
+
+    Returns:
+        str: The name of the strategy:
+    """
+
+    try:
+        with open(config_file, "r") as file:
+            conf = toml.load(file)
+            live = conf.get("live", {})
+            strategy = live.get("strategy", strategy)
+        
+    except Exception:
+        logger.info(f"Could not find strategy name in {config_file}, falling back to environment variables.\n")
+        strategy = os.getenv("STRATEGY")
+        if strategy == None:
+            logger.info(f"strategy name string missing from environment variables")
+ 
+    return strategy
+
 
 def load_api_keys(config_file: str = "settings.toml") -> tuple:
     """
@@ -36,11 +63,8 @@ def load_api_keys(config_file: str = "settings.toml") -> tuple:
         tuple: (ALPACA_KEY, ALPACA_SECRET_KEY)
     """
 
-    try:
-        alpaca_key = os.getenv("ALPACA_KEY")
-        alpaca_secret = os.getenv("ALPACA_SECRET_KEY")
-    except: # Can not find the .env file, or the right variables in the file.
-        pass
+    alpaca_key = None
+    alpaca_secret = None
 
     try:
         with open(config_file, "r") as file:
@@ -51,10 +75,17 @@ def load_api_keys(config_file: str = "settings.toml") -> tuple:
 
     except FileNotFoundError:
         logger.info(f"Config file not found: {config_file}, falling back to environment variables.\n")
+        alpaca_key = os.getenv("ALPACA_KEY")
+        alpaca_secret = os.getenv("ALPACA_SECRET_KEY")
 
     except Exception:
-        logger.error(f"Error reading config, using environment variables as fallback.\n")
+        logger.info(f"Could not find Alpaca API credentials in {config_file}, falling back to environment variables.\n")
+        alpaca_key = os.getenv("ALPACA_KEY")
+        alpaca_secret = os.getenv("ALPACA_SECRET_KEY")
 
+    if not alpaca_key or not alpaca_secret:
+        print("Missing Alpaca API credentials. Provide them in the config file or as environment variables.")
+        
     return alpaca_key, alpaca_secret
 
         
