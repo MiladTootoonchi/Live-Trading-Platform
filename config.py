@@ -14,12 +14,13 @@ def make_logger():
     file_name = os.path.join(log_dir, "live_trading")
 
     logger = logging.getLogger(file_name)
-    handler = logging.FileHandler(f"{file_name}.log", mode = "a")
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s -%(message)s")
 
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+    if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+        handler = logging.FileHandler(f"{file_name}.log", mode = "a")
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s -%(message)s")
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
     
     return logger
 
