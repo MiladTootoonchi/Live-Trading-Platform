@@ -1,7 +1,7 @@
 from typing import Callable, Dict, Any
 
 from ..alpaca_trader.order import SideSignal
-from config import make_logger
+from config import make_logger, load_strategy_name
 
 from .bollinger_bands_strategy import bollinger_bands_strategy
 from .macd import macd_strategy
@@ -79,7 +79,10 @@ def find_strategy() -> Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
         KeyError: If the strategy name is not found.
     """
     while True:
-        name = input("Which strategy do you want to use? ")
+        name = load_strategy_name()
+
+        if name not in strategies:
+            name = input("Which strategy do you want to use? ")
 
         try:
             return strategies[name]
