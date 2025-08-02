@@ -25,6 +25,29 @@ def make_logger():
 
 logger = make_logger()
 
+
+
+def load_strategy_name(config_file: str = "settings.toml") -> str:
+    """
+    Load the name of the strategy the user want to use for the live trading.
+    If the strategy is not given, the program will ask for an input.
+
+    Returns:
+        str: The name of the strategy:
+    """
+
+    try:
+        with open(config_file, "r") as file:
+            conf = toml.load(file)
+            live = conf.get("live", {})
+            strategy = live.get("strategy", strategy)
+        
+    except Exception:
+        strategy = input("Which strategy do you want to use? ")
+
+    return strategy
+
+
 def load_api_keys(config_file: str = "settings.toml") -> tuple:
     """
     Load API keys from a TOML config file, with fallback to environment variables.
@@ -36,11 +59,8 @@ def load_api_keys(config_file: str = "settings.toml") -> tuple:
         tuple: (ALPACA_KEY, ALPACA_SECRET_KEY)
     """
 
-    try:
-        alpaca_key = os.getenv("ALPACA_KEY")
-        alpaca_secret = os.getenv("ALPACA_SECRET_KEY")
-    except: # Can not find the .env file, or the right variables in the file.
-        pass
+    alpaca_key = None
+    alpaca_secret = None
 
     try:
         with open(config_file, "r") as file:
@@ -49,12 +69,14 @@ def load_api_keys(config_file: str = "settings.toml") -> tuple:
             alpaca_key = keys.get("alpaca_key", alpaca_key)
             alpaca_secret = keys.get("alpaca_secret_key", alpaca_secret)
 
-    except FileNotFoundError:
-        logger.info(f"Config file not found: {config_file}, falling back to environment variables.\n")
-
     except Exception:
-        logger.error(f"Error reading config, using environment variables as fallback.\n")
+        logger.info(f"Config file not found: {config_file}, falling back to environment variables.\n")
+        alpaca_key = os.getenv("ALPACA_KEY")
+        alpaca_secret = os.getenv("ALPACA_SECRET_KEY")
 
+    if not alpaca_key or not alpaca_secret:
+        print("Missing Alpaca API credentials. Provide them in the config file or as environment variables.")
+        
     return alpaca_key, alpaca_secret
 
         
