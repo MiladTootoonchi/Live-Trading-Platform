@@ -6,29 +6,21 @@ logger = make_logger()
 def momentum_strategy(position_data: dict) -> tuple[SideSignal, int]:
     """
     A simple momentum-based trading strategy.
-
-    Logic:
-    - Buy when there is strong positive price momentum (>2% intraday gain).
-    - Sell when the position has gained >5%.
-    - Sell if today's change is negative and gains are weak (<2%).
-    - Sell to cut losses if unrealized return drops below -3%.
-    - Hold otherwise.
-
-    Args:
-        position_data (dict): Position details, typically from a trading API.
-
-    Returns:
-        tuple: (SideSignal.BUY or SideSignal.SELL, quantity), or (SideSignal.HOLD, 0) to hold.
+    Robust against missing or incomplete data.
     """
     try: 
-        qty = int(float(position_data["qty"]))
-        avg_entry_price = float(position_data["avg_entry_price"])
-        current_price = float(position_data["current_price"])
-        change_today = float(position_data["change_today"])
+        qty = int(float(position_data.get("qty", 0)))
+        avg_entry_price = float(position_data.get("avg_entry_price", 0))
+        current_price = float(position_data.get("current_price", 0))
+        change_today = float(position_data.get("change_today", 0))
+
+        # Check for insufficient data
+        if current_price == 0 or avg_entry_price == 0:
+            logger.info("[Momentum Strategy] Not enough data to evaluate position")
+            return SideSignal.HOLD, 0
 
         unrealized_return_pct = (
             (current_price - avg_entry_price) / avg_entry_price * 100
-            if avg_entry_price > 0 else 0
         )
 
         if qty == 0 and change_today > 2:
