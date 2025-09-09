@@ -24,13 +24,13 @@ def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
     }
 
     end_date = datetime.now(timezone.utc)
-    start_date = end_date - timedelta(days=60)  # Request 60 days for safety buffer
+    start_date = end_date - timedelta(days=200)
 
     url = (
         f"https://data.alpaca.markets/v2/stocks/{symbol}/bars"
-        f"?start={start_date.isoformat()}Z"
-        f"&end={end_date.isoformat()}Z"
-        f"&timeframe=1Day&limit=60"
+        f"?start={start_date.isoformat().replace('+00:00', 'Z')}"
+        f"&end={end_date.isoformat().replace('+00:00', 'Z')}"
+        f"&timeframe=1Day&limit=200"
     )
 
     try:
@@ -41,6 +41,8 @@ def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
         return SideSignal.HOLD, 0
 
     bars = response.json().get("bars", [])
+    logger.info(f"Fetched {len(bars)} bars for {symbol}")
+
     if len(bars) < 20:
         logger.info(f"Not enough data for {symbol}\n")
         return SideSignal.HOLD, 0
@@ -48,27 +50,23 @@ def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
     closes = [bar["c"] for bar in bars]
 
     sma20 = sum(closes[-20:]) / 20
-
-    # Calculate standard deviation of the last 20 closes
-    mean = sma20
-    variance = sum((price - mean) ** 2 for price in closes[-20:]) / 20
+    variance = sum((p - sma20) ** 2 for p in closes[-20:]) / 20
     stddev = variance ** 0.5
 
-    upper_band = sma20 + (2 * stddev)
-    lower_band = sma20 - (2 * stddev)
+    upper_band = sma20 + 2 * stddev
+    lower_band = sma20 - 2 * stddev
     current_price = closes[-1]
 
-    logger.info(f"[{symbol}] Price: {current_price:.2f}, SMA20: {sma20:.2f}, Upper: {upper_band:.2f}, Lower: {lower_band:.2f}")
+    logger.info(
+        f"[{symbol}] Price: {current_price:.2f}, SMA20: {sma20:.2f}, "
+        f"Upper: {upper_band:.2f}, Lower: {lower_band:.2f}"
+    )
 
     qty = int(float(position.get("qty", 0)))
 
-    # Strategy logic:
-    # Buy when price crosses below the lower Bollinger Band (oversold signal)
-    # Sell when price crosses above the upper Bollinger Band (overbought signal)
     if current_price < lower_band:
         return SideSignal.BUY, 1
     elif current_price > upper_band and qty > 0:
         return SideSignal.SELL, qty
     else:
         return SideSignal.HOLD, 0
-
