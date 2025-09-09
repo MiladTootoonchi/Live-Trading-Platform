@@ -3,7 +3,9 @@ from ..alpaca_trader.order import SideSignal
 import requests
 from datetime import datetime, timedelta, timezone
 from typing import Tuple
-from config import load_api_keys
+from config import load_api_keys, make_logger
+
+logger = make_logger()
 
 def calculate_rsi(closes, period: int = 14) -> float:
     gains = []
@@ -32,7 +34,7 @@ def rsi_strategy(position_data: dict) -> Tuple[SideSignal, int]:
     """
     symbol = position_data.get("symbol")
     if not symbol:
-        print("Missing 'symbol' in position_data")
+        logger.error("Missing 'symbol' in position_data\n")
         return SideSignal.HOLD, 0
 
     alpaca_key, alpaca_secret = load_api_keys()
@@ -56,18 +58,18 @@ def rsi_strategy(position_data: dict) -> Tuple[SideSignal, int]:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
     except requests.RequestException as e:
-        print(f"Failed to fetch data for {symbol}: {e}")
+        logger.error(f"Failed to fetch data for {symbol}: {e}\n")
         return SideSignal.HOLD, 0
 
     bars = response.json().get("bars", [])
     if len(bars) < 15:
-        print(f"Not enough data to calculate RSI for {symbol}")
+        logger.info(f"Not enough data to calculate RSI for {symbol}\n")
         return SideSignal.HOLD, 0
 
     closes = [bar["c"] for bar in bars]
     rsi = calculate_rsi(closes[-15:])  #15 closes to calculate 14-period RSI
 
-    print(f"[{symbol}] RSI: {rsi:.2f}")
+    logger.info(f"[{symbol}] RSI: {rsi:.2f}")
 
     qty = int(float(position_data.get("qty", 0)))
 

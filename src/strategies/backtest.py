@@ -1,8 +1,9 @@
 import requests
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict
-from config import load_api_keys
+from config import load_api_keys, make_logger
 
+logger = make_logger()
 
 def fetch_price_data(symbol: str, days: int = 250) -> List[Dict]:
     alpaca_key, alpaca_secret = load_api_keys()
@@ -25,7 +26,7 @@ def fetch_price_data(symbol: str, days: int = 250) -> List[Dict]:
         bars = response.json().get("bars", [])
         return bars
     except Exception as e:
-        print(f"Error fetching data for {symbol}: {e}")
+        logger.error(f"Error fetching data for {symbol}: {e}\n")
         return []
 
 def backtest_strategy(strategy_func, symbol: str, initial_cash: float = 10000):

@@ -3,6 +3,10 @@ import asyncio
 from typing import Callable, List, Dict, Any
 
 from .order import OrderData, SideSignal
+from config import make_logger
+
+
+logger = make_logger()
 
 class AlpacaTrader:
     """
@@ -85,8 +89,7 @@ class AlpacaTrader:
         ORDERS_URL = f"{self._APCA_API_BASE_URL}/v2/orders"
         response = await asyncio.to_thread(requests.post, ORDERS_URL, json = data, headers = self._HEADERS)
 
-        print("Sending Order Data:", data)
-        print("Headers:", self._HEADERS, "\n")
+        logger.info(f"Sending Order Data:\n {data} \n Headers: {self._HEADERS}\n")
 
         response_json = response.json()
         order_id = response_json["id"]
@@ -102,7 +105,7 @@ class AlpacaTrader:
 
         url = f"{self._APCA_API_BASE_URL}/v2/orders"
         response = await asyncio.to_thread(requests.delete, url, headers = self._HEADERS)
-        print("Cancel response:", response.content)
+        logger.info(f"Cancel response: {response.content}\n")
 
     async def create_buy_order(self) -> None:
         """
@@ -180,10 +183,10 @@ class AlpacaTrader:
             order = response.json()
 
             if order.get("status") == "filled":
-                print(f"Order {order_id} filled for {order['symbol']}.")
+                logger.info(f"Order {order_id} filled for {order['symbol']}. \n")
                 return
-            print(f"Waiting for order {order_id} to fill...")
-            await asyncio.sleep(60)
+            print(f"Waiting for order {order_id} to fill...")   # this is just temporary info, does not need to log this
+            await asyncio.sleep(60) # Sleep for a minute
 
 
 
@@ -210,13 +213,18 @@ class AlpacaTrader:
                 positions if symbol == "ALL" else [p for p in positions if p.get("symbol") == symbol]
             )
 
-            if symbol == "ALL": print("Updating all positions")
-            else: print(f"Updating: {symbol}")
+            if len(positions_to_update) == 0:
+                print("Did not find any positions, try --order or -o to place an order... ")
+                raise KeyboardInterrupt
 
+            if symbol == "ALL": logger.info("Updating all positions")
+            else: logger.info(f"Updating: {symbol}")
+
+            tasks = []
             for position in positions_to_update:
                 symbol_i = position.get("symbol")
                 signal, qty = strategy(position)
-                print(f"{symbol_i}: {signal.value}\n")
+                logger.info(f"{symbol_i}: {signal.value}")
 
                 if signal != SideSignal.HOLD:
                     order = OrderData(
@@ -225,9 +233,9 @@ class AlpacaTrader:
                         side = signal.value,
                         type = "market"
                     )
-                    await self.place_order(order)
+                    tasks.append(self.place_order(order))
 
-                else: await asyncio.sleep(60)  # sleep for a minute
+            await asyncio.gather(*tasks)
 
         except Exception as e:
-            print(f"Failed to update position(s) for {symbol}: {e}\n")
+            logger.error(f"Failed to update position(s) for {symbol}: {e}\n")

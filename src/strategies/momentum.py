@@ -1,4 +1,7 @@
 from ..alpaca_trader.order import SideSignal
+from config import make_logger
+
+logger = make_logger()
 
 def momentum_strategy(position_data: dict) -> tuple[SideSignal, int]:
     """
@@ -43,9 +46,9 @@ def momentum_strategy(position_data: dict) -> tuple[SideSignal, int]:
         return SideSignal.HOLD, 0
 
     except KeyError as e:
-        print(f"[Momentum Strategy] Missing key: {e}")
+        logger.error(f"[Momentum Strategy] Missing key: {e}\n")
         return SideSignal.HOLD, 0
 
     except Exception as e:
-        print(f"[Momentum Strategy] Error: {e}")
+        logger.error(f"[Momentum Strategy] Error: {e}\n")
         return SideSignal.HOLD, 0
