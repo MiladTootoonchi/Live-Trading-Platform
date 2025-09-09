@@ -29,7 +29,7 @@ def calculate_macd(closes):
     signal_line = exponential_moving_average(macd_line, 9)
     return macd_line, signal_line
 
-def fetch_price_data(symbol: str, days: int = 100):
+def fetch_price_data(symbol: str, days: int = 200):
     """Fetches price data from Alpaca API"""
     alpaca_key, alpaca_secret = load_api_keys()
     
@@ -43,28 +43,24 @@ def fetch_price_data(symbol: str, days: int = 100):
     
     url = (
         f"https://data.alpaca.markets/v2/stocks/{symbol}/bars"
-        f"?start={start_date.isoformat()}Z"
-        f"&end={end_date.isoformat()}Z"
+        f"?start={start_date.isoformat().replace('+00:00', 'Z')}"
+        f"&end={end_date.isoformat().replace('+00:00', 'Z')}"
         f"&timeframe=1Day&limit={days}"
     )
 
     try:
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
-        return response.json().get("bars", [])
+        bars = response.json().get("bars", [])
+        logger.info(f"Fetched {len(bars)} bars for {symbol}")
+        return bars
     except requests.RequestException as e:
-        (f"Failed to fetch data for {symbol}: {e}")
+        logger.error(f"Failed to fetch data for {symbol}: {e}")
         return []
 
 def macd_strategy(position_data: dict) -> Tuple[SideSignal, int]:
     """
     MACD-based trading strategy that can be used with AlpacaTrader.update()
-    
-    Args:
-        position_data: Dict with position information from Alpaca
-        
-    Returns:
-        Tuple[SideSignal, int]: Signal (BUY/SELL/HOLD) and number of shares
     """
     symbol = position_data.get("symbol")
     if not symbol:
@@ -72,7 +68,7 @@ def macd_strategy(position_data: dict) -> Tuple[SideSignal, int]:
         return SideSignal.HOLD, 0
 
     # Fetch price data
-    bars = fetch_price_data(symbol, days=100)
+    bars = fetch_price_data(symbol, days=200)
     if len(bars) < 35:
         logger.info(f"Not enough data to calculate MACD for {symbol}\n")
         return SideSignal.HOLD, 0
