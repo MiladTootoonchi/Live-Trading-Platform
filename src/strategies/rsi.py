@@ -45,13 +45,13 @@ def rsi_strategy(position_data: dict) -> Tuple[SideSignal, int]:
     }
 
     end_date = datetime.now(timezone.utc)
-    start_date = end_date - timedelta(days=100)
+    start_date = end_date - timedelta(days=200)
 
     url = (
         f"https://data.alpaca.markets/v2/stocks/{symbol}/bars"
-        f"?start={start_date.isoformat()}Z"
-        f"&end={end_date.isoformat()}Z"
-        f"&timeframe=1Day&limit=100"
+        f"?start={start_date.isoformat().replace('+00:00','Z')}"
+        f"&end={end_date.isoformat().replace('+00:00','Z')}"
+        f"&timeframe=1Day&limit=200"
     )
 
     try:
@@ -62,12 +62,14 @@ def rsi_strategy(position_data: dict) -> Tuple[SideSignal, int]:
         return SideSignal.HOLD, 0
 
     bars = response.json().get("bars", [])
+    logger.info(f"Fetched {len(bars)} bars for {symbol}")
+
     if len(bars) < 15:
         logger.info(f"Not enough data to calculate RSI for {symbol}\n")
         return SideSignal.HOLD, 0
 
     closes = [bar["c"] for bar in bars]
-    rsi = calculate_rsi(closes[-15:])  #15 closes to calculate 14-period RSI
+    rsi = calculate_rsi(closes[-15:])  # 15 closes to calculate 14-period RSI
 
     logger.info(f"[{symbol}] RSI: {rsi:.2f}")
 
