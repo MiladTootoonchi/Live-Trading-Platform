@@ -14,10 +14,6 @@ def moving_average_strategy(position: dict) -> Tuple[SideSignal, int]:
         - Buy if current price > MA20 > MA50 > MA200
         - Sell if current price < MA20 < MA50 < MA200 and we have qty
         - Hold otherwise
-    Args:
-        position (dict): Position info, expects keys "symbol" and "qty".
-    Returns:
-        Tuple[SideSignal, int]: Signal and quantity to trade.
     """
     symbol = position.get("symbol")
     if not symbol:
@@ -32,13 +28,13 @@ def moving_average_strategy(position: dict) -> Tuple[SideSignal, int]:
     }
 
     end_date = datetime.now(timezone.utc)
-    start_date = end_date - timedelta(days=250)
+    start_date = end_date - timedelta(days=300)
 
     url = (
         f"https://data.alpaca.markets/v2/stocks/{symbol}/bars"
-        f"?start={start_date.isoformat()}Z"
-        f"&end={end_date.isoformat()}Z"
-        f"&timeframe=1Day&limit=250"
+        f"?start={start_date.isoformat().replace('+00:00','Z')}"
+        f"&end={end_date.isoformat().replace('+00:00','Z')}"
+        f"&timeframe=1Day&limit=300"
     )
 
     try:
@@ -49,6 +45,8 @@ def moving_average_strategy(position: dict) -> Tuple[SideSignal, int]:
         return SideSignal.HOLD, 0
 
     bars = response.json().get("bars", [])
+    logger.info(f"Fetched {len(bars)} bars for {symbol}")
+
     if len(bars) < 200:
         logger.info(f"Not enough data for {symbol}. Requires at least 200 days of data.\n")
         return SideSignal.HOLD, 0
@@ -70,3 +68,4 @@ def moving_average_strategy(position: dict) -> Tuple[SideSignal, int]:
         return SideSignal.SELL, qty
     else:
         return SideSignal.HOLD, 0
+
