@@ -28,3 +28,25 @@ def fetch_price_data(symbol: str, days: int = 250) -> List[Dict]:
         print(f"Error fetching data for {symbol}: {e}")
         return []
 
+def backtest_strategy(strategy_func, symbol: str, initial_cash: float = 10000):
+    bars = fetch_price_data(symbol)
+    if not bars:
+        print("No data fetched for backtest")
+        return
+    
+    cash = initial_cash
+    position_qty = 0
+    position_avg_price = 0.0
+
+    portfolio_values = []
+    dates = []
+
+    for i in range(len(bars)):
+        bar = bars[i]
+        date = bar['t'][:10]
+        current_price = bar['c']
+
+        position_data = {
+            "symbol": symbol,
+            "qty": position_qty
+        }
