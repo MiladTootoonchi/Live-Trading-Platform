@@ -3,38 +3,27 @@ from config import make_logger
 
 logger = make_logger()
 
-def mean_reversion_strategy(position_data: dict, moving_avg_price: float) -> tuple[SideSignal, int]:
+def mean_reversion_strategy(position_data: dict, moving_avg_price: float, min_data_points: int = 1) -> tuple[SideSignal, int]:
     """
-   Mean reversion strategy based on market moving average (SMA).
-
-    Logic:
-    - Buy when the price is significantly below the SMA (assumed undervalued).
-    - Sell when the price is significantly above the SMA (assumed overvalued).
-    - Stop-loss if the price falls too far below the SMA after buying.
-    - Otherwise, hold the position.
-
-    Args:
-        position_data (dict): Position details from trading API, expects keys: "qty", "current_price".
-        moving_avg_price (float): Market moving average price (e.g., 20-period SMA).
-
-    Returns:
-        tuple: (SideSignal, quantity)
-
+    Mean reversion strategy based on market moving average (SMA).
+    Robust against missing data.
     """
     try: 
         qty = int(float(position_data.get("qty", 0)))
-        current_price = float(position_data["current_price"])
+        current_price = float(position_data.get("current_price", 0))
 
+        # Check if moving average is valid
         if moving_avg_price == 0:
-            return SideSignal.HOLD, 0 # Avoid division by zero
-        
+            logger.info("[Mean Reversion] Not enough data to calculate moving average")
+            return SideSignal.HOLD, 0
+
         deviation = (current_price - moving_avg_price) / moving_avg_price * 100
 
-        # buy if price is more than 3% below SMA
+        # Buy if price is more than 3% below SMA
         if qty == 0 and deviation < -3:
             return SideSignal.BUY, 10      
 
-        # sell if price is more than 4% above SMA
+        # Sell if price is more than 4% above SMA
         if qty > 0 and deviation > 4:
             return SideSignal.SELL, qty
 
@@ -46,4 +35,4 @@ def mean_reversion_strategy(position_data: dict, moving_avg_price: float) -> tup
 
     except (KeyError, ValueError) as e:
         logger.error(f"[Mean Reversion Strategy] Error: {e}\n")
-        return SideSignal.HOLD, 0 
+        return SideSignal.HOLD, 0
