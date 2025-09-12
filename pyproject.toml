@@ -10,4 +10,5 @@ dependencies = [
     "requests",
     "python-dotenv",
     "toml",
+    "alpaca-py"
 ]
