@@ -2,9 +2,11 @@ from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
 import datetime as dt
+import pandas as pd
 
-from config import load_api_keys
+from config import load_api_keys, make_logger
 
+logger = make_logger()
 key, secret = load_api_keys()
 
 client = StockHistoricalDataClient(key, secret)
@@ -25,9 +27,23 @@ def fetch_data(symbol: str,
         including open, high, low, close, volume, and timestamp indexed by date.
     """
 
+    if client is None:
+        logger.log("Alpaca client must be provided")
+
     # Convert tuples to datetime.date
     start = dt.date(*start_date)
     end = dt.date(*end_date)
+
+
+    # Make sure dates are not in the future
+    today = dt.date.today()
+    if end > today:
+        logger.log(f"Warning: end_date {end} is in the future. Setting it to today.")
+        end = today
+    if start > today:
+        print(f"Error: start_date {start} is in the future. Cannot fetch data.")
+        return pd.DataFrame() 
+
 
     request_params = StockBarsRequest(
         symbol_or_symbols = symbol,
