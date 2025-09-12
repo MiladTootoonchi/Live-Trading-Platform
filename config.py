@@ -7,6 +7,16 @@ import os
 load_dotenv()
 
 def make_logger():
+    """
+    Creates and configures a logger that writes INFO-level messages to a file.
+
+    The logger writes to 'logfiles/live_trading.log', creating the directory if it 
+    doesn't exist. Log messages are formatted with a timestamp, log level, and message.
+    
+    Returns:
+        logging.Logger: Configured logger instance ready for use.
+    """
+    
     log_dir = "logfiles"
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
@@ -32,6 +42,9 @@ def load_strategy_name(config_file: str = "settings.toml") -> str:
     """
     Load the name of the strategy the user want to use for the live trading.
     If the strategy is not given, the program will ask for an input.
+
+    Args:
+        config_file (str): Path to the TOML config file.
 
     Returns:
         str: The name of the strategy:
