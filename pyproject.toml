@@ -10,5 +10,12 @@ dependencies = [
     "requests",
     "python-dotenv",
     "toml",
-    "alpaca-py"
+    "alpaca-py",
+    "pandas",
+    "matplotlib",
+    "seaborn",
+    "scikit-learn",
+    "scipy",
+    "tensorflow",
+    "scikeras"
 ]
