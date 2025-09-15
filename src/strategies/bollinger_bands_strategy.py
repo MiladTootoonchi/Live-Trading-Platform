@@ -75,8 +75,8 @@ def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
             logger.info(f"Not enough data for {symbol} - only {len(bars)} bars")
             return SideSignal.HOLD, 0
 
-        # Bollinger Bands beregning
-        closes = [float(bar["c"]) for bar in bars]  # Sørg for at det er float
+        
+        closes = [float(bar["c"]) for bar in bars] 
         sma20 = sum(closes[-20:]) / 20
         variance = sum((p - sma20) ** 2 for p in closes[-20:]) / 20
         stddev = variance ** 0.5
