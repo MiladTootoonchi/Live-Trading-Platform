@@ -1,5 +1,4 @@
 from ..alpaca_trader.order import SideSignal
-from datetime import datetime, timezone
 from typing import Tuple
 from config import load_api_keys, make_logger
 import requests
@@ -22,14 +21,9 @@ def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
         "APCA-API-SECRET-KEY": alpaca_secret
     }
 
-    start_date = datetime(2024, 10, 1, tzinfo=timezone.utc)
-    end_date = datetime(2025, 7, 15, tzinfo=timezone.utc)
-
     url = (
         f"https://data.alpaca.markets/v2/stocks/{symbol}/bars"
-        f"?start={start_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
-        f"&end={end_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
-        f"&timeframe=1Day&limit=500"
+        f"?timeframe=1Min&limit=100"
     )
 
     logger.info(f"Fetching data from: {url}")
@@ -44,6 +38,7 @@ def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
     data = response.json()
     bars = data.get("bars", [])
 
+    #Bollinger stratgey requires at least 20 bars to generate valid signals
     if len(bars) < 20:
         logger.warning(f"Not enough data for {symbol} - only {len(bars)} bars")
         return SideSignal.HOLD, 0
@@ -72,4 +67,3 @@ def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
     else:
         logger.info(f"[{symbol}] HOLD - price within bands")
         return SideSignal.HOLD, 0
-
