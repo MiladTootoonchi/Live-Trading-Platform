@@ -1,6 +1,5 @@
 from ..alpaca_trader.order import SideSignal
 import requests
-from datetime import datetime, timezone
 from typing import Tuple
 from config import load_api_keys, make_logger
 
@@ -29,7 +28,7 @@ def calculate_macd(closes):
     return macd_line, signal_line
 
 def fetch_price_data(symbol: str):
-    """Fetches price data using a fixed date range compatible with free IEX data"""
+    """Fetches recent intraday price data from Alpaca (1Min bars)."""
     alpaca_key, alpaca_secret = load_api_keys()
     if not alpaca_key or not alpaca_secret:
         logger.error("Missing API keys")
@@ -40,14 +39,9 @@ def fetch_price_data(symbol: str):
         "APCA-API-SECRET-KEY": alpaca_secret
     }
 
-    start_date = datetime(2024, 10, 1, tzinfo=timezone.utc)
-    end_date = datetime(2025, 9, 15, tzinfo=timezone.utc)
-
     url = (
         f"https://data.alpaca.markets/v2/stocks/{symbol}/bars"
-        f"?start={start_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
-        f"&end={end_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
-        f"&timeframe=1Day&limit=500"
+        f"?timeframe=1Min&limit=100"
     )
 
     logger.info(f"Fetching data from: {url}")
@@ -70,6 +64,7 @@ def macd_strategy(position_data: dict) -> Tuple[SideSignal, int]:
         logger.error("Missing 'symbol' in position_data")
         return SideSignal.HOLD, 0
 
+    #MACD strategy requires at least 35 historical bars to compute reliable EMA and signal line values.
     bars = fetch_price_data(symbol)
     if len(bars) < 35:
         logger.info(f"Not enough data to calculate MACD for {symbol}")
