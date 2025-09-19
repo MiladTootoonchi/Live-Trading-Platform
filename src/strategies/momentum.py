@@ -1,4 +1,4 @@
-from src.alpaca_trader.order import SideSignal
+from ..alpaca_trader.order import SideSignal
 from config import load_api_keys, make_logger
 import requests
 
