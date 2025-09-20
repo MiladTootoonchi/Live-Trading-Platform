@@ -22,7 +22,8 @@ def fetch_price_data(symbol: str, limit: int = 100):
     try:
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
-        bars = response.json().get("bars", [])
+        data = response.json()
+        bars = data.get("bars") or []
         logger.info(f"Fetched {len(bars)} bars for {symbol}")
         return bars
     except requests.RequestException as e:
