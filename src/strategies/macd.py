@@ -78,14 +78,13 @@ def macd_strategy(position_data: dict) -> Tuple[SideSignal, int]:
 
     prev_macd, curr_macd = macd_line[-2], macd_line[-1]
     prev_signal, curr_signal = signal_line[-2], signal_line[-1]
-    qty = int(float(position_data.get("qty", 0)))
 
     if prev_macd <= prev_signal and curr_macd > curr_signal:
         logger.info(f"[{symbol}] BUY signal - bullish MACD crossover")
-        return SideSignal.BUY, 1
+        return SideSignal.BUY, 0
     elif prev_macd >= prev_signal and curr_macd < curr_signal and qty > 0:
         logger.info(f"[{symbol}] SELL signal - bearish MACD crossover")
-        return SideSignal.SELL, qty
+        return SideSignal.SELL, 0
     else:
         logger.info(f"[{symbol}] HOLD - no crossover signal")
         return SideSignal.HOLD, 0
