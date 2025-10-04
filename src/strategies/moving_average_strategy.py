@@ -4,7 +4,7 @@ import requests
 
 logger = make_logger()
 
-def fetch_price_data(symbol: str, limit: int = 100):
+def fetch_price_data(symbol: str, limit: int = 200):
     """Fetch latest 1-minute bars from Alpaca."""
     alpaca_key, alpaca_secret = load_api_keys()
     if not alpaca_key or not alpaca_secret:
@@ -55,8 +55,6 @@ def moving_average_strategy(position: dict) -> tuple[SideSignal, int]:
     ma50 = sum(closes[-50:]) / 50
     ma200 = sum(closes[-200:]) / 200
 
-    qty = int(float(position.get("qty", 0)))
-
     logger.info(f"[{symbol}] Price: {current_price:.2f}, MA20: {ma20:.2f}, MA50: {ma50:.2f}, MA200: {ma200:.2f}")
 
     # Strategy logic:
@@ -66,7 +64,7 @@ def moving_average_strategy(position: dict) -> tuple[SideSignal, int]:
     if current_price > ma20 > ma50 > ma200:
         logger.info(f"[{symbol}] BUY signal - bullish MA alignment")
         return SideSignal.BUY, 0
-    elif current_price < ma20 < ma50 < ma200 and qty > 0:
+    elif current_price < ma20 < ma50 < ma200:
         logger.info(f"[{symbol}] SELL signal - bearish MA alignment")
         return SideSignal.SELL, 0
     else:
