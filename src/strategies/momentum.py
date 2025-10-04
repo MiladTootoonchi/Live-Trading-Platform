@@ -43,29 +43,29 @@ def momentum_strategy(position_data: dict) -> tuple[SideSignal, int]:
     current_price = float(bars[-1]["c"])
     open_price_today = float(bars[-1]["o"])
     change_today = (current_price - open_price_today) / open_price_today * 100
-
-    qty = int(float(position_data.get("qty", 0)))
     avg_entry_price = float(position_data.get("avg_entry_price") or current_price)
     unrealized_return_pct = (current_price - avg_entry_price) / avg_entry_price * 100
 
     logger.info(f"[Momentum] {symbol} Price: {current_price:.2f}, Change today: {change_today:.2f}%")
 
     # Buy: strong positive momentum
-    if qty == 0 and change_today > 2:
+    if change_today > 2:
         logger.info("[Momentum] BUY signal triggered")
-        return SideSignal.BUY, 10
+        return SideSignal.BUY, 0
 
     # Sell: take profit, negative momentum, or stop loss
-    if unrealized_return_pct > 5:
+    elif unrealized_return_pct > 5:
         logger.info("[Momentum] SELL signal - take profit")
-        return SideSignal.SELL, qty
+        return SideSignal.SELL, 0
 
-    if change_today < -1 and unrealized_return_pct < 2:
+    elif change_today < -1 and unrealized_return_pct < 2:
         logger.info("[Momentum] SELL signal - negative momentum with small gain")
-        return SideSignal.SELL, qty
+        return SideSignal.SELL, 0
 
-    if unrealized_return_pct < -3:
+    elif unrealized_return_pct < -3:
         logger.info("[Momentum] SELL signal - stop loss")
-        return SideSignal.SELL, qty
+        return SideSignal.SELL, 0
 
-    return SideSignal.HOLD, 0
+    else:
+        logger.info("[Momentum] HOLD - no significant movement")
+        return SideSignal.HOLD, 0
