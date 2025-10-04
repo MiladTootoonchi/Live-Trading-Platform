@@ -56,12 +56,11 @@ def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
         f"Upper: {upper_band:.2f}, Lower: {lower_band:.2f}"
     )
 
-    qty = int(float(position.get("qty", 0)))
 
     if current_price < lower_band:
         logger.info(f"[{symbol}] BUY signal - price below lower band")
         return SideSignal.BUY, 0
-    elif current_price > upper_band and qty > 0:
+    elif current_price > upper_band:
         logger.info(f"[{symbol}] SELL signal - price above upper band")
         return SideSignal.SELL, 0
     else:
