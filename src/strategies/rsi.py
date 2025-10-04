@@ -72,11 +72,9 @@ def rsi_strategy(position_data: dict) -> Tuple[SideSignal, int]:
 
     logger.info(f"[{symbol}] RSI: {rsi:.2f}")
 
-    qty = int(float(position_data.get("qty", 0)))
-
     if rsi < 30:
         return SideSignal.BUY, 0 
-    elif rsi > 70 and qty > 0:
+    elif rsi > 70:
         return SideSignal.SELL, 0  
     else:
         return SideSignal.HOLD, 0
