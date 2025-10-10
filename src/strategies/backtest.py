@@ -73,33 +73,43 @@ def fetch_price_data(symbol: str, timeframe: str = "1Min", days: int = 5) -> Lis
     return all_bars
 
 class Backtester:
-    def __init__(self, symbol: str, days: int = 250, initial_cash: float = 10000):
+    def __init__(self, symbol: str, days: int = 250, initial_cash: float = 10000, timeframe: str = "1Min"):
+        """
+        Backtesting engine for a single symbol.
+
+        Args:
+            symbol (str): Stock symbol (e.g., 'AAPL')
+            days (int): Number of historical days to fetch
+            initial_cash (float): Starting portfolio value
+            timeframe (str): Bar timeframe ('1Min', '5Min', '15Min', '1Day', etc.)
+
+        """
         self.symbol = symbol
         self.days = days
         self.initial_cash = initial_cash
-        self.bars = fetch_price_data(symbol, days=days)
+        self.timeframe = timeframe
+
+        #fetch data
+        self.bars  = fetch_price_data(symbol, timeframe=timeframe, days=days)
 
         if not self.bars:
-            raise ValueError(f"No data fetched for {symbol}")
+            raise ValueError(f"No data fetched for {symbol} ({timeframe})")
         else: 
-            logger.info(f"Fetched {len(self.bars)} bars for {symbol}")
+            logger.info(f"Fetched {len(self.bars)} bars for {symbol} ({timeframe})")
 
     def run_strategy(self, strategy_func: Callable) -> pd.DataFrame:
-        """
-        Run a strategy and returns the portofolio developemnt 
+        """ Run a strategy and returns the portofolio developemnt """
 
-        """
         cash = self.initial_cash
         position_qty = 0
         position_avg_price = 0.0
-
-
         portofolio_values = []
         dates = []
+        trades = []
 
         for i in range(20, len(self.bars)):
             bar = self.bars[i]
-            date = bar["t"][:10]
+            date = bar["t"][:19]
             current_price = bar["c"]
 
             position_data = {
@@ -113,4 +123,53 @@ class Backtester:
             except Exception as e:
                 logger.error(f"Strategy {strategy_func.__name__} failed: {e}")
                 signal, qty = SideSignal.HOLD, 0
+
+            # Execute trades
+            if signal == SideSignal.BUY and qty > 0 and cash >= current_price * qty:
+                cost = current_price * qty
+                if position_qty > 0:
+                    position_avg_price = ((position_avg_price * position_qty) + cost) / (position_qty + qty)
+                else:
+                    position_avg_price = current_price
+                position_qty += qty
+                cash -= cost
+                trades.append({
+                    'date': date,
+                    'action': 'BUY',
+                    'qty': qty,
+                    'price': current_price,
+                    'cost': cost
+
+                })
+                logger.info(f"{date}: BUY {qty} @ ${current_price:.2f}")
+
+            elif signal == SideSignal.SELL and qty > 0 and position_qty >= qty:
+                proceeds = current_price * qty
+                position_qty -= qty
+                cash += proceeds
+
+                if position_qty == 0:
+                    position_avg_price = 0.0
+                trades.append({
+                'date': date,
+                'action': 'SELL',
+                'qty': qty,
+                'price': current_price,
+                'proceeds': proceeds
+                })
+                logger.info(f"{date}: SELL {qty} @ ${current_price:.2f}")
+
+            # Calculate portofoli value
+            position_value = position_qty * current_price
+            total_value = cash + position_value
+            portofolio_values.append(total_value)
+            dates.append(date)
+        
+        results = pd.DataFrame({
+            'date': dates,
+            'portfolio_value': portofolio_values
+        })
+        self.trades = pd.DataFrame(trades) if trades else pd.DataFrame()
+        return results
+    
                 
