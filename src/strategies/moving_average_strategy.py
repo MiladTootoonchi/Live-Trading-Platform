@@ -69,4 +69,4 @@ def moving_average_strategy(position: dict) -> tuple[SideSignal, int]:
         return SideSignal.SELL, 0
     else:
         logger.info(f"[{symbol}] HOLD - no clear MA trend")
-        return SideSignal.HOLD, 0
+        return SideSignal.HOLD, 0 

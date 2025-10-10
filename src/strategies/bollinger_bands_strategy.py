@@ -5,6 +5,13 @@ import requests
 
 logger = make_logger()
 
+def fetch_price_data(symbol: str, limit: int = 100):
+    """Fetches recent intraday price data from Alpaca (1Min bars)."""
+    alpaca_key, alpaca_secret = load_api_keys()
+    if not alpaca_key or not alpaca_secret:
+        logger.error("Missing API keys")
+        return []
+
 def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
     symbol = position.get("symbol")
     if not symbol:
