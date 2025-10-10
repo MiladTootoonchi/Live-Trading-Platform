@@ -172,4 +172,44 @@ class Backtester:
         self.trades = pd.DataFrame(trades) if trades else pd.DataFrame()
         return results
     
+    def calculate_metrics(self, results: pd.DataFrame) -> Dict[str, float]:
+        """ Calculate performance metrics"""
+        if results.empty or len(results) < 2:
+            return {}
+
+        final_value = results['portfolio_value'].iloc[-1]
+        total_return = ((final_value - self.initial_cash) / self.initial_cash) * 100
+
+        # Calculate daily returns
+        results['daily_return'] = results['portfolio_value'].pct_change()
+
+        # Sharpe ratio (annualized, assuming 252 trading days)
+        if results['daily_return'].std() > 0:
+            sharpe_ratio = (results['daily_return'].mean() / results['daily_return'].std()) * (252 ** 0.5)
+        else:
+            sharpe_ratio = 0.0
+
+        # Maximum drawtown
+        cumulative_max = results['portfolio_value'].expanding().max()
+        drawtown = (results['portfolio_value'] - cumulative_max) / cumulative_max
+        max_drawtown = drawtown.min() * 100
+
+        # Win rate (if trades exist)
+        win_rate = 0.0
+        if not self.trades.empty and 'SELL' in self.trades['action'].values:
+            #Simplified win rate calculation
+            sell_trades = self.trades[self.trades['action'] == 'SELL']
+            if len(sell_trades) > 0:
+                # This is a simplified version - ideally match buys to sells
+                win_rate = len(sell_trades) / len(sell_trades) * 100
+
+        return {
+            'total_return_pct': round(total_return, 2),
+            'final_value': round(final_value, 2),
+            'sharpe_ratio': round(sharpe_ratio, 2),
+            'max_drawdown_pct': round(max_drawdown, 2),
+            'num_trades': len(self.trades),
+            'win_rate_pct': round(win_rate, 2)
+        }
+
                 
