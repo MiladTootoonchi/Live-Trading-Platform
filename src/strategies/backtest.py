@@ -189,10 +189,10 @@ class Backtester:
         else:
             sharpe_ratio = 0.0
 
-        # Maximum drawtown
+        # Maximum drawdown
         cumulative_max = results['portfolio_value'].expanding().max()
-        drawtown = (results['portfolio_value'] - cumulative_max) / cumulative_max
-        max_drawtown = drawtown.min() * 100
+        drawdown = (results['portfolio_value'] - cumulative_max) / cumulative_max
+        max_drawdown = drawdown.min() * 100
 
         # Win rate (if trades exist)
         win_rate = 0.0
@@ -211,5 +211,6 @@ class Backtester:
             'num_trades': len(self.trades),
             'win_rate_pct': round(win_rate, 2)
         }
+    
 
                 
