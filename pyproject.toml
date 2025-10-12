@@ -17,6 +17,6 @@ dependencies = [
     "scikit-learn",
     "scipy",
     "tensorflow",
-    "scikeras".
+    "scikeras",
     "alpaca"
 ]
