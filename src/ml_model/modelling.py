@@ -3,7 +3,6 @@ from typing import Union, Tuple, Sequence
 
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import LSTM, Dense, Dropout
-from scikeras.wrappers import KerasClassifier
 
 import numpy as np
 
