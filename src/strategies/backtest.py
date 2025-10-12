@@ -211,6 +211,61 @@ class Backtester:
             'num_trades': len(self.trades),
             'win_rate_pct': round(win_rate, 2)
         }
-    
 
+def compare_strategies(symbol: str, strategies: Dict[str, Callable],
+                       days : int = 250, initial_cash: float = 10000) -> pd.DataFrame:
+    """
+    Compare multiple strategies on the same symbol
+    
+    Args:
+        symbol: Stock symbol to test
+        strategies: Dict of strategy_name -> strategy_function
+        days: Number of days of historical data
+        initial_cash: Initial cash amount
+    
+    Returns:
+        DataFrame with comparison metrics
+    """
+    results = []
+
+    logger.info(f"\n{'='*60}")
+    logger.info(f"Starting backtest for {symbol} with {len(strategies)} strategies")
+    logger.info(f"{'='*60}\n")
+
+    for strategy_name, strategy_func in strategies.items():
+        logger.info(f"\nTesting strategy: {strategy_name}")
+        logger.info(f"{'-'*40}")
+
+        try: 
+            backtester = Backtester(symbol, days=days, initial_cash=initial_cash)
+            portfolio_history = backtester.run_strategy(strategy_func)
+            metrics = backtester.calculate_metrics(portfolio_history)
+
+            metrics['strategy'] = strategy_name
+            metrics['symbol'] = symbol
+            results.append(metrics)
+            
+            logger.info(f"Total Return: {metrics.get('total_return_pct', 0):.2f}%")
+            logger.info(f"Sharpe Ratio: {metrics.get('sharpe_ratio', 0):.2f}")
+            logger.info(f"Max Drawdown: {metrics.get('max_drawdown_pct', 0):.2f}%")
+            logger.info(f"Number of Trades: {metrics.get('num_trades', 0)}")
+            
+        except Exception as e:
+            logger.error(f"Failed to run strategy {strategy_name}: {e}")
+            results.append({
+                'strategy': strategy_name,
+                'symbol': symbol,
+                'error': str(e)
+            })
+    logger.info(f"\n{'='*60}")
+    logger.info(f"Backtest complete!")
+    logger.info(f"{'='*60}\n")
+    
+    comparison_df = pd.DataFrame(results)
+    
+    # Sort by total return
+    if 'total_return_pct' in comparison_df.columns:
+        comparison_df = comparison_df.sort_values('total_return_pct', ascending=False)
+    
+    return comparison_df
                 
