@@ -56,7 +56,7 @@ async def get_one_realtime_bar(symbol: str, num_trades: int = 20) -> pd.DataFram
     task = asyncio.create_task(stream._run_forever())
     await stop_event.wait()  # wait until desired number of trades
     task.cancel()
-    await stream.close()
+    await stream.stop()
 
     df_bar = pd.DataFrame([live_bar])
     return df_bar
@@ -199,3 +199,66 @@ def stock_data_feature_engineering(df: pd.DataFrame) -> tuple[np.ndarray, pd.Ser
     y = df['target'].loc[X.index]  # align target
 
     return X_scaled, y
+
+
+def stock_data_prediction_pipeline(df: pd.DataFrame, scaler: StandardScaler) -> np.ndarray:
+    """
+    Prepare new stock data for prediction by applying the same feature engineering 
+    as during training, without fitting the scaler or creating targets.
+
+    Args:
+        df : pd.DataFrame
+            New stock data with required columns.
+        scaler : StandardScaler
+            Pre-fitted scaler from the training phase.
+
+    Returns:
+        X_scaled : np.ndarray
+            Scaled feature matrix ready for model.predict().
+    """
+
+    df = df.copy()
+    if 'timestamp' not in df.columns:
+        if 'index' in df.columns:
+            df.rename(columns={'index': 'timestamp'}, inplace=True)
+        else:
+            raise KeyError("No 'timestamp' column found in prediction DataFrame.")
+    
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df.set_index('timestamp', inplace=True)
+
+    # SMA
+    df['SMA5']  = df['close'].rolling(window=5).mean()
+    df['SMA20'] = df['close'].rolling(window=20).mean()
+    df['SMA50'] = df['close'].rolling(window=50).mean()
+
+    # Price change
+    df['price_change'] = df['close'].diff()
+
+    # RSI (14-day)
+    window = 14
+    delta = df['close'].diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.rolling(window=window).mean()
+    avg_loss = loss.rolling(window=window).mean()
+    rs = avg_gain / avg_loss
+    df['RSI'] = 100 - (100 / (1 + rs))
+
+    # MACD
+    ema12 = df['close'].ewm(span=12, adjust=False).mean()
+    ema26 = df['close'].ewm(span=26, adjust=False).mean()
+    df['MACD'] = ema12 - ema26
+    df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+
+    df = df.dropna()
+
+    features = [
+        'open', 'high', 'low', 'close', 'volume', 'trade_count',
+        'vwap', 'SMA5', 'SMA20', 'SMA50', 'price_change', 'RSI', 'MACD', 'MACD_Signal'
+    ]
+    X = df[features]
+
+    X_scaled = scaler.transform(X)
+
+    return X_scaled
