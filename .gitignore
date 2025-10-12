@@ -5,3 +5,4 @@ __pycache__/
 .venv
 build
 live_trading_platform.egg-info
+logfiles

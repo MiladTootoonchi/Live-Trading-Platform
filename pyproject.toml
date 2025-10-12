@@ -18,5 +18,6 @@ dependencies = [
     "scipy",
     "tensorflow",
     "scikeras",
-    "alpaca"
+    "alpaca",
+    "notebook ipykernel"
 ]
