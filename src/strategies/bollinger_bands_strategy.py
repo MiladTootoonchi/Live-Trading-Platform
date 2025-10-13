@@ -5,6 +5,7 @@ import requests
 
 logger = make_logger()
 
+
 def fetch_price_data(symbol: str, limit: int = 100):
     """Fetches recent intraday price data from Alpaca (1Min bars)."""
     alpaca_key, alpaca_secret = load_api_keys()
@@ -12,27 +13,12 @@ def fetch_price_data(symbol: str, limit: int = 100):
         logger.error("Missing API keys")
         return []
 
-def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
-    symbol = position.get("symbol")
-    if not symbol:
-        logger.error("No symbol provided in position")
-        return SideSignal.HOLD, 0
-
-    alpaca_key, alpaca_secret = load_api_keys()
-    if not alpaca_key or not alpaca_secret:
-        logger.error("Missing API keys")
-        return SideSignal.HOLD, 0
-
     headers = {
         "APCA-API-KEY-ID": alpaca_key,
         "APCA-API-SECRET-KEY": alpaca_secret
     }
 
-    url = (
-        f"https://data.alpaca.markets/v2/stocks/{symbol}/bars"
-        f"?timeframe=1Min&limit=100"
-    )
-
+    url = f"https://data.alpaca.markets/v2/stocks/{symbol}/bars?timeframe=1Min&limit={limit}"
     logger.info(f"Fetching data from: {url}")
 
     try:
@@ -40,12 +26,23 @@ def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
         response.raise_for_status()
     except requests.RequestException as e:
         logger.error(f"Error fetching data for {symbol}: {e}")
-        return SideSignal.HOLD, 0
+        return []
 
     data = response.json()
     bars = data.get("bars", [])
+    if not bars:
+        logger.warning(f"No bars returned for {symbol}. Check API keys and market hours.")
+    return bars
 
-    #Bollinger stratgey requires at least 20 bars to generate valid signals
+
+def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
+    """Generates a buy/sell/hold signal based on Bollinger Bands."""
+    symbol = position.get("symbol")
+    if not symbol:
+        logger.error("No symbol provided in position")
+        return SideSignal.HOLD, 0
+
+    bars = fetch_price_data(symbol)
     if len(bars) < 20:
         logger.warning(f"Not enough data for {symbol} - only {len(bars)} bars")
         return SideSignal.HOLD, 0
@@ -63,7 +60,6 @@ def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
         f"Upper: {upper_band:.2f}, Lower: {lower_band:.2f}"
     )
 
-
     if current_price < lower_band:
         logger.info(f"[{symbol}] BUY signal - price below lower band")
         return SideSignal.BUY, 0
@@ -73,3 +69,4 @@ def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
     else:
         logger.info(f"[{symbol}] HOLD - price within bands")
         return SideSignal.HOLD, 0
+
