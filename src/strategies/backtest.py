@@ -117,17 +117,17 @@ class Backtester:
         
         return 0
 
-    def run_strategy(self, strategy_func: Callable) -> pd.DataFrame:
-        """ Run a strategy and returns the portofolio developemnt """
+    def run_strategy(self, strategy_func: Callable, lookback: int = 20) -> pd.DataFrame:
+        """ Run a strategy and returns the portfolio development """
 
         cash = self.initial_cash
         position_qty = 0
         position_avg_price = 0.0
-        portofolio_values = []
+        portfolio_values = []
         dates = []
         trades = []
 
-        for i in range(20, len(self.bars)):
+        for i in range(lookback, len(self.bars)):
             bar = self.bars[i]
             date = bar["t"][:19]
             current_price = bar["c"]
@@ -179,15 +179,15 @@ class Backtester:
                 })
                 logger.info(f"{date}: SELL {qty} @ ${current_price:.2f}")
 
-            # Calculate portofoli value
+            # Calculate portfolio value
             position_value = position_qty * current_price
             total_value = cash + position_value
-            portofolio_values.append(total_value)
+            portfolio_values.append(total_value)
             dates.append(date)
         
         results = pd.DataFrame({
             'date': dates,
-            'portfolio_value': portofolio_values
+            'portfolio_value': portfolio_values
         })
         self.trades = pd.DataFrame(trades) if trades else pd.DataFrame()
         return results
@@ -217,11 +217,31 @@ class Backtester:
         # Win rate (if trades exist)
         win_rate = 0.0
         if not self.trades.empty and 'SELL' in self.trades['action'].values:
-            #Simplified win rate calculation
-            sell_trades = self.trades[self.trades['action'] == 'SELL']
-            if len(sell_trades) > 0:
-                # This is a simplified version - ideally match buys to sells
-                win_rate = len(sell_trades) / len(sell_trades) * 100
+            # Calculate win rate by comparing buy and sell prices
+            buy_trades = self.trades[self.trades['action'] == 'BUY'].copy()
+            sell_trades = self.trades[self.trades['action'] == 'SELL'].copy()
+            
+            if len(buy_trades) > 0 and len(sell_trades) > 0:
+                # Simple approach: compare average prices
+                avg_buy_price = buy_trades['price'].mean()
+                avg_sell_price = sell_trades['price'].mean()
+                
+                # If you have paired trades, use this more sophisticated approach:
+                # Match sells to buys chronologically and calculate win/loss
+                winning_trades = 0
+                total_closed_trades = 0
+                
+                for _, sell in sell_trades.iterrows():
+                    # Find the most recent buy before this sell
+                    prior_buys = buy_trades[buy_trades['date'] < sell['date']]
+                    if not prior_buys.empty:
+                        last_buy_price = prior_buys.iloc[-1]['price']
+                        if sell['price'] > last_buy_price:
+                            winning_trades += 1
+                        total_closed_trades += 1
+                
+                if total_closed_trades > 0:
+                    win_rate = (winning_trades / total_closed_trades) * 100
 
         return {
             'total_return_pct': round(total_return, 2),
@@ -233,7 +253,7 @@ class Backtester:
         }
 
 def compare_strategies(symbol: str, strategies: Dict[str, Callable],
-                       days : int = 250, initial_cash: float = 10000) -> pd.DataFrame:
+                       days: int = 250, initial_cash: float = 10000) -> pd.DataFrame:
     """
     Compare multiple strategies on the same symbol
     
@@ -290,8 +310,8 @@ def compare_strategies(symbol: str, strategies: Dict[str, Callable],
     return comparison_df
 
 def run_multi_symbol_backtest(symbols: List[str], strategies: Dict[str, Callable],
-                              days: int = 250, initial_caash: float = 10000,
-                              timeframe: str = "1Day") -> pd. DataFrame:
+                              days: int = 250, initial_cash: float = 10000,
+                              timeframe: str = "1Day") -> pd.DataFrame:
     """
     Run backtest across multiple symbols and strategies.
 
@@ -307,14 +327,13 @@ def run_multi_symbol_backtest(symbols: List[str], strategies: Dict[str, Callable
     """
     all_results = []
 
-    for symbols in symbols:
+    for symbol in symbols:
         logger.info(f"\n{'#'*60}")
         logger.info(f"Processing: {symbol}")
         logger.info(f"{'#'*60}")
 
         try:
-            symbol_results = compare_strategies(symbol, strategies, days,
-                                                initial_cash, timeframe)
+            symbol_results = compare_strategies(symbol, strategies, days, initial_cash)
             all_results.append(symbol_results)
         except Exception as e:
             logger.error(f"Failed to process {symbol}: {e}")
