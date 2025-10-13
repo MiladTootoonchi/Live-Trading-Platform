@@ -1,9 +1,10 @@
 from ..alpaca_trader.order import SideSignal
-import requests
 from typing import Tuple
-from config import load_api_keys, make_logger
+from config import make_logger
+from .fetch_price_data import fetch_price_data  
 
 logger = make_logger()
+
 
 def exponential_moving_average(data, period):
     if not data or period <= 0:
@@ -17,6 +18,7 @@ def exponential_moving_average(data, period):
             ema.append(price * k + ema[i - 1] * (1 - k))
     return ema
 
+
 def calculate_macd(closes):
     ema12 = exponential_moving_average(closes, 12)
     ema26 = exponential_moving_average(closes, 26)
@@ -27,36 +29,6 @@ def calculate_macd(closes):
     signal_line = exponential_moving_average(macd_line, 9)
     return macd_line, signal_line
 
-def fetch_price_data(symbol: str):
-    """Fetches recent intraday price data from Alpaca (1Min bars)."""
-    alpaca_key, alpaca_secret = load_api_keys()
-    if not alpaca_key or not alpaca_secret:
-        logger.error("Missing API keys")
-        return []
-
-    headers = {
-        "APCA-API-KEY-ID": alpaca_key,
-        "APCA-API-SECRET-KEY": alpaca_secret
-    }
-
-    url = (
-        f"https://data.alpaca.markets/v2/stocks/{symbol}/bars"
-        f"?timeframe=1Min&limit=100"
-    )
-
-    logger.info(f"Fetching data from: {url}")
-
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        logger.error(f"Failed to fetch data for {symbol}: {e}")
-        return []
-
-    data = response.json()
-    bars = data.get("bars", [])
-    logger.info(f"Fetched {len(bars)} bars for {symbol}")
-    return bars
 
 def macd_strategy(position_data: dict) -> Tuple[SideSignal, int]:
     symbol = position_data.get("symbol")
@@ -64,7 +36,7 @@ def macd_strategy(position_data: dict) -> Tuple[SideSignal, int]:
         logger.error("Missing 'symbol' in position_data")
         return SideSignal.HOLD, 0
 
-    #MACD strategy requires at least 35 historical bars to compute reliable EMA and signal line values.
+    # MACD strategy requires at least 35 historical bars
     bars = fetch_price_data(symbol)
     if len(bars) < 35:
         logger.info(f"Not enough data to calculate MACD for {symbol}")
@@ -88,4 +60,3 @@ def macd_strategy(position_data: dict) -> Tuple[SideSignal, int]:
     else:
         logger.info(f"[{symbol}] HOLD - no crossover signal")
         return SideSignal.HOLD, 0
-
