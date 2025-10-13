@@ -288,4 +288,38 @@ def compare_strategies(symbol: str, strategies: Dict[str, Callable],
         comparison_df = comparison_df.sort_values('total_return_pct', ascending=False)
     
     return comparison_df
-                
+
+def run_multi_symbol_backtest(symbols: List[str], strategies: Dict[str, Callable],
+                              days: int = 250, initial_caash: float = 10000,
+                              timeframe: str = "1Day") -> pd. DataFrame:
+    """
+    Run backtest across multiple symbols and strategies.
+
+    Args:
+        symbols: List of stock symbols
+        strategies: Dict of strategy_name -> strategy_function
+        days: Number of days of historical data
+        initial_cash: Initial cash amount
+        timeframe: Bar timeframe
+
+    Returns:
+        Combined DataFrame with all results
+    """
+    all_results = []
+
+    for symbols in symbols:
+        logger.info(f"\n{'#'*60}")
+        logger.info(f"Processing: {symbol}")
+        logger.info(f"{'#'*60}")
+
+        try:
+            symbol_results = compare_strategies(symbol, strategies, days,
+                                                initial_cash, timeframe)
+            all_results.append(symbol_results)
+        except Exception as e:
+            logger.error(f"Failed to process {symbol}: {e}")
+    
+    if all_results:
+        return pd.concat(all_results, ignore_index=True)
+    else:
+        return pd.DataFrame()
