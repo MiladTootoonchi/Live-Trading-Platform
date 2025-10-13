@@ -98,6 +98,24 @@ class Backtester:
             raise ValueError(f"No data fetched for {symbol} ({timeframe})")
         else: 
             logger.info(f"Fetched {len(self.bars)} bars for {symbol} ({timeframe})")
+    
+    def calculate_quantity(self, signal: SideSignal, cash: float, position_qty: int,
+                           current_price: float) -> int:
+        """
+        Calculate quantity to trade based on signal and available capital.
+        Matches the logic from AlpacaTrader.
+        """
+        if signal == SideSignal.BUY:
+            # Use position_size_pct of available cash
+            max_value = cash * self.position_size_pct
+            qty = int(max_value / current_price)
+            return qty if qty > 0 else 0
+        
+        elif signal == SideSignal.SELL:
+            # Sell entire position
+            return position_qty
+        
+        return 0
 
     def run_strategy(self, strategy_func: Callable) -> pd.DataFrame:
         """ Run a strategy and returns the portofolio developemnt """
