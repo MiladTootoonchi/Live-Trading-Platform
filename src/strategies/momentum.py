@@ -1,36 +1,12 @@
 from ..alpaca_trader.order import SideSignal
-from config import load_api_keys, make_logger
-import requests
+from config import make_logger
+from .fetch_price_data import fetch_price_data 
 
 logger = make_logger()
 
-def fetch_price_data(symbol: str):
-    """Fetches latest 1-minute bars from Alpaca"""
-    alpaca_key, alpaca_secret = load_api_keys()
-    if not alpaca_key or not alpaca_secret:
-        logger.error("Missing API keys")
-        return []
-
-    headers = {
-        "APCA-API-KEY-ID": alpaca_key,
-        "APCA-API-SECRET-KEY": alpaca_secret
-    }
-
-    url = f"https://data.alpaca.markets/v2/stocks/{symbol}/bars?timeframe=1Min&limit=100"
-    logger.info(f"Fetching data from: {url}")
-
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        bars = data.get("bars", [])
-        logger.info(f"Fetched {len(bars)} bars for {symbol}")
-        return bars
-    except requests.RequestException as e:
-        logger.error(f"Error fetching data for {symbol}: {e}")
-        return []
 
 def momentum_strategy(position_data: dict) -> tuple[SideSignal, int]:
+    """Generates a momentum-based BUY/SELL/HOLD signal."""
     symbol = position_data.get("symbol")
     if not symbol:
         logger.error("[Momentum] No symbol provided")
@@ -38,6 +14,7 @@ def momentum_strategy(position_data: dict) -> tuple[SideSignal, int]:
 
     bars = fetch_price_data(symbol)
     if not bars:
+        logger.warning(f"[Momentum] No data available for {symbol}")
         return SideSignal.HOLD, 0
 
     current_price = float(bars[-1]["c"])
@@ -69,3 +46,4 @@ def momentum_strategy(position_data: dict) -> tuple[SideSignal, int]:
     else:
         logger.info("[Momentum] HOLD - no significant movement")
         return SideSignal.HOLD, 0
+
