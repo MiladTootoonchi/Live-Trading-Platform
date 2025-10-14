@@ -73,7 +73,7 @@ def fetch_price_data(symbol: str, timeframe: str = "1Min", days: int = 5) -> Lis
     return all_bars
 
 class Backtester:
-    def __init__(self, symbol: str, days: int = 250, initial_cash: float = 10000, timeframe: str = "1Day",
+    def __init__(self, symbol: str, days: int = 250, initial_cash: float = 10000, timeframe: str = "1Min",
     position_size_pct: float = 0.95):
         """
         Backtesting engine for a single symbol.
