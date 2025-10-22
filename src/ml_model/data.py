@@ -55,7 +55,12 @@ async def get_one_realtime_bar(symbol: str, num_trades: int = 20) -> pd.DataFram
 
     task = asyncio.create_task(stream._run_forever())
     await stop_event.wait()  # wait until desired number of trades
+
     task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
     await stream.stop()
 
     df_bar = pd.DataFrame([live_bar])
@@ -187,6 +192,7 @@ def stock_data_feature_engineering(df: pd.DataFrame) -> tuple[np.ndarray, pd.Ser
 
     # Addind a target
     df['target'] = (df['close'].shift(-1) > df['close']).astype(int)
+    df = df[:-1]  # Remove last row with NaN target
 
     # Splitting data
     features = ['open', 'high', 'low', 'close', 'volume', 'trade_count',

@@ -57,7 +57,7 @@ def load_strategy_name(config_file: str = "settings.toml") -> str:
         with open(config_file, "r") as file:
             conf = toml.load(file)
             live = conf.get("live", {})
-            strategy = live.get("strategy", strategy)
+            strategy = live.get("strategy", None)
         
     except Exception:
         logger.info(f"Could not find strategy name in {config_file}, falling back to environment variables.\n")
