@@ -13,7 +13,12 @@ def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
         logger.error("No symbol provided in position")
         return SideSignal.HOLD, 0
 
-    bars = fetch_price_data(symbol)
+    bars = position.get("history, []")
+
+    if not bars:
+        from .fetch_price_data import fetch_price_data
+        bars = fetch_price_data
+        
     if len(bars) < 20:
         logger.warning(f"Not enough data for {symbol} - only {len(bars)} bars")
         return SideSignal.HOLD, 0
