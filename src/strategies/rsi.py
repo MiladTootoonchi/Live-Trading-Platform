@@ -25,9 +25,14 @@ def rsi_strategy(position_data: dict) -> Tuple[SideSignal, int]:
     if not symbol:
         logger.error("Missing 'symbol' in position_data")
         return SideSignal.HOLD, 0
+    
+    bars = position_data.get("history", [])
 
-    bars = fetch_price_data(symbol)
-    if len(bars) < 15:
+    if not bars:
+        logger.warning(f"[RSI] No history in position_data for {symbol}, fetching from API")
+        bars = fetch_price_data(symbol)
+
+    if not bars or len(bars) < 15:
         logger.info(f"Not enough bars to calculate RSI for {symbol}")
         return SideSignal.HOLD, 0
 
