@@ -17,9 +17,14 @@ def moving_average_strategy(position: dict) -> tuple[SideSignal, int]:
     if not symbol:
         logger.error("No symbol provided in position")
         return SideSignal.HOLD, 0
+    
+    bars = position.get("history", [])
 
-    bars = fetch_price_data(symbol, limit=200)
-    if len(bars) < 200:
+    if not bars:
+        logger.warning(f"[MA Strategy] No history in position data for {symbol}, fetching from API")
+        bars = fetch_price_data(symbol, limit=200)
+
+    if not bars or len(bars) < 200:
         logger.info(f"Not enough bars for {symbol}. Need at least 200 minute bars")
         return SideSignal.HOLD, 0
 
