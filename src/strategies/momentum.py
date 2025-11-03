@@ -11,8 +11,13 @@ def momentum_strategy(position_data: dict) -> tuple[SideSignal, int]:
     if not symbol:
         logger.error("[Momentum] No symbol provided")
         return SideSignal.HOLD, 0
+    
+    bars = position_data.get("history", [])
 
-    bars = fetch_price_data(symbol)
+    if not bars:
+        logger.warning(f"[Momentum] No history in position_data, fetching from API for {symbol}")
+        bars = fetch_price_data(symbol)
+
     if not bars:
         logger.warning(f"[Momentum] No data available for {symbol}")
         return SideSignal.HOLD, 0
