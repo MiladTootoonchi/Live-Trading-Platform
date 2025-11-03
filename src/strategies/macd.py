@@ -37,7 +37,12 @@ def macd_strategy(position_data: dict) -> Tuple[SideSignal, int]:
         return SideSignal.HOLD, 0
 
     # MACD strategy requires at least 35 historical bars
-    bars = fetch_price_data(symbol)
+    bars = position_data.get("history", [])
+
+    if not bars:
+        from .fetch_price_data import fetch_price_data
+        bars = fetch_price_data(symbol)
+        
     if len(bars) < 35:
         logger.info(f"Not enough data to calculate MACD for {symbol}")
         return SideSignal.HOLD, 0
