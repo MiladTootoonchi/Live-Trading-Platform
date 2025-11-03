@@ -11,8 +11,14 @@ def mean_reversion_strategy(position_data: dict, moving_avg_price: float = 0, mi
     if not symbol:
         logger.error("[Mean Reversion] No symbol provided")
         return SideSignal.HOLD, 0
+    
+    bars = position_data.get("history, []")
 
-    bars = fetch_price_data(symbol)
+    if not bars:
+        logger.warning(f"[Mean Reversion] No history in position_data, fetching from API for {symbol}")
+        bars = fetch_price_data(symbol)
+
+        
     if bars and len(bars) > 0:
         current_price = float(bars[-1]["c"])
     else:
