@@ -21,13 +21,13 @@ strategies = {
 def main():
     print("Starting Backtest")
     print("───────────────────────────────────────────────")
-    print(f"Symbol: AAPL")
+    print(f"Symbol: TSLA")
     print(f"Strategies: {len(strategies)}")
     print(f"Mode: {'TEST' if TEST_MODE else 'LIVE'}\n")
     
     try:
         results = compare_strategies(
-            symbol='SPY',
+            symbol='TSLA',
             strategies=strategies,
             days=30,
             initial_cash=10000,
