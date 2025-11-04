@@ -27,9 +27,9 @@ def main():
     
     try:
         results = compare_strategies(
-            symbol='AAPL',
+            symbol='SPY',
             strategies=strategies,
-            days=15,
+            days=30,
             initial_cash=10000,
             test_mode=TEST_MODE
         )
