@@ -31,20 +31,20 @@ def momentum_strategy(position_data: dict) -> tuple[SideSignal, int]:
     logger.info(f"[Momentum] {symbol} Price: {current_price:.2f}, Change today: {change_today:.2f}%")
 
     # Buy: strong positive momentum
-    if change_today > 2:
+    if change_today > 0.5:
         logger.info("[Momentum] BUY signal triggered")
         return SideSignal.BUY, 0
 
     # Sell: take profit, negative momentum, or stop loss
-    elif unrealized_return_pct > 5:
+    elif unrealized_return_pct > 2:
         logger.info("[Momentum] SELL signal - take profit")
         return SideSignal.SELL, 0
 
-    elif change_today < -1 and unrealized_return_pct < 2:
+    elif change_today < -0.5 and unrealized_return_pct < 2:
         logger.info("[Momentum] SELL signal - negative momentum with small gain")
         return SideSignal.SELL, 0
 
-    elif unrealized_return_pct < -3:
+    elif unrealized_return_pct < -1.5:
         logger.info("[Momentum] SELL signal - stop loss")
         return SideSignal.SELL, 0
 
