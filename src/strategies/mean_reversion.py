@@ -32,13 +32,13 @@ def mean_reversion_strategy(position_data: dict, moving_avg_price: float = 0, mi
 
     logger.info(f"[Mean Reversion] Current: {current_price:.2f}, SMA: {moving_avg_price:.2f}, Deviation: {deviation:.2f}%")
 
-    if deviation < -2:
+    if deviation < -0.5:
         logger.info(f"[Mean Reversion] SELL signal - stop-loss triggered at {deviation:.2f}%")
         return SideSignal.SELL, 0
-    elif deviation < -1:
+    elif deviation < -0.3:
         logger.info(f"[Mean Reversion] BUY signal - price {deviation:.2f}% below SMA")
         return SideSignal.BUY, 0
-    elif deviation > 1:
+    elif deviation > 0.3:
         logger.info(f"[Mean Reversion] SELL signal - price {deviation:.2f}% above SMA")
         return SideSignal.SELL, 0
     else:
