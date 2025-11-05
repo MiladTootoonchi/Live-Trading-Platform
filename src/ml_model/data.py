@@ -19,25 +19,35 @@ BASE_URL = "https://paper-api.alpaca.markets"
 
 async def get_one_realtime_bar(symbol: str, num_trades: int = 20) -> pd.DataFrame:
     """
-    Streams real-time trades for a stock symbol and computes a proper OHLC bar
+    Streams real-time trades for a stock symbol and computes an OHLCV bar
+    (open, high, low, close, volume, trade_count, vwap)
     after receiving a fixed number of trades.
 
-    Args:
-        symbol (str): Stock ticker symbol (e.g., "MSFT").
-        num_trades (int): Number of trades to collect before computing OHLC.
-
     Returns:
-        pd.DataFrame: Single-row DataFrame with columns ['open','high','low','close'].
+        pd.DataFrame: Single-row DataFrame with columns:
+        ['timestamp', 'open', 'high', 'low', 'close', 'volume', 'trade_count', 'vwap']
     """
 
-    df_bar = pd.DataFrame(columns = ['open', 'high', 'low', 'close'])
-    live_bar = {"open": None, "high": None, "low": None, "close": None}
-    trade_count = 0
+    # Initialize the bar
+    live_bar = {
+        "open": None,
+        "high": None,
+        "low": None,
+        "close": None,
+        "volume": 0.0,
+        "trade_count": 0,
+        "vwap": 0.0
+    }
+
+    total_dollar_volume = 0.0
+    total_volume = 0.0
     stop_event = asyncio.Event()
 
     async def trade_callback(data):
-        nonlocal trade_count
-        price = data.price
+        nonlocal total_dollar_volume, total_volume
+
+        price = float(data.price)
+        size = float(getattr(data, "size", 1.0))  # get trade size (volume per trade), default to 1.0 if missing
 
         # Update OHLC
         live_bar["open"] = live_bar["open"] or price
@@ -45,39 +55,63 @@ async def get_one_realtime_bar(symbol: str, num_trades: int = 20) -> pd.DataFram
         live_bar["low"] = min(live_bar["low"] or price, price)
         live_bar["close"] = price
 
-        trade_count += 1
-        if trade_count >= num_trades:
-            stop_event.set()  # stop after enough trades
+        # Update volume and VWAP calculations
+        total_volume += size
+        total_dollar_volume += price * size
+        live_bar["volume"] = total_volume
+        live_bar["trade_count"] += 1
+        live_bar["vwap"] = total_dollar_volume / total_volume if total_volume > 0 else price
 
+        # Stop after enough trades
+        if live_bar["trade_count"] >= num_trades:   # replaced old 'trade_count' variable with live_bar['trade_count']
+            stop_event.set()
 
-    stream = StockDataStream(api_key = KEY, secret_key = SECRET)
+    # Connect to Alpaca stream
+    stream = StockDataStream(api_key=KEY, secret_key=SECRET)
     stream.subscribe_trades(trade_callback, symbol)
 
     task = asyncio.create_task(stream._run_forever())
-    await stop_event.wait()  # wait until desired number of trades
-
-    task.cancel()
+    
     try:
-        await task
-    except asyncio.CancelledError:
-        pass
-    await stream.stop()
+        await stop_event.wait()
+    finally:
+        try:
+            await stream.stop_ws()
+        except Exception:
+            pass
 
+        if not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+    # Create DataFrame with all expected columns
     df_bar = pd.DataFrame([live_bar])
+
+    # Add timestamp column for downstream pipelines
+    df_bar["timestamp"] = pd.Timestamp.utcnow()
+
+    # Reorder columns for consistency with historical data
+    df_bar = df_bar[
+        ["timestamp", "open", "high", "low", "close", "volume", "trade_count", "vwap"]
+    ]
+
     return df_bar
 
 
 
 def fetch_data(symbol: str, 
                start_date: tuple[int, int, int] = (2020, 1, 1), 
-               end_date: tuple[int, int, int] = (2024, 12, 31)):
+               end_date: tuple[int, int, int] = (2025, 1, 1)) -> pd.DataFrame:
     """
     Fetching historical stock data for a given symbol using Alpaca's API.
 
     Args:
         symbol (str): The ticker symbol of the stock to fetch (e.g., 'AAPL').
         start_date (tuple[int, int, int]), optional: The start date as a tuple (year, month, day). Defaults to (2020, 1, 1).
-        end_date (tuple[int, int, int]), optional: The end date as a tuple (year, month, day). Defaults to (2024, 12, 31).
+        end_date (tuple[int, int, int]), optional: The end date as a tuple (year, month, day). Defaults to (2025, 1, 1).
 
     Returns:
         pandas.DataFrame: A DataFrame containing the historical daily stock bars, 
@@ -191,6 +225,7 @@ def stock_data_feature_engineering(df: pd.DataFrame) -> tuple[np.ndarray, pd.Ser
     df = df.dropna()
 
     # Addind a target
+    df = df.copy()
     df['target'] = (df['close'].shift(-1) > df['close']).astype(int)
     df = df[:-1]  # Remove last row with NaN target
 
@@ -204,7 +239,7 @@ def stock_data_feature_engineering(df: pd.DataFrame) -> tuple[np.ndarray, pd.Ser
 
     y = df['target'].loc[X.index]  # align target
 
-    return X_scaled, y
+    return X_scaled, y, scaler
 
 
 def stock_data_prediction_pipeline(df: pd.DataFrame, scaler: StandardScaler) -> np.ndarray:
@@ -224,6 +259,9 @@ def stock_data_prediction_pipeline(df: pd.DataFrame, scaler: StandardScaler) -> 
     """
 
     df = df.copy()
+
+    df = df.reset_index()
+
     if 'timestamp' not in df.columns:
         if 'index' in df.columns:
             df.rename(columns={'index': 'timestamp'}, inplace=True)

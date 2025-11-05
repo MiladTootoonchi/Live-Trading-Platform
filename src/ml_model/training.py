@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Tuple, Sequence, Union
 from tensorflow.keras.models import Model
+from tensorflow.keras.callbacks import EarlyStopping
 
 from .modelling import create_sequences, build_lstm
 
@@ -51,5 +52,14 @@ def train_model(X_seq: Union[np.ndarray, list],
     """
 
     lstm_model = build_lstm(X_seq)
-    lstm_model.fit(X_seq, y_seq, epochs = 20, batch_size = 16, validation_split = 0.1, verbose = 2)
+    early_stop = EarlyStopping(monitor = 'val_loss', patience = 5, restore_best_weights = True)
+    
+    lstm_model.fit(
+        X_seq, y_seq, 
+        epochs = 20, 
+        batch_size = 16, 
+        validation_split = 0.1,
+        callbacks = [early_stop],
+        verbose = 2)
+    
     return lstm_model

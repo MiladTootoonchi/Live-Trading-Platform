@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Union, Tuple, Sequence
 
-from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras import Model, Input
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 
 import numpy as np
@@ -45,9 +45,22 @@ def build_lstm(X_train_seq: Union[np.ndarray, list]) -> Model:
     Returns:
         Model: Compiled Keras LSTM model ready for training.
     """
-    model = Sequential()
-    model.add(LSTM(50, input_shape = (X_train_seq.shape[1], X_train_seq.shape[2])))
-    model.add(Dropout(0.2))
-    model.add(Dense(1, activation = 'sigmoid'))
-    model.compile(loss = 'binary_crossentropy', optimizer = 'adam', metrics = ['accuracy'])
+    # Determine number of features dynamically
+    n_features = X_train_seq.shape[2]
+
+    # Use functional API with Input layer (instead of input_shape in LSTM)
+    inputs = Input(shape=(None, n_features))  # variable time steps allowed¨
+ 
+    x = LSTM(50, return_sequences = False)(inputs)
+    x = Dropout(0.2)(x)
+    outputs = Dense(1, activation = 'sigmoid')(x)
+
+    model = Model(inputs, outputs)
+
+    model.compile(
+        loss = 'binary_crossentropy', 
+        optimizer = 'adam', 
+        metrics = ['accuracy']
+    )
+    
     return model
