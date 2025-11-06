@@ -2,3 +2,29 @@
 __pycache__/
 *.pyc
 *.pyo
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Datafiles
+*.csv
+*.parquet
+*.db
+*.h5
+
+# Logs
+*.log
+
+# VS Code settings
+.vscode/
+
+# OS files
+.DS_Store
+
+
+venv/
+.conda/
+
+test_*.py

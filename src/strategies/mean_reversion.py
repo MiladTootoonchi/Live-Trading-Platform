@@ -1,49 +1,53 @@
 from ..alpaca_trader.order import SideSignal
 from config import make_logger
+from .fetch_price_data import fetch_price_data 
 
 logger = make_logger()
 
-def mean_reversion_strategy(position_data: dict, moving_avg_price: float) -> tuple[SideSignal, int]:
-    """
-   Mean reversion strategy based on market moving average (SMA).
 
-    Logic:
-    - Buy when the price is significantly below the SMA (assumed undervalued).
-    - Sell when the price is significantly above the SMA (assumed overvalued).
-    - Stop-loss if the price falls too far below the SMA after buying.
-    - Otherwise, hold the position.
+def mean_reversion_strategy(position_data: dict, moving_avg_price: float = 0, min_data_points: int = 1) -> tuple[SideSignal, int]:
+    """Generates mean reversion BUY/SELL/HOLD signals."""
+    symbol = position_data.get("symbol")
+    if not symbol:
+        logger.error("[Mean Reversion] No symbol provided")
+        return SideSignal.HOLD, 0
+    
+    bars = position_data.get("history", [])
 
-    Args:
-        position_data (dict): Position details from trading API, expects keys: "qty", "current_price".
-        moving_avg_price (float): Market moving average price (e.g., 20-period SMA).
+    if not bars:
+        logger.warning(f"[Mean Reversion] No history in position_data, fetching from API for {symbol}")
+        bars = fetch_price_data(symbol)
 
-    Returns:
-        tuple: (SideSignal, quantity)
 
-    """
-    try: 
-        qty = int(float(position_data.get("qty", 0)))
-        current_price = float(position_data["current_price"])
+    if bars and len(bars) > 0:
+        current_price = float(bars[-1]["c"])
+    else:
+        current_price = float(position_data.get("current_price", 0))
 
-        if moving_avg_price == 0:
-            return SideSignal.HOLD, 0 # Avoid division by zero
-        
-        deviation = (current_price - moving_avg_price) / moving_avg_price * 100
-
-        # buy if price is more than 3% below SMA
-        if qty == 0 and deviation < -3:
-            return SideSignal.BUY, 10      
-
-        # sell if price is more than 4% above SMA
-        if qty > 0 and deviation > 4:
-            return SideSignal.SELL, qty
-
-        # Stop-loss if price drops too far
-        if qty > 0 and deviation < -6:
-            return SideSignal.SELL, qty
-
+    if moving_avg_price == 0:
+        logger.info("[Mean Reversion] Not enough data to calculate moving average")
         return SideSignal.HOLD, 0
 
-    except (KeyError, ValueError) as e:
-        logger.error(f"[Mean Reversion Strategy] Error: {e}\n")
-        return SideSignal.HOLD, 0 
+    deviation = (current_price - moving_avg_price) / moving_avg_price * 100
+
+    logger.info(f"[Mean Reversion] Current: {current_price:.2f}, SMA: {moving_avg_price:.2f}, Deviation: {deviation:.2f}%")
+
+    if deviation < -0.5:
+        logger.info(f"[Mean Reversion] SELL signal - stop-loss triggered at {deviation:.2f}%")
+        return SideSignal.SELL, 0
+    elif deviation < -0.3:
+        logger.info(f"[Mean Reversion] BUY signal - price {deviation:.2f}% below SMA")
+        return SideSignal.BUY, 0
+    elif deviation > 0.3:
+        logger.info(f"[Mean Reversion] SELL signal - price {deviation:.2f}% above SMA")
+        return SideSignal.SELL, 0
+    else:
+        logger.info("[Mean Reversion] HOLD - price within acceptable range")
+        return SideSignal.HOLD, 0
+
+
+
+      
+
+   
+

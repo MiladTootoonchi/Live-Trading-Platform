@@ -1,54 +1,54 @@
 from ..alpaca_trader.order import SideSignal
 from config import make_logger
+from .fetch_price_data import fetch_price_data 
 
 logger = make_logger()
 
+
 def momentum_strategy(position_data: dict) -> tuple[SideSignal, int]:
-    """
-    A simple momentum-based trading strategy.
+    """Generates a momentum-based BUY/SELL/HOLD signal."""
+    symbol = position_data.get("symbol")
+    if not symbol:
+        logger.error("[Momentum] No symbol provided")
+        return SideSignal.HOLD, 0
+    
+    bars = position_data.get("history", [])
 
-    Logic:
-    - Buy when there is strong positive price momentum (>2% intraday gain).
-    - Sell when the position has gained >5%.
-    - Sell if today's change is negative and gains are weak (<2%).
-    - Sell to cut losses if unrealized return drops below -3%.
-    - Hold otherwise.
+    if not bars:
+        logger.warning(f"[Momentum] No history in position_data, fetching from API for {symbol}")
+        bars = fetch_price_data(symbol)
 
-    Args:
-        position_data (dict): Position details, typically from a trading API.
-
-    Returns:
-        tuple: (SideSignal.BUY or SideSignal.SELL, quantity), or (SideSignal.HOLD, 0) to hold.
-    """
-    try: 
-        qty = int(float(position_data["qty"]))
-        avg_entry_price = float(position_data["avg_entry_price"])
-        current_price = float(position_data["current_price"])
-        change_today = float(position_data["change_today"])
-
-        unrealized_return_pct = (
-            (current_price - avg_entry_price) / avg_entry_price * 100
-            if avg_entry_price > 0 else 0
-        )
-
-        if qty == 0 and change_today > 2:
-            return SideSignal.BUY, 10
-
-        if unrealized_return_pct > 5:
-            return SideSignal.SELL, qty
-
-        if change_today < -1 and unrealized_return_pct < 2:
-            return SideSignal.SELL, qty
-
-        if unrealized_return_pct < -3:
-            return SideSignal.SELL, qty
-
+    if not bars:
+        logger.warning(f"[Momentum] No data available for {symbol}")
         return SideSignal.HOLD, 0
 
-    except KeyError as e:
-        logger.error(f"[Momentum Strategy] Missing key: {e}\n")
+    current_price = float(bars[-1]["c"])
+    open_price_today = float(bars[-1]["o"])
+    change_today = (current_price - open_price_today) / open_price_today * 100
+    avg_entry_price = float(position_data.get("avg_entry_price") or current_price)
+    unrealized_return_pct = (current_price - avg_entry_price) / avg_entry_price * 100
+
+    logger.info(f"[Momentum] {symbol} Price: {current_price:.2f}, Change today: {change_today:.2f}%")
+
+    # Buy: strong positive momentum
+    if change_today > 0.5:
+        logger.info("[Momentum] BUY signal triggered")
+        return SideSignal.BUY, 0
+
+    # Sell: take profit, negative momentum, or stop loss
+    elif unrealized_return_pct > 2:
+        logger.info("[Momentum] SELL signal - take profit")
+        return SideSignal.SELL, 0
+
+    elif change_today < -0.5 and unrealized_return_pct < 2:
+        logger.info("[Momentum] SELL signal - negative momentum with small gain")
+        return SideSignal.SELL, 0
+
+    elif unrealized_return_pct < -1.5:
+        logger.info("[Momentum] SELL signal - stop loss")
+        return SideSignal.SELL, 0
+
+    else:
+        logger.info("[Momentum] HOLD - no significant movement")
         return SideSignal.HOLD, 0
 
-    except Exception as e:
-        logger.error(f"[Momentum Strategy] Error: {e}\n")
-        return SideSignal.HOLD, 0

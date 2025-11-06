@@ -75,13 +75,13 @@ def load_api_keys(config_file: str = "settings.toml") -> tuple:
 
     except FileNotFoundError:
         logger.info(f"Config file not found: {config_file}, falling back to environment variables.\n")
-        alpaca_key = os.getenv("ALPACA_KEY")
-        alpaca_secret = os.getenv("ALPACA_SECRET_KEY")
+        alpaca_key = os.getenv("alpaca_key")
+        alpaca_secret = os.getenv("alpaca_secret_key")
 
     except Exception:
         logger.info(f"Could not find Alpaca API credentials in {config_file}, falling back to environment variables.\n")
-        alpaca_key = os.getenv("ALPACA_KEY")
-        alpaca_secret = os.getenv("ALPACA_SECRET_KEY")
+        alpaca_key = os.getenv("alpaca_key")
+        alpaca_secret = os.getenv("alpaca_secret_key")
 
     if not alpaca_key or not alpaca_secret:
         print("Missing Alpaca API credentials. Provide them in the config file or as environment variables.")
