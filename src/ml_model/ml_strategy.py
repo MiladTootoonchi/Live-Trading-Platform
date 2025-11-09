@@ -12,7 +12,7 @@ from src.ml_model.evaluations import evaluate_model
 
 logger = make_logger()
 
-def AI_strategy(position_data: dict) -> tuple[SideSignal, int]:
+async def AI_strategy(position_data: dict) -> tuple[SideSignal, int]:
     """
     Evaluates a trading position from an Alpaca JSON response and recommends an action.
     This strategy will only buy or sell.
@@ -46,7 +46,7 @@ def AI_strategy(position_data: dict) -> tuple[SideSignal, int]:
     f1, accuracy = evaluate_model(model, X_test, y_test)
 
     # Fetching mdip data till today (realtime data)
-    realtime_bar = asyncio.run(get_one_realtime_bar(symbol=symbol))
+    realtime_bar = await get_one_realtime_bar(symbol = symbol)
 
     hist_df = fetch_data("MSFT", 
                         start_date = (mdip.year, mdip.month, mdip.day), 

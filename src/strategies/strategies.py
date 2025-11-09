@@ -9,6 +9,7 @@ from .mean_reversion import mean_reversion_strategy
 from .momentum import momentum_strategy
 from .moving_average_strategy import moving_average_strategy
 from .rsi import rsi_strategy
+from ..ml_model.ml_strategy import AI_strategy
 
 logger = make_logger()
 
@@ -64,6 +65,7 @@ strategies = {
     "momentum_strategy": momentum_strategy,
     "moving_average_strategy": moving_average_strategy,
     "rsi_strategy": rsi_strategy,
+    "ai": AI_strategy,
 }
 
 

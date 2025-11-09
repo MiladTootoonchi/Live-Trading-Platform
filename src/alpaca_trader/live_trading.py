@@ -1,6 +1,7 @@
 import requests
 import asyncio
 from typing import Callable, List, Dict, Any
+import inspect
 
 from .order import OrderData, SideSignal
 from config import make_logger
@@ -223,7 +224,12 @@ class AlpacaTrader:
             tasks = []
             for position in positions_to_update:
                 symbol_i = position.get("symbol")
-                signal, qty = strategy(position)
+
+                if inspect.iscoroutinefunction(strategy):
+                    signal, qty = await strategy(position)    # The ML strategy need awaiting
+                else:
+                    signal, qty = strategy(position)
+
                 logger.info(f"{symbol_i}: {signal.value}")
 
                 if signal != SideSignal.HOLD:

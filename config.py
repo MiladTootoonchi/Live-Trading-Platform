@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 # Force load the .env from project root
-env_path = Path(__file__).resolve().parent.parent / ".env"
+env_path = Path(__file__).resolve().parent / ".env"
 load_dotenv(env_path)
 
 def make_logger():
@@ -106,4 +106,4 @@ def load_api_keys(config_file: str = "settings.toml") -> tuple:
 
         
 if __name__ == "__main__":
-    print(load_api_keys())
+    print(load_api_keys(), load_strategy_name())
