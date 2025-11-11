@@ -1,11 +1,12 @@
 import numpy as np
 from typing import Union, Tuple, Sequence
 
-from tensorflow.keras import Model, Input
-from tensorflow.keras.layers import LSTM, Dense, Dropout
-
-import numpy as np
-
+from tensorflow.keras import Model
+from tensorflow.keras.layers import (
+    Input, LSTM, Dense, Dropout, Bidirectional,
+    Attention, LayerNormalization, Add, GlobalAveragePooling1D
+)
+from tensorflow.keras.optimizers import Adam
 
 
 def create_sequences(X: Union[Sequence, np.ndarray],
@@ -68,4 +69,49 @@ def build_lstm(X_train_seq: Union[np.ndarray, list]) -> Model:
         metrics = ['accuracy']
     )
     
+    return model
+
+
+def build_attention_bilstm(X_train_seq: Union[np.ndarray, list]) -> Model:
+    """
+    Builds and compiles an Attention-enhanced BiLSTM model for binary stock movement prediction.
+
+    Args:
+        X_train_seq (Union[np.ndarray, list]): Input feature sequences used to determine input shape.
+            Expected shape is (num_samples, time_steps, num_features).
+
+    Returns:
+        Model: Compiled Keras BiLSTM-Attention model.
+    """
+
+    n_features = X_train_seq.shape[2]
+
+    # Input Layer
+    inputs = Input(shape=(None, n_features))
+
+    # Bidirectional LSTM (returns full sequence for attention)
+    x = Bidirectional(LSTM(64, return_sequences=True))(inputs)
+    x = Dropout(0.3)(x)
+
+    # Attention mechanism
+    attn = Attention()([x, x])               # Self-attention over time steps
+    x = Add()([x, attn])                     # Residual connection
+    x = LayerNormalization()(x)
+
+    x = GlobalAveragePooling1D()(x)
+    x = Dense(64, activation='relu')(x)
+    x = Dropout(0.3)(x)
+
+    # Binary output (up/down)
+    outputs = Dense(1, activation='sigmoid')(x)
+
+    # Build and compile
+    model = Model(inputs, outputs)
+
+    model.compile(
+        loss = 'binary_crossentropy',
+        optimizer = Adam(learning_rate=1e-3),
+        metrics = ['accuracy']
+    )
+
     return model

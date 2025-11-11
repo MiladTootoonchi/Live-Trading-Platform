@@ -3,7 +3,7 @@ from typing import Tuple, Sequence, Union
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping
 
-from .modelling import create_sequences, build_lstm
+from .modelling import create_sequences, build_lstm, build_attention_bilstm
 
 
 
