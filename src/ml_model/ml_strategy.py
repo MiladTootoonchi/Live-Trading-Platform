@@ -48,7 +48,7 @@ async def AI_strategy(position_data: dict) -> tuple[SideSignal, int]:
     # Fetching mdip data till today (realtime data)
     realtime_bar = await get_one_realtime_bar(symbol = symbol)
 
-    hist_df = fetch_data("MSFT", 
+    hist_df = fetch_data(symbol = symbol, 
                         start_date = (mdip.year, mdip.month, mdip.day), 
                         end_date = (yesterday.year, yesterday.month, yesterday.day))
     
@@ -67,7 +67,7 @@ async def AI_strategy(position_data: dict) -> tuple[SideSignal, int]:
 
     info = f"""
     The stock will go (1 for up, 0 for down) = {signal} tommorow 
-    with {(real_time_prediction*100):.4f} % probability.
+    with {(real_time_prediction.item() * 100):.4f} % probability.
     The AI - model got a test f1-score on {f1}, and a test accuracy score on {accuracy}.
     """
 
@@ -75,8 +75,14 @@ async def AI_strategy(position_data: dict) -> tuple[SideSignal, int]:
 
 
     # Deciding side and qty
-    side = SideSignal.BUY if real_time_prediction > 0.5 else SideSignal.SELL
     qty = compute_trade_qty(position_data, float(real_time_prediction))
+
+    if qty == 0:
+        side = SideSignal.HOLD
+    elif signal > 0:
+        side = SideSignal.BUY
+    else:
+        side = SideSignal.SELL
 
     return side, qty
 
@@ -113,9 +119,9 @@ def compute_trade_qty(position_data: dict, prob: float) -> int:
 
     # Risk parameters
     confidence_threshold = 0.55
-    max_position_frac = 0.10   # Max 10% of total equity
-    risk_per_trade = 0.01      # Risk 1% of equity per trade
-    stop_pct = 0.02            # 2% stop loss assumption
+    max_position_frac = 0.10        # Max 10% of total equity
+    risk_per_trade = 0.01           # Risk 1% of equity per trade
+    stop_pct = 0.02                 # 2% stop loss assumption
 
     try:
         price = float(position_data.get("avg_entry_price") or position_data.get("market_price"))
