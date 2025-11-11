@@ -243,5 +243,5 @@ class AlpacaTrader:
 
             await asyncio.gather(*tasks)
 
-        except Exception as e:
-            logger.error(f"Failed to update position(s) for {symbol}: {e}\n")
+        except Exception:
+            logger.exception(f"Failed to update position(s) for {symbol}")

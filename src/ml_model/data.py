@@ -8,6 +8,15 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 import asyncio
 
+def safe_run(self):
+    # If already in an async loop, don't call asyncio.run()
+    if asyncio.get_event_loop().is_running():
+        return self._run_forever()
+    else:
+        return asyncio.run(self._run_forever())
+
+StockDataStream.run = safe_run
+
 from config import load_api_keys, make_logger
 
 logger = make_logger()
@@ -47,7 +56,7 @@ async def get_one_realtime_bar(symbol: str, num_trades: int = 20) -> pd.DataFram
         nonlocal total_dollar_volume, total_volume
 
         price = float(data.price)
-        size = float(getattr(data, "size", 1.0))  # get trade size (volume per trade), default to 1.0 if missing
+        size = float(getattr(data, "size", 1.0))
 
         # Update OHLC
         live_bar["open"] = live_bar["open"] or price
@@ -63,22 +72,29 @@ async def get_one_realtime_bar(symbol: str, num_trades: int = 20) -> pd.DataFram
         live_bar["vwap"] = total_dollar_volume / total_volume if total_volume > 0 else price
 
         # Stop after enough trades
-        if live_bar["trade_count"] >= num_trades:   # replaced old 'trade_count' variable with live_bar['trade_count']
+        if live_bar["trade_count"] >= num_trades:
             stop_event.set()
 
     # Connect to Alpaca stream
     stream = StockDataStream(api_key=KEY, secret_key=SECRET)
     stream.subscribe_trades(trade_callback, symbol)
 
-    task = asyncio.create_task(stream._run_forever())
-    
+    task = asyncio.create_task(stream.run())
+    await asyncio.sleep(1)
+
     try:
+        stream.subscribe_trades(trade_callback, symbol)
         await stop_event.wait()
     finally:
         try:
-            await stream.stop_ws()
-        except Exception:
-            pass
+            await stream.unsubscribe_trades(symbol)
+        except Exception as e:
+            logger.warning(f"Unsubscribe failed: {e}")
+
+        try:
+            await stream.stop()
+        except Exception as e:
+            logger.warning(f"Stop failed: {e}")
 
         if not task.done():
             task.cancel()
