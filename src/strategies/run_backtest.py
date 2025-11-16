@@ -1,11 +1,10 @@
-from src.strategies.backtest import compare_strategies
-from src.strategies.bollinger_bands_strategy import bollinger_bands_strategy
-from src.strategies.macd import macd_strategy
-from src.strategies.mean_reversion import mean_reversion_strategy
-from src.strategies.momentum import momentum_strategy
-from src.strategies.moving_average_strategy import moving_average_strategy
-from src.strategies.rsi import rsi_strategy
-import pandas as pd
+from .backtest import compare_strategies
+from .bollinger_bands_strategy import bollinger_bands_strategy
+from .macd import macd_strategy
+from .mean_reversion import mean_reversion_strategy
+from .momentum import momentum_strategy
+from .moving_average_strategy import moving_average_strategy
+from .rsi import rsi_strategy
 
 TEST_MODE = True  
 
