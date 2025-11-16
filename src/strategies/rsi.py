@@ -1,7 +1,7 @@
 from ..alpaca_trader.order import SideSignal
 from typing import Tuple
 from config import make_logger
-from src.strategies.fetch_price_data import fetch_price_data 
+from .fetch_price_data import fetch_data 
 
 logger = make_logger()
 
@@ -30,7 +30,7 @@ def rsi_strategy(position_data: dict) -> Tuple[SideSignal, int]:
 
     if not bars:
         logger.warning(f"[RSI] No history in position_data for {symbol}, fetching from API")
-        bars = fetch_price_data(symbol)
+        bars = fetch_data(symbol)
 
     if not bars or len(bars) < 15:
         logger.info(f"Not enough bars to calculate RSI for {symbol}")

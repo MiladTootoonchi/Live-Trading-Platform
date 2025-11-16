@@ -1,7 +1,7 @@
 from ..alpaca_trader.order import SideSignal
 from typing import Tuple
 from config import make_logger
-from .fetch_price_data import fetch_price_data 
+from .fetch_price_data import fetch_data 
 
 logger = make_logger()
 
@@ -16,8 +16,7 @@ def bollinger_bands_strategy(position: dict) -> Tuple[SideSignal, int]:
     bars = position.get("history", [])
 
     if not bars:
-        from .fetch_price_data import fetch_price_data
-        bars = fetch_price_data(symbol)
+        bars = fetch_data(symbol)
 
     if len(bars) < 20:
         logger.warning(f"Not enough data for {symbol} - only {len(bars)} bars")

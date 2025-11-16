@@ -2,7 +2,7 @@ import pandas as pd
 from typing import Callable, List, Dict
 from config import make_logger
 from ..alpaca_trader.order import SideSignal
-from .fetch_price_data import fetch_price_data
+from .fetch_price_data import fetch_data
 
 logger = make_logger()
 
@@ -32,7 +32,7 @@ class Backtester:
         while remaining_days > 0:
             fetch_days = min(batch_size, remaining_days)
             logger.info(f"Fetching {fetch_days} days for {symbol}")
-            batch_bars = fetch_price_data(symbol, limit=fetch_days * 390)  
+            batch_bars = fetch_data(symbol, limit=fetch_days * 390)  
             if not batch_bars:
                 logger.warning(f"No data fetched for {symbol} in last batch")
                 break
@@ -64,13 +64,13 @@ class Backtester:
         trades = []
 
         from . import fetch_price_data as fpd_module
-        original_fetch = fpd_module.fetch_price_data
+        original_fetch = fpd_module.fetch_data
 
         def mock_fetch_price_data(symbol, limit=None):
             """Return cached bars up to current iteration."""
             return self._current_bars
 
-        fpd_module.fetch_price_data = mock_fetch_price_data
+        fpd_module.fetch_data = mock_fetch_price_data
 
         try:
             for i in range(lookback, len(self.bars)):
@@ -122,7 +122,7 @@ class Backtester:
                 dates.append(date)
 
         finally:
-            fpd_module.fetch_price_data = original_fetch
+            fpd_module.fetch_data = original_fetch
 
         self.trades = pd.DataFrame(trades) if trades else pd.DataFrame()
         return pd.DataFrame({'date': dates, 'portfolio_value': portfolio_values})

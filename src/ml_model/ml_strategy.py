@@ -5,7 +5,8 @@ from alpaca.trading.client import TradingClient
 
 from ..alpaca_trader.order import SideSignal
 from config import make_logger, load_api_keys
-from src.ml_model.data import fetch_data, stock_data_prediction_pipeline, stock_data_feature_engineering, get_one_realtime_bar
+from src.ml_model.data import stock_data_prediction_pipeline, stock_data_feature_engineering, get_one_realtime_bar
+from src.strategies.fetch_price_data import fetch_data
 from src.ml_model.training import train_model, sequence_split
 from src.ml_model.evaluations import evaluate_model
 

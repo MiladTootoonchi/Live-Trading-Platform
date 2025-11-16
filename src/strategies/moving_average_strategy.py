@@ -1,6 +1,6 @@
 from ..alpaca_trader.order import SideSignal
 from config import make_logger
-from .fetch_price_data import fetch_price_data 
+from .fetch_price_data import fetch_data 
 
 logger = make_logger()
 
@@ -22,7 +22,7 @@ def moving_average_strategy(position: dict) -> tuple[SideSignal, int]:
 
     if not bars:
         logger.warning(f"[MA Strategy] No history in position data for {symbol}, fetching from API")
-        bars = fetch_price_data(symbol, limit=200)
+        bars = fetch_data(symbol, limit=200)
 
     if not bars or len(bars) < 200:
         logger.info(f"Not enough bars for {symbol}. Need at least 200 minute bars")

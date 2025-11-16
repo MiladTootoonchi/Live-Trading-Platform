@@ -1,34 +1,57 @@
-from ..alpaca_trader.order import SideSignal
-from typing import Tuple
 from config import load_api_keys, make_logger
-import requests
+from alpaca.data.timeframe import TimeFrame
+import datetime as dt
+import pandas as pd
+from alpaca.data.requests import StockBarsRequest
+from alpaca.data.historical import StockHistoricalDataClient
 
 logger = make_logger()
 
-def fetch_price_data(symbol: str, limit: int = 100):
-    """Fetches recent intraday price data from Alpaca (1Min bars)."""
-    alpaca_key, alpaca_secret = load_api_keys()
-    if not alpaca_key or not alpaca_secret:
-        logger.error("Missing API keys")
-        return []
+KEY, SECRET = load_api_keys()
 
-    headers = {
-        "APCA-API-KEY-ID": alpaca_key,
-        "APCA-API-SECRET-KEY": alpaca_secret
-    }
+client = StockHistoricalDataClient(api_key = KEY, secret_key = SECRET)
 
-    url = f"https://data.alpaca.markets/v2/stocks/{symbol}/bars?timeframe=1Min&limit={limit}"
-    logger.info(f"Fetching data from: {url}")
+def fetch_data(symbol: str, 
+               start_date: tuple[int, int, int] = (2020, 1, 1), 
+               end_date: tuple[int, int, int] = (2025, 1, 1)) -> pd.DataFrame:
+    """
+    Fetching historical stock data for a given symbol using Alpaca's API.
 
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        logger.error(f"Error fetching data for {symbol}: {e}")
-        return []
+    Args:
+        symbol (str): The ticker symbol of the stock to fetch (e.g., 'AAPL').
+        start_date (tuple[int, int, int]), optional: The start date as a tuple (year, month, day). Defaults to (2020, 1, 1).
+        end_date (tuple[int, int, int]), optional: The end date as a tuple (year, month, day). Defaults to (2025, 1, 1).
 
-    data = response.json()
-    bars = data.get("bars", [])
-    if not bars:
-        logger.warning(f"No bars returned for {symbol}. Check API keys and market hours.")
-    return bars
+    Returns:
+        pandas.DataFrame: A DataFrame containing the historical daily stock bars, 
+        including open, high, low, close, volume, and timestamp indexed by date.
+    """
+
+    if client is None:
+        logger.log("Alpaca client must be provided")
+
+    # Convert tuples to datetime.date
+    start = dt.date(*start_date)
+    end = dt.date(*end_date)
+
+
+    # Make sure dates are not in the future
+    today = dt.date.today()
+    if end > today:
+        logger.log(f"Warning: end_date {end} is in the future. Setting it to today.")
+        end = today
+    if start > today:
+        print(f"Error: start_date {start} is in the future. Cannot fetch data.")
+        return pd.DataFrame() 
+
+
+    request_params = StockBarsRequest(
+        symbol_or_symbols = symbol,
+        timeframe = TimeFrame.Day,
+        start = start,
+        end = end
+    )
+
+    bars = client.get_stock_bars(request_params)
+
+    return bars.df

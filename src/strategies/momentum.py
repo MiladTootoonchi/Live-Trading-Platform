@@ -1,6 +1,6 @@
 from ..alpaca_trader.order import SideSignal
 from config import make_logger
-from .fetch_price_data import fetch_price_data 
+from .fetch_price_data import fetch_data 
 
 logger = make_logger()
 
@@ -16,7 +16,7 @@ def momentum_strategy(position_data: dict) -> tuple[SideSignal, int]:
 
     if not bars:
         logger.warning(f"[Momentum] No history in position_data, fetching from API for {symbol}")
-        bars = fetch_price_data(symbol)
+        bars = fetch_data(symbol)
 
     if not bars:
         logger.warning(f"[Momentum] No data available for {symbol}")
