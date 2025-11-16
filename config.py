@@ -3,10 +3,23 @@ import os
 import toml
 import logging
 import os
+from pathlib import Path
 
-load_dotenv()
+# Force load the .env from project root
+env_path = Path(__file__).resolve().parent / ".env"
+load_dotenv(env_path)
 
 def make_logger():
+    """
+    Creates and configures a logger that writes INFO-level messages to a file.
+
+    The logger writes to 'logfiles/live_trading.log', creating the directory if it 
+    doesn't exist. Log messages are formatted with a timestamp, log level, and message.
+    
+    Returns:
+        logging.Logger: Configured logger instance ready for use.
+    """
+    
     log_dir = "logfiles"
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
@@ -33,6 +46,9 @@ def load_strategy_name(config_file: str = "settings.toml") -> str:
     Load the name of the strategy the user want to use for the live trading.
     If the strategy is not given, the program will ask for an input.
 
+    Args:
+        config_file (str): Path to the TOML config file.
+
     Returns:
         str: The name of the strategy:
     """
@@ -41,11 +57,11 @@ def load_strategy_name(config_file: str = "settings.toml") -> str:
         with open(config_file, "r") as file:
             conf = toml.load(file)
             live = conf.get("live", {})
-            strategy = live.get("strategy", strategy)
+            strategy = live.get("strategy", None)
         
     except Exception:
         logger.info(f"Could not find strategy name in {config_file}, falling back to environment variables.\n")
-        strategy = os.getenv("STRATEGY")
+        strategy = os.getenv("strategy")
         if strategy == None:
             logger.info(f"strategy name string missing from environment variables")
  
@@ -90,4 +106,4 @@ def load_api_keys(config_file: str = "settings.toml") -> tuple:
 
         
 if __name__ == "__main__":
-    print(load_api_keys())
+    print(load_api_keys(), load_strategy_name())
