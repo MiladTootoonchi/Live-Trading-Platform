@@ -1,5 +1,12 @@
 import numpy as np
 from typing import Tuple, Sequence, Union
+
+# Ignoring info + warning + errors: the user do not need to see this
+import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"   # Completely disable GPU
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"   # Reduces backend logs
+
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping
 

@@ -4,6 +4,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Tuple
 from sklearn.metrics import classification_report, confusion_matrix, f1_score, accuracy_score
+
+# Ignoring info + warning + errors: the user do not need to see this
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"   # Completely disable GPU
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"   # Reduces backend logs
+
 from tensorflow.keras.models import Model
 
 from config import make_logger

@@ -1,4 +1,3 @@
-import asyncio
 import pandas as pd
 import numpy as np
 import datetime as dt
@@ -54,7 +53,17 @@ async def AI_strategy(position_data: dict) -> tuple[SideSignal, int]:
     
     hist_df = hist_df.reset_index()     # making sure there isnt any dobble index
 
-    pred_df = pd.concat([hist_df.tail(50), realtime_bar])
+    # Drop fully-NA rows
+    realtime_bar = realtime_bar.dropna(how = "all")
+
+    # Drop fully-NA columns (this is what removes the FutureWarning)
+    realtime_bar = realtime_bar.dropna(axis = 1, how = "all")
+
+    # Now safe to concatenate
+    pred_df = pd.concat(
+        [hist_df.tail(50), realtime_bar],
+        ignore_index = True
+    )
     
     # Preprocessing pred_data
     X = stock_data_prediction_pipeline(pred_df, scaler)
@@ -66,9 +75,9 @@ async def AI_strategy(position_data: dict) -> tuple[SideSignal, int]:
     signal = int((real_time_prediction > 0.5).astype(int).item())
 
     info = f"""
+
     The stock will go (1 for up, 0 for down) = {signal} tommorow 
     with {(real_time_prediction.item() * 100):.4f} % probability.
-    The AI - model got a test f1-score on {f1}, and a test accuracy score on {accuracy}.
     """
 
     logger.info(info)
