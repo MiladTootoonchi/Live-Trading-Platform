@@ -1,7 +1,5 @@
 <h1 align = "center"> Live-Trading-Platform </h1>
 
-***
-
 **Year:** 2025
 
 **Team members:** \
@@ -49,7 +47,7 @@ Traditional trading methods often depend on manual decision-making processes, wh
 To bridge the gap between theoretical knowledge and practical application, this project aims to develop a Python-based trading bot capable of analysing market trends, executing trades, and assessing strategy performance within a simulated paper trading environment.
 
 The overall goal is to develop an automated trading system.  
-In order to achieve this the following objectives and activities has been set: \
+In order to achieve this the following objectives and activities has been set:
 
 1. Research 
 
@@ -99,66 +97,124 @@ In order to achieve this the following objectives and activities has been set: \
 
 <h2 align = "center"> Theory & Key Concepts </h2>
 
-This chapter provides an overview of the key concepts essential for developing an automated trading system. It covers topics such as FinTech, algorithmic trading, trading strategies, and back testing. Additionally, it introduces Python’s role in implementing trading strategies and interacting with platforms like Alpaca. Understanding these concepts will lay the foundation for creating and evaluating a successful trading strategy. 
+This chapter provides an overview of the key concepts essential for developing an automated trading system. It covers topics such as FinTech, algorithmic trading, trading strategies, and backtesting. Additionally, it introduces Python’s role in implementing trading strategies and interacting with platforms like Alpaca. Understanding these concepts will lay the foundation for creating and evaluating a successful trading strategy. 
 
-<h2 align = "center"> What is FinTech? </h2>
+<h3 align = "center"> What is FinTech? </h3>
 
 Financial technology, or fintech, refers to the use of innovative technologies to deliver and improve financial services. From mobile banking and digital wallets to blockchain and algorithmic trading, fintech is transforming how individuals, businesses, and institutions interact with money. 
 
 Driven by advancements in software, data analytics, and connectivity, fintech has disrupted traditional banking models by offering faster, cheaper, and more accessible solutions. It enables everything from peer-to-peer payments and robo-advisors to crowdfunding platforms and decentralized finance (DeFi).
 
-![Fintech (financial technology) and the European Union: State of play and  outlook | Epthinktank | European Parliament](https://i0.wp.com/epthinktank.eu/wp-content/uploads/2019/02/eprs-briefing-635513-fintech-and-eu-final.jpg?fit=1000%2C306&ssl=1 "FinTech")
+![Fintech (financial technology) and the European Union: State of play and  outlook | Epthinktank | European Parliament](https://i0.wp.com/epthinktank.eu/wp-content/uploads/2019/02/eprs-briefing-635513-fintech-and-eu-final.jpg?fit=1000%2C306&ssl=1 "FinTech") \
+Figure 1: The usage of FinTech
 
 At its core, fintech blends finance and technology to increase efficiency, enhance customer experiences, and open up new opportunities for financial inclusion across the globe. As digital adoption continues to rise, fintech is reshaping the future of finance—making it more agile, intelligent, and customer-focused than ever before.
 
 “Algorithmic trading is a process for executing orders utilizing automated and pre-programmed trading instructions to account for variables such as price, timing and volume.
 
-![Algorithmic Trading: Definition, How It Works, Pros & Cons](https://www.investopedia.com/thmb/j0RDfj9IIW_pSffoBUikqTyjs8U=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/dotdash_Final_Algorithmic_Trading_Apr_2020-01-59aa25326afd47edb2e847c0e18f8ce2.jpg)
+![Algorithmic Trading: Definition, How It Works, Pros & Cons](https://www.investopedia.com/thmb/j0RDfj9IIW_pSffoBUikqTyjs8U=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/dotdash_Final_Algorithmic_Trading_Apr_2020-01-59aa25326afd47edb2e847c0e18f8ce2.jpg) \
+Figure 2: An algorithm is a set of directions for solving a problem. Computer algorithms send small portions of the full order to the market over time.” - Investopedia. 
 
-An algorithm is a set of directions for solving a problem. Computer algorithms send small portions of the full order to the market over time.” - Investopedia. 
-
-<h2 align = "center"> Introduction to Alpaca </h2>
+<h3 align = "center"> Introduction to Alpaca </h3>
 In today’s digital-first economy, efficient and flexible market access is a critical component for individual and institutional investors alike. Market access refers to the ability to interact with and trade within financial markets, including stock exchanges, forex, and derivatives markets. The evolution of financial technology has enabled new forms of market access-through APIs, low-latency trading platforms, and algorithmic interfaces—empowering developers and traders to automate strategies and engage with global markets in real-time. 
 
 One of the prominent platforms facilitating this innovation is Alpaca Markets. Alpaca is a modern commission-free brokerage platform that offers robust APIs for trading U.S. stocks and ETFs. Designed with developers in mind, Alpaca provides real-time market data, paper trading environments, and order execution capabilities through simple REST and WebSocket interfaces. Its emphasis on algorithmic and programmatic trading makes it an attractive solution for fintech startups, quantitative traders, and academic researchers exploring financial automation. 
 
-![Alpaca Launches Next-Gen Order Management System That Makes Order  Processing 100x Faster](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTgxUaS1mTtNlVD2XAtydSKXtWsgAGIhygQ-A&s "Alpaca API")
+![Alpaca Launches Next-Gen Order Management System That Makes Order  Processing 100x Faster](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTgxUaS1mTtNlVD2XAtydSKXtWsgAGIhygQ-A&s "Alpaca API") \
+Figure 3: How Alpaca API works
 
 By lowering the barriers to entry, Alpaca represents a shift toward democratizing financial markets—offering accessible, scalable, and customizable trading infrastructure. This project explores the fundamentals of market access and highlights how Alpaca Markets enables seamless integration of trading algorithms, portfolio management, and data-driven investment strategies. 
 
-<h2 align = "center"> Concepts for Strategies </h2>
+<h3 align = "center"> Concepts for Strategies </h3>
 
 The decision to buy or sell financial securities uses a predetermined algorithm, with the intent to make a profit. In this platform, this algorithm is a python script which can take historical data as an input and give a decision to buy / sell / hold as output. 
 
 In trading, there are several key strategies that guide decision-making. These strategies can be automated through algorithmic trading systems, allowing for faster and more efficient execution of trades based on specific signals and market conditions. 
 
-- Momentum: This strategy involves buying stocks that are trending upward or selling those that are trending downward, with the expectation that these trends will continue. Traders rely on the idea that strong trends often persist for a period. 
+- **Momentum:** This strategy involves buying stocks that are trending upward or selling those that are trending downward, with the expectation that these trends will continue. Traders rely on the idea that strong trends often persist for a period. 
 
-- Mean Reversion: Traders using this strategy believe that stock prices will eventually return to their historical average. As a result, they buy stocks that are undervalued and sell those that are overpriced, expecting price corrections. 
+- **Mean Reversion:** Traders using this strategy believe that stock prices will eventually return to their historical average. As a result, they buy stocks that are undervalued and sell those that are overpriced, expecting price corrections. 
 
-- Moving Average Strategies: Comparing the stock’s current price with its moving averages (20-day, 50-day, 200-day) to generate buy/sell signals. 
+- **Moving Average Strategies:** Comparing the stock’s current price with its moving averages (20-day, 50-day, 200-day) to generate buy/sell signals. 
 
-- RSI (Relative Strength Index): Used to determine whether a stock is overbought (RSI > 70) or oversold (RSI < 30), providing potential buy/sell signals.
+- **RSI (Relative Strength Index):** Used to determine whether a stock is overbought (RSI > 70) or oversold (RSI < 30), providing potential buy/sell signals.
 
-- MACD (Moving Average Convergence Divergence): A momentum indicator based on the crossover of the MACD line and the signal line, used for buy/sell decisions.
+- **MACD (Moving Average Convergence Divergence):** A momentum indicator based on the crossover of the MACD line and the signal line, used for buy/sell decisions.
 
-- Bollinger Bands: Utilized to measure stock volatility and potential price movements based on the distance between the upper and lower bands.
+- **Bollinger Bands:** Utilized to measure stock volatility and potential price movements based on the distance between the upper and lower bands.
 
-- Rule based strategy: A simple strategy where the program sends buy / sell / hold signals based on close-price thesholds. Only position data is needed here.
+- **Rule based strategy:** A simple strategy where the program sends buy / sell / hold signals based on close-price thesholds. Only position data is needed here.
 
-- Neural nettworks: A neural network is a type of machine learning model inspired by the human brain, consisting of interconnected nodes, or "neurons," arranged in layers. These networks learn from data by processing information and adjusting the strength of connections between neurons to recognize patterns, make predictions, and solve complex problems. 
-    - RNN (LSTM): A recurrent neural network (RNN) is a type of neural network with a feedback loop that allows it to process sequential data by using past information to influence current outputs. A Long Short-Term Memory (LSTM) is a specialized type of RNN designed to handle long-term dependencies in data more effectively, using memory cells with gates to control the flow of information over time. 
+- **Neural nettworks:** A neural network is a type of machine learning model inspired by the human brain, consisting of interconnected nodes, or "neurons," arranged in layers. These networks learn from data by processing information and adjusting the strength of connections between neurons to recognize patterns, make predictions, and solve complex problems. 
+    - **RNN (LSTM):** A recurrent neural network (RNN) is a type of neural network with a feedback loop that allows it to process sequential data by using past information to influence current outputs. A Long Short-Term Memory (LSTM) is a specialized type of RNN designed to handle long-term dependencies in data more effectively, using memory cells with gates to control the flow of information over time. This ML-model will predict if the stock will rise or fall the next day, a simple classification prediction. The quantity of the order will be calculated seperatly using the probability of the prediction, this model will hold if the quantity is calculated to be 0.
+  
+![A graph of trading strategy AI-generated content may be incorrect.](https://www.5paisa.com/finschool/wp-content/uploads/2022/12/macd-vs-relative.jpeg "MACD vs. RSI") \
+Figure 4: (Ajay, 2022) The figure shows us different trading strategy methods based on MACD and RSI
+
+<h3 align = "center"> Backtesting </h3>
+
+Backtesting and paper trading are essential steps in developing a successful trading algorithm, as they help evaluate performance before risking real capital. Backtesting involves running a strategy on historical market data to assess its effectiveness, while paper trading allows traders to simulate live market conditions without actual financial risk.
+
+These methods help identify weaknesses, optimize parameters, and build confidence in a strategy. Without proper testing, traders risk deploying flawed algorithms that may perform poorly in real world conditions, leading to significant losses. 
+
+Creating a profitable trading algorithm comes with several challenges, including overfitting and market risks. Overfitting occurs when an algorithm is too closely tailored to past data, making it ineffective in future market conditions. Additionally, market risks such as volatility, slippage, and unexpected economic events can negatively impact a strategy’s performance. Developing a robust algorithm requires careful optimization, risk management techniques, and continuous adaptation to changing market dynamics. Without addressing these challenges, even a well designed algorithm may fail to generate consistent profits. 
 
 ***
 <h2 align = "center"> Program Design </h2>
 
-kart og forklaring over hvordan systemer samkjører
+**Tools Used:** 
+- Python 
+- Alpaca
 
-kart og forklaring over hvordan pakkene samkjører
+**Packages**
+- alpaca
+- alpaca_trade_api
+- alpaca-py
+- requests
+- numPy
+- Ppandas
+- matplotlib
+- seaborn
+- scikit-learn
+- scipy
+- tensorflow
+- scikeras
+- toml
+- python-dotenv
 
-kart og forkalring over maskinlærepakken
+**Main Deliverables:**
+- A Python-based trading algorithm 
+- A backtesting framework for evaluating performance 
+- A report on strategy effectiveness and areas for improvement 
 
-<h3 align = "center"> Data and Data Collection </h3>
+**Target Audience:** New students learning about FinTech and algorithmic trading 
+
+**Success Criteria:** A functional trading bot that executes simulated trades with basic performance metrics 
+
+<h3 align = "left"> Program Architecture </h3>
+
+![system architecture.drawio.png](<attachment:system architecture.drawio.png>) \
+Figure 5: The program architecture shows how the different packages communicate with each other.
+
+<br>
+<br>
+
+
+<h4 align = "left"> ML-Model Architecture </h4>
+
+![model_architecture.drawio.png](attachment:model_architecture.drawio.png) \
+Figure 6: The LSTM model architecture.
+
+**model compile settings** \
+loss: binary crossentropy, \
+optimizer = adam, \
+metric = accuracy \
+test metric = f1-score
+
+<br>
+<br>
+
+<h4 align = "left"> Data & Data Collection </h4>
 
 Description of the dataset(s)
 
@@ -192,8 +248,12 @@ maskinlære
 <h2 align = "center"> Discussion & Future Work </h2>
 
 diskusjon
+    - mer OOP-programmering?
+    - bedre kommunikasjon med pakker
+    - mer regularisering som dropout og early_stopping
 
 hva planen er for videre utvikling
+    - bedre ml-modeller? (mer kompliserte)
 
 ***
 
