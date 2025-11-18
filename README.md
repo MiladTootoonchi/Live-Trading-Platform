@@ -105,23 +105,35 @@ Financial technology, or fintech, refers to the use of innovative technologies t
 
 Driven by advancements in software, data analytics, and connectivity, fintech has disrupted traditional banking models by offering faster, cheaper, and more accessible solutions. It enables everything from peer-to-peer payments and robo-advisors to crowdfunding platforms and decentralized finance (DeFi).
 
+<br>
+
 ![Fintech (financial technology) and the European Union: State of play and  outlook | Epthinktank | European Parliament](https://i0.wp.com/epthinktank.eu/wp-content/uploads/2019/02/eprs-briefing-635513-fintech-and-eu-final.jpg?fit=1000%2C306&ssl=1 "FinTech") \
 Figure 1: The usage of FinTech
+
+<br>
 
 At its core, fintech blends finance and technology to increase efficiency, enhance customer experiences, and open up new opportunities for financial inclusion across the globe. As digital adoption continues to rise, fintech is reshaping the future of finance—making it more agile, intelligent, and customer-focused than ever before.
 
 “Algorithmic trading is a process for executing orders utilizing automated and pre-programmed trading instructions to account for variables such as price, timing and volume.
 
+<br>
+
 ![Algorithmic Trading: Definition, How It Works, Pros & Cons](https://www.investopedia.com/thmb/j0RDfj9IIW_pSffoBUikqTyjs8U=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/dotdash_Final_Algorithmic_Trading_Apr_2020-01-59aa25326afd47edb2e847c0e18f8ce2.jpg) \
 Figure 2: An algorithm is a set of directions for solving a problem. Computer algorithms send small portions of the full order to the market over time.” - Investopedia. 
+
+<br>
 
 <h3 align = "center"> Introduction to Alpaca </h3>
 In today’s digital-first economy, efficient and flexible market access is a critical component for individual and institutional investors alike. Market access refers to the ability to interact with and trade within financial markets, including stock exchanges, forex, and derivatives markets. The evolution of financial technology has enabled new forms of market access-through APIs, low-latency trading platforms, and algorithmic interfaces—empowering developers and traders to automate strategies and engage with global markets in real-time. 
 
 One of the prominent platforms facilitating this innovation is Alpaca Markets. Alpaca is a modern commission-free brokerage platform that offers robust APIs for trading U.S. stocks and ETFs. Designed with developers in mind, Alpaca provides real-time market data, paper trading environments, and order execution capabilities through simple REST and WebSocket interfaces. Its emphasis on algorithmic and programmatic trading makes it an attractive solution for fintech startups, quantitative traders, and academic researchers exploring financial automation. 
 
+<br>
+
 ![Alpaca Launches Next-Gen Order Management System That Makes Order  Processing 100x Faster](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTgxUaS1mTtNlVD2XAtydSKXtWsgAGIhygQ-A&s "Alpaca API") \
 Figure 3: How Alpaca API works
+
+<br>
 
 By lowering the barriers to entry, Alpaca represents a shift toward democratizing financial markets—offering accessible, scalable, and customizable trading infrastructure. This project explores the fundamentals of market access and highlights how Alpaca Markets enables seamless integration of trading algorithms, portfolio management, and data-driven investment strategies. 
 
@@ -147,9 +159,13 @@ In trading, there are several key strategies that guide decision-making. These s
 
 - **Neural nettworks:** A neural network is a type of machine learning model inspired by the human brain, consisting of interconnected nodes, or "neurons," arranged in layers. These networks learn from data by processing information and adjusting the strength of connections between neurons to recognize patterns, make predictions, and solve complex problems. 
     - **RNN (LSTM):** A recurrent neural network (RNN) is a type of neural network with a feedback loop that allows it to process sequential data by using past information to influence current outputs. A Long Short-Term Memory (LSTM) is a specialized type of RNN designed to handle long-term dependencies in data more effectively, using memory cells with gates to control the flow of information over time. This ML-model will predict if the stock will rise or fall the next day, a simple classification prediction. The quantity of the order will be calculated seperatly using the probability of the prediction, this model will hold if the quantity is calculated to be 0.
-  
+
+<br>
+
 ![A graph of trading strategy AI-generated content may be incorrect.](https://www.5paisa.com/finschool/wp-content/uploads/2022/12/macd-vs-relative.jpeg "MACD vs. RSI") \
 Figure 4: (Ajay, 2022) The figure shows us different trading strategy methods based on MACD and RSI
+
+<br>
 
 <h3 align = "center"> Backtesting </h3>
 
@@ -191,19 +207,22 @@ Creating a profitable trading algorithm comes with several challenges, including
 
 **Success Criteria:** A functional trading bot that executes simulated trades with basic performance metrics 
 
-<h3 align = "left"> Program Architecture </h3>
+<h3 align = "left"> Program Directory Architecture </h3>
 
 ![system architecture.drawio.png](<attachment:system architecture.drawio.png>) \
 Figure 5: The program architecture shows how the different packages communicate with each other.
 
 <br>
-<br>
 
+![classdiagram.drawio.png](attachment:classdiagram.drawio.png) \
+Figure 6: The diagram shows how the *AlpacaTrader* object communicates with strategies, configuration and the main function.
+
+<br>
 
 <h4 align = "left"> ML-Model Architecture </h4>
 
 ![model_architecture.drawio.png](attachment:model_architecture.drawio.png) \
-Figure 6: The LSTM model architecture.
+Figure 7: The LSTM model architecture.
 
 **model compile settings** \
 loss: binary crossentropy, \
@@ -212,19 +231,80 @@ metric = accuracy \
 test metric = f1-score
 
 <br>
-<br>
 
 <h4 align = "left"> Data & Data Collection </h4>
+The dataset contains historical stock price information retrieved from the Alpaca API. Each entry includes a timestamp along with standard market fields such as open, high, low, close, volume, trade count, and VWAP. The data is structured as a time series, making it suitable for predictive modeling. All market data are obtained directly from the Alpaca Market Data API, which provides exchange reported price and volume information. The dataset reflects real trading activity and is used both for machine-learning-based prediction and does not include preprocessing for rule-based or financial strategy testing.
 
-Description of the dataset(s)
+Typical issues found in financial time-series data may appear:
+- Missing values due to market closures, low-liquidity periods, or incomplete API responses.
+- Rolling-window NaNs, which naturally occur when computing SMA, RSI, MACD, and similar indicators.
+- Outliers and sharp price movements, reflecting real market volatility.
+- Inconsistent or duplicated timestamps, depending on API frequency and sampling settings.
+- Distribution mismatch if real-time data is not preprocessed in the exact same way as training data.
 
-Data sources
+<br>
 
-Data quality issues
+**Preprocessing Steps (Cleaning, Transformations, Feature Engineering)**
 
-Preprocessing steps (cleaning, transformations, feature engineering)
+This projects pipeline applies structured and repeatable transformations:
 
-Challenges and constraints
+1. Timestamp normalization
+
+    - Reset index, convert timestamps to datetime, and re-index the DataFrame using the timestamp.
+
+2. Feature engineering (technical indicators)
+
+    - Moving averages: SMA5, SMA20, SMA50
+
+    - Price change: first difference of close price
+
+    - RSI (14-period)
+
+    - MACD and MACD Signal line (EMA-based)
+
+3. Data cleaning
+
+    - Removal of all rows containing NaN values created by rolling or EMA computations.
+
+4. Target variable construction (training only)
+
+    - Binary target indicating whether the next closing price is higher than the current one.
+
+5. Scaling
+
+    - StandardScaler is fit on the training features.
+
+    - During real-time prediction, the same scaler is used to transform incoming data without refitting.
+
+6. Real-time prediction preparation
+
+    - Applies the identical feature engineering pipeline.
+
+    - Does not create targets and does not refit the scaler.
+
+    - Drops NaNs and returns only the scaled feature matrix for model inference.
+
+7. Rule-based / financial strategies
+
+    - These strategies use raw market data and do not involve scaling or preprocessing steps.
+
+<br>
+
+**Challenges and Constraints**
+
+- Minimum data requirements: Indicators like SMAs and RSI require several past observations, reducing usable data at the beginning.
+
+- Real-time consistency: Maintaining identical processing between training and inference is critical to avoid data leakage or drift.
+
+- Volatility and noise: Market noise can weaken predictive performance and require robust feature engineering.
+
+- Potential timestamp irregularities from the Alpaca API, which may affect rolling calculations.
+
+- Computational cost when recalculating indicators continuously for real-time predictions.
+
+- Model sensitivity to scaling errors or missing values if real-time data differ structurally from the training distribution.
+
+<br>
 
 <h3 align = "center"> Manual (How to use the program) </h3>
 
