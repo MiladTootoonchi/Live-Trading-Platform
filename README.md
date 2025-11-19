@@ -209,19 +209,19 @@ Creating a profitable trading algorithm comes with several challenges, including
 
 <h3 align = "left"> Program Directory Architecture </h3>
 
-![system architecture.drawio.png](<attachment:system architecture.drawio.png>) \
+![Directory Architecture](figures/directory_architecture.png) \
 Figure 5: The program architecture shows how the different packages communicate with each other.
 
 <br>
 
-![classdiagram.drawio.png](attachment:classdiagram.drawio.png) \
+![Class Diagram](figures/classdiagram.png) \
 Figure 6: The diagram shows how the *AlpacaTrader* object communicates with strategies, configuration and the main function.
 
 <br>
 
 <h4 align = "left"> ML-Model Architecture </h4>
 
-![model_architecture.drawio.png](attachment:model_architecture.drawio.png) \
+![LSTM simple architecture](figures/ml_architecture.png) \
 Figure 7: The LSTM model architecture.
 
 **model compile settings** \
@@ -311,6 +311,54 @@ This projects pipeline applies structured and repeatable transformations:
 Førsteg: hva må man gjøre før man starter den
 hvordan starte / bruke den
 
+**<h4>Prerequisites</h4>**
+
+**How to Locate Your Alpaca API Keys**
+
+1. **Log in to Your Alpaca Account**  
+   Navigate to the Alpaca website and sign in with your registered username and password.
+
+2. **Access the Dashboard**  
+   After logging in, you will be taken to the main dashboard. If not, select **Dashboard** from the menu.
+
+3. **Open the API Keys Section**  
+   In the left-hand navigation panel, select **API Keys** or **Your API Keys**, depending on your account view.
+
+4. **Select the Appropriate Environment**  
+   Choose between:
+   - **Paper Trading** (for testing)
+   - **Live Trading** (for real transactions)  
+   Each environment has its own set of keys.
+
+5. **Reveal the Keys**  
+   Click **Generate** (if no keys exist) or **View**/**Reveal** (if keys are already created).  
+   You will see two values:
+   - **API Key ID**
+   - **Secret Key**
+
+6. **Copy and Store the Keys Securely**  
+   Copy both keys and store them in the *settings.toml* file under *[keys]* section.
+   *Do not share these keys publicly.*
+
+7. **Regenerate if Needed**  
+   If you suspect your keys have been exposed, you can select **Regenerate** to create new ones.  
+
+**Strategies**
+This prerequisite is not necessary since the program will ask you for your perfered strategy if the program can not find it in the *settings.toml* file. If you wish to write down your perfered strategy, store the name of the strategy under the *[live]* section as strategy (e.g. strategy = ai).
+<br>
+
+These are the strategy names you can choose from. \ 
+*Warning: the name of the strategy should be exactly similar to one of the strategy names bellow.* \
+- rule_based_strategy
+- bollinger_bands_strategy
+- macd_strategy
+- mean_reversion_strategy
+- momentum_strategy
+- moving_average_strategy
+- rsi_strategy
+- ai
+
+*We would recomend the rsi_strategy for the time being.*
 
 ***
 <h2 align = "center"> Results </h2>
@@ -328,12 +376,11 @@ maskinlære
 <h2 align = "center"> Discussion & Future Work </h2>
 
 diskusjon
-    - mer OOP-programmering?
-    - bedre kommunikasjon med pakker
+    - mer OOP-programmering? bedre kommunikasjon med pakker
     - mer regularisering som dropout og early_stopping
 
 hva planen er for videre utvikling
-    - bedre ml-modeller? (mer kompliserte)
+    - bedre ml-modeller? (mer kompliserte), men på andre siden mer komplisert er ikke nødvendigvis bedre
 
 ***
 
