@@ -7,6 +7,31 @@ Milad Tootoonchi \
 Makka Dulgaeva
 
 ***
+<h2 align = "center"> Table of Contents </h2>
+
+1. [Introduction](#introduction)
+2. [Background](#background)
+   - [Problem Statement](#problem-statement)
+3. [Theory & Key Concepts](#theory--key-concepts)
+   - [What is FinTech?](#what-is-fintech)
+   - [Introduction to Alpaca](#introduction-to-alpaca)
+   - [Concepts for Strategies](#concepts-for-strategies)
+   - [Backtesting](#backtesting)
+4. [Program Design](#program-design)
+   - [Program Directory Architecture](#program-directory-architecture)
+   - [ML-Model Architecture](#ml-model-architecture)
+   - [Data & Data Collection](#data--data-collection)
+   - [Manual (How to use the program)](#manual-how-to-use-the-program)
+5. [Results](#results)
+   - [Backtesting Results](#backtesting-results)
+   - [Machine Learning Results](#machine-learning-results)
+6. [Discussion](#discussion)
+7. [Future Work](#future-work)
+8. [References](#references)
+
+<br>
+
+***
 
 <h2 align = "center"> Introduction </h2>
 
@@ -421,28 +446,110 @@ The steps below explain how to use its different command-line options.
 
 <h2 align = "center"> Results </h2>
 
-...
+This chapter presents the results from the backtesting of the rule-based strategies, as well as the evaluation of the machine-learning LSTM model. The goal is to provide an overview of how the strategies performed historically and to assess whether the ML model was able to detect short-term price movements. These results also form the basis for later discussion and improvement.
 
 <h3 align = "center"> Backtesting Results </h3>
 
-strategier
+Backtesting was performed on several different strategies using historical TSLA data. The results clearly show that the strategies vary significantly in terms of total return, risk, and the number of trades executed. The table below summarizes the key performance metrics:
 
-maskinlære
+| Strategy           | Total Return (%) | Sharpe Ratio | Max Drawdown (%) | Number of Trades | Win-rate (%) |
+|-------------------|------------------|--------------|------------------|------------------|--------------|
+| **RSI**           | **178.2**        | 1.07         | -26.38           | 333              | 0.0          |
+| **Mean Reversion**| 138.0            | 0.64         | -59.34           | 917              | 0.0          |
+| **Bollinger Bands**| 42.28           | 0.74         | -12.99           | 138              | 0.0          |
+| **MA**            | 1.35             | 0.16         | -63.13           | 125              | 0.0          |
+| **MACD**          | -0.53            | 0.03         | -16.14           | 80               | 0.0          |
+| **Momentum**       | -22.56          | -0.07        | -44.85           | 1034             | 0.0          |
+
+Although the win-rate is 0% for all strategies (which is a limitation of the simplified trade-execution logic used in the backtester), the **RSI strategy stands out as the best performer**, achieving the highest total return and the strongest Sharpe ratio. The more aggressive Mean Reversion strategy also performed well, but at the cost of a significantly larger drawdown.
+
+Strategies such as MACD, Moving Average, and Momentum struggled, with the Momentum strategy performing the worst overall and showing high sensitivity to market noise. These mixed results highlight that simple rule-based strategies can work under certain market conditions but are far from reliable across all scenarios.
+
+<br>
+
+<h3 align = "center"> Machine Learning Results </h3>
+
+The machine-learning model was evaluated using a classification approach, where the LSTM attempts to predict whether the next day’s closing price would increase or decrease. The confusion matrix and classification report provide insight into the model’s predictive ability.
+
+The final test performance was:
+
+- **Best logged test F1-score:** 0.6898  
+- **Validation accuracy:** 0.5387  
+
+The full classification report for the final model is shown below:  
+
+          precision    recall  f1-score   support  
+
+       0     0.4308    0.2314    0.3011       121  
+       1     0.5485    0.7533    0.6348       150  
+
+accuracy                         0.5203       271
+
+macro avg 0.4897 0.4924 0.4680 271  
+weighted avg 0.4960 0.5203 0.4858 271
+
+The model performs noticeably better on class 1 (predicting that the stock will rise), achieving over 0.75 recall, meaning it correctly identifies most upward movements. However, it struggles with class 0 (predicting a drop), leading to lower balance between the classes.
+
+Overall, the ML model performs only slightly above random guessing but shows potential. The relatively strong F1 score for class 1 indicates that the model might be useful in optimistic or rising markets, although the overall accuracy remains modest. More advanced tuning, regularization, and feature engineering would likely improve general performance.
+
+<br>
 
 ***
 
-<h2 align = "center"> Discussion & Future Work </h2>
+<h2 align = "center"> Discussion </h2>
 
-diskusjon
-    - mer OOP-programmering? bedre kommunikasjon med pakker
-    - mer regularisering som dropout og early_stopping
+The results from both the backtesting and the machinelearning evaluation highlight several important strengths and limitations of the current system. While the project successfully demonstrates a functional algorithmic trading framework, the findings suggest multiple areas where the system can be improved, both technically and conceptually.
 
-hva planen er for videre utvikling
-    - bedre ml-modeller? (mer kompliserte), men på andre siden mer komplisert er ikke nødvendigvis bedre
-    - en måte å cancellere på: kan kansellere bare siste sendte order. dette kan gjøres ved å endre på --cancel flagget.
-    - bruke ai strategien til å gi order i en specifies stock, selv om du ikke har noe i en position.
-    - ha en måte å skru av automatiske orders på.
+From the backtesting results, it is clear that the rule-based strategies behave very differently depending on market conditions. The RSI strategy performed exceptionally well, showing both strong returns and a relatively favorable risk profile. However, other strategies, such as MACD, Moving Average, and especially Momentum, performed poorly and showed high susceptibility to volatility and noise. This indicates that simple indicator-based strategies may not generalize well and are highly dependent on the underlying market regime. Additionally, the 0% win-rate across all strategies reveals a limitation in the trade execution logic within the backtester, meaning that the results should be interpreted with caution. Improving this mechanism would lead to more realistic performance metrics.
+
+On the machinelearning side, the LSTM model showed moderate performance. With a best F1-score of 0.6898 and an accuracy slightly above random, the model does capture some meaningful patterns, especially for predicting upward movements. However, the imbalance in class performance, combined with the overall accuracy of around 52%, shows that the model still struggles with market noise and rapid price fluctuations. More regularization, such as dropout, early stopping, and possibly batch normalization would likely improve the model’s generalization ability. Furthermore, the model’s reliance on only price derived features limits its predictive power, which could be addressed by incorporating additional features like volume-based indicators, macroeconomic data, or alternative data sources.
+
+<h3 align = "center"> Future Work </h3>
+
+There are several clear directions for future improvement:
+
+1. **More advanced ML models**  
+   While it is tempting to use more complex architectures, for example deeper LSTMs, GRUs, CNN-LSTM hybrids, or even transformer models complexity does not always lead to better performance, especially in noisy financial time-series data. A more controlled approach would be to improve preprocessing, expand the feature set, and tune hyperparameters more systematically before moving to more advanced architectures.
+
+2. **Enhanced program architecture**  
+   The current system could benefit from a cleaner object oriented structure. Improving communication between modules would make the codebase easier to extend, debug, and maintain. A more modular design would also support plugging in additional strategies or ML models without restructuring large parts of the system.
+
+3. **Better trade-execution handling**  
+   A useful improvement would be adding more flexible order-management logic. For example:
+   - Allowing the user to cancel only the most recent order rather than all active orders.  
+   - Providing an option to temporarily deactivate automated order placement.  
+   - Enabling the AI strategy to open a new position in a stock even if the portfolio currently holds no shares of it.
+
+4. **Improving the ML pipeline**  
+   Adding stronger regularization, experimenting with different window sizes, and applying better validation techniques (e.g., walk-forward validation) would likely make the ML predictions more robust. Additionally, integrating early stopping could prevent overfitting and improve the model's stability during training.
+
+Overall, while the platform already demonstrates the core functionality of an algorithmic trading system, there is significant potential for refinement. With improvements in model design, program structure, and risk management, the system could evolve into a more reliable and realistic trading environment capable of supporting more advanced strategies and tools in the future.
+
+<br>
 
 ***
 
-<h2 align = "center"> Refferences  </h2>
+<h2 align = "center"> References </h2>
+
+Alpaca Markets. (2024). *Alpaca API documentation*. https://docs.alpaca.markets/
+
+Hochreiter, S., & Schmidhuber, J. (1997). Long short-term memory. *Neural Computation, 9*(8), 1735–1780. https://doi.org/10.1162/neco.1997.9.8.1735
+
+Hunter, J. D. (2007). Matplotlib: A 2D graphics environment. *Computing in Science & Engineering, 9*(3), 90–95.
+
+McKinney, W. (2010). Data structures for statistical computing in Python. In *Proceedings of the 9th Python in Science Conference* (pp. 51–56). SciPy.
+
+Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel, O., ... & Duchesnay, É. (2011). Scikit-learn: Machine learning in Python. *Journal of Machine Learning Research, 12*, 2825–2830.
+
+Raschka, S., & Mirjalili, V. (2019). *Python machine learning* (3rd ed.). Packt Publishing.
+
+Seaborn Development Team. (2024). *Seaborn statistical data visualization*. https://seaborn.pydata.org
+
+TensorFlow Team. (2024). *TensorFlow machine learning platform*. https://www.tensorflow.org/
+
+Van Rossum, G., & Drake, F. L. (2009). *Python 3 reference manual*. CreateSpace.
+
+OpenAI. (2025). *ChatGPT (Version 5.1)* [Large language model]. https://www.openai.com  
+(*Used as a writing assistant for sentence clarity, structure and wording.*)
+
+Investopedia. (2022). *Algorithmic trading: Definition, how it works, pros & cons*. https://www.investopedia.com
