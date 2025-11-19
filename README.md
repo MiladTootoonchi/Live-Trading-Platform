@@ -207,7 +207,7 @@ Creating a profitable trading algorithm comes with several challenges, including
 
 **Success Criteria:** A functional trading bot that executes simulated trades with basic performance metrics 
 
-<h3 align = "left"> Program Directory Architecture </h3>
+<h3 align = "center"> Program Directory Architecture </h3>
 
 ![Directory Architecture](figures/directory_architecture.png) \
 Figure 5: The program architecture shows how the different packages communicate with each other.
@@ -308,12 +308,9 @@ This projects pipeline applies structured and repeatable transformations:
 
 <h3 align = "center"> Manual (How to use the program) </h3>
 
-Førsteg: hva må man gjøre før man starter den
-hvordan starte / bruke den
-
 **<h4>Prerequisites</h4>**
 
-**How to Locate Your Alpaca API Keys**
+**How to Locate Your Alpaca API Keys:**
 
 1. **Log in to Your Alpaca Account**  
    Navigate to the Alpaca website and sign in with your registered username and password.
@@ -343,12 +340,13 @@ hvordan starte / bruke den
 7. **Regenerate if Needed**  
    If you suspect your keys have been exposed, you can select **Regenerate** to create new ones.  
 
-**Strategies**
-This prerequisite is not necessary since the program will ask you for your perfered strategy if the program can not find it in the *settings.toml* file. If you wish to write down your perfered strategy, store the name of the strategy under the *[live]* section as strategy (e.g. strategy = ai).
 <br>
 
-These are the strategy names you can choose from. \ 
-*Warning: the name of the strategy should be exactly similar to one of the strategy names bellow.* \
+**Strategies:** \
+This prerequisite is not necessary since the program will ask you for your perfered strategy if the program can not find it in the *settings.toml* file. If you wish to write down your perfered strategy, store the name of the strategy under the *[live]* section as strategy (e.g. strategy = ai).  
+
+These are the strategy names you can choose from.  
+*Warning: the name of the strategy should be exactly similar to one of the strategy names bellow.*
 - rule_based_strategy
 - bollinger_bands_strategy
 - macd_strategy
@@ -360,7 +358,67 @@ These are the strategy names you can choose from. \
 
 *We would recomend the rsi_strategy for the time being.*
 
+<br>
+
+**How to Install the Required Python Packages**
+
+Follow these short steps to set up your environment:
+
+1. Install Python
+    - Check that Python 3.8 or newer is installed:
+        - *python --version*
+
+2. Create a Virtual Environment
+    - macOS / Linux
+        - *python -m venv .venv*
+        - *source .venv/bin/activate*
+    - Windows (PowerShell)
+        - *python -m venv .venv*
+        - *.\.venv\Scripts\Activate.ps1*
+3. Upgrade Pip
+    - *python -m pip install --upgrade pip*
+4. Install the Required Packages
+    - *pip install .*
+
+<br>
+
+**<h4> Usage Guide</h4>**
+
+The steps below explain how to use its different command-line options.
+
+1. Open a Terminal
+    - Navigate to the main directory where the program is located.
+
+2. Run the Program with a Command.
+    - The program accepts several command-line flags.  
+    - Use this format:
+        - python main.py *[flag]*
+
+3. First you need to place an Order (if you do not have any positions in your portfolio).
+    - *--order* or *-o*
+    - *python main.py --order*
+
+4. Cancel all open orders (if you regret sending the orders)
+    - You can only cancel all orders at the same time.
+    - It is possible to cancel orders sendt by the program
+    - *--cancel* or *-c*
+    - *python main.py --cancel*
+
+5. Update a specific position or all positions
+    - Evaluates specifies / all positions using a strategy chosen at startup. Makes an order based on the evaluation.
+    - *--update* or *-u*
+    - *python main.py --update [stock symbol, or 'ALL' for all positions]*
+
+* Run the Live Trading Loop
+    - This will run an update every 60 seconds on ALL positions.
+    - *--live* or *-l*
+    - *python main.py --live*
+
+
+<br>
+
 ***
+
 <h2 align = "center"> Results </h2>
 
 ...
@@ -381,6 +439,9 @@ diskusjon
 
 hva planen er for videre utvikling
     - bedre ml-modeller? (mer kompliserte), men på andre siden mer komplisert er ikke nødvendigvis bedre
+    - en måte å cancellere på: kan kansellere bare siste sendte order. dette kan gjøres ved å endre på --cancel flagget.
+    - bruke ai strategien til å gi order i en specifies stock, selv om du ikke har noe i en position.
+    - ha en måte å skru av automatiske orders på.
 
 ***
 
