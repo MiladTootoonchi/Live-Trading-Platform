@@ -9,31 +9,39 @@ Makka Dulgaeva
 ***
 <h2 align = "center"> Table of Contents </h2>
 
-1. [Introduction](#introduction)
-2. [Background](#background)
-   - [Problem Statement](#problem-statement)
-3. [Theory & Key Concepts](#theory--key-concepts)
-   - [What is FinTech?](#what-is-fintech)
-   - [Introduction to Alpaca](#introduction-to-alpaca)
-   - [Concepts for Strategies](#concepts-for-strategies)
-   - [Backtesting](#backtesting)
-4. [Program Design](#program-design)
-   - [Program Directory Architecture](#program-directory-architecture)
-   - [ML-Model Architecture](#ml-model-architecture)
-   - [Data & Data Collection](#data--data-collection)
-   - [Manual (How to use the program)](#manual-how-to-use-the-program)
-5. [Results](#results)
-   - [Backtesting Results](#backtesting-results)
-   - [Machine Learning Results](#machine-learning-results)
-6. [Discussion](#discussion)
-7. [Future Work](#future-work)
-8. [References](#references)
+1. [Introduction](#introduction)  
+    - [Usage of AI](#usage-of-ai)  
+    - [Preface](#preface)
+2. [Background](#background)  
+    - [Problem Statement](#problem-statement)
+3. [Theory & Key Concepts](#theory--key-concepts)  
+    - [What is FinTech?](#what-is-fintech)  
+    - [Introduction to Alpaca](#introduction-to-alpaca)  
+    - [Concepts for Strategies](#concepts-for-strategies)  
+    - [Backtesting](#backtesting)
+4. [Program Design](#program-design)  
+    - [Program Directory Architecture](#program-directory-architecture)  
+    - [ML-Model Architecture](#ml-model-architecture)  
+    - [Data & Data Collection](#data--data-collection)  
+    - [Manual (How to use the program)](#manual-how-to-use-the-program)
+5. [Results](#results)  
+    - [Backtesting Results](#backtesting-results)  
+    - [Machine Learning Results](#machine-learning-results)
+6. [Discussion](#discussion)  
+    - [Future Work](#future-work)
+7. [References](#references)
 
 <br>
 
 ***
 
 <h2 align = "center"> Introduction </h2>
+
+<h3 align = "center"> Usage of AI </h3>
+
+In this report, we used the AI tool ChatGPT as a writing assistant. The tool was applied to improve grammar, sentence clarity, and academic phrasing, but it did not generate content, arguments, or analysis for us. All ideas, data interpretations, and theoretical explanations in the report are our own and based on the sources listed in the reference section. The use of ChatGPT is limited to language refinement and does not influence the academic content of the work.
+
+<h3 align = "center"> Preface </h3>
 
 The financial markets operate as a vast and intricate system, where millions of traders make decisions in real time, striving to outperform one another. Historically, human intuition and experience dominated this space. Stock exchanges were filled with traders engaging in open outcry, making rapid decisions based on their expertise and instincts. 
 
