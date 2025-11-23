@@ -367,7 +367,7 @@ This projects pipeline applies structured and repeatable transformations:
    - **Secret Key**
 
 6. **Copy and Store the Keys Securely**  
-   Copy both keys and store them in the *settings.toml* file under *[keys]* section.
+   Copy both keys and store them in the *settings.toml* file under *[keys]* **section with quote marks around the keys ("*key*")**.  
    *Do not share these keys publicly.*
 
 7. **Regenerate if Needed**  
@@ -376,7 +376,7 @@ This projects pipeline applies structured and repeatable transformations:
 <br>
 
 **Strategies:** \
-This prerequisite is not necessary since the program will ask you for your perfered strategy if the program can not find it in the *settings.toml* file. If you wish to write down your perfered strategy, store the name of the strategy under the *[live]* section as strategy (e.g. strategy = ai).  
+This prerequisite is not necessary since the program will ask you for your perfered strategy if the program can not find it in the *settings.toml* file. If you wish to write down your perfered strategy, store the name of the strategy under the *[live]* section as strategy (e.g. strategy = "ai"). **Remember to put quote marks around the strategy name**.  
 
 These are the strategy names you can choose from.  
 *Warning: the name of the strategy should be exactly similar to one of the strategy names bellow.*
