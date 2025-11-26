@@ -75,17 +75,23 @@ async def AI_strategy(position_data: dict) -> tuple[SideSignal, int]:
 
     signal = int((real_time_prediction > 0.5).astype(int).item())
 
+    # Getting probability for prediction
+    if signal == 0:
+        prob = 1 - real_time_prediction.item()
+    else:
+        prob = real_time_prediction
+
     info = f"""
 
     The stock will go (1 for up, 0 for down) = {signal} tommorow 
-    with {(real_time_prediction.item() * 100):.4f} % probability.
+    with {(prob.item() * 100):.4f} % probability.
     """
 
     logger.info(info)
 
 
     # Deciding side and qty
-    qty = compute_trade_qty(position_data, float(real_time_prediction))
+    qty = compute_trade_qty(position_data, float(prob))
 
     if qty == 0:
         side = SideSignal.HOLD
