@@ -93,6 +93,11 @@ class AlpacaTrader:
         logger.info(f"Sending Order Data:\n {data} \n Headers: {self._HEADERS}\n")
 
         response_json = response.json()
+
+        if "id" not in response_json:
+            logger.error(f"Order rejected: {response_json} \n")
+            return
+
         order_id = response_json["id"]
         await self._wait_until_order_filled(order_id)
     
