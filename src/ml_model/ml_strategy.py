@@ -79,12 +79,12 @@ async def AI_strategy(position_data: dict) -> tuple[SideSignal, int]:
     if signal == 0:
         prob = 1 - real_time_prediction.item()
     else:
-        prob = real_time_prediction
+        prob = real_time_prediction.item()
 
     info = f"""
 
     The stock will go (1 for up, 0 for down) = {signal} tommorow 
-    with {(prob.item() * 100):.4f} % probability.
+    with {(prob * 100):.4f} % probability.
     """
 
     logger.info(info)
