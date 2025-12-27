@@ -1,6 +1,6 @@
 from typing import Callable, Dict, Any
 
-from ..alpaca_trader.order import SideSignal
+from live_trader.alpaca_trader.order import SideSignal
 from config import make_logger, load_strategy_name
 
 from .bollinger_bands_strategy import bollinger_bands_strategy
@@ -9,7 +9,7 @@ from .mean_reversion import mean_reversion_strategy
 from .momentum import momentum_strategy
 from .moving_average_strategy import moving_average_strategy
 from .rsi import rsi_strategy
-from ..ml_model.ml_strategy import AI_strategy
+from live_trader.ml_model.ml_strategy import AI_strategy
 
 logger = make_logger()
 

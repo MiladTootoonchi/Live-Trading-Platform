@@ -2,8 +2,7 @@ import argparse
 import asyncio
 
 from config import load_api_keys
-from src.alpaca_trader.live_trading import AlpacaTrader
-from src.strategies.strategies import find_strategy
+from live_trader import AlpacaTrader, find_strategy
 
 
 def parseInput():

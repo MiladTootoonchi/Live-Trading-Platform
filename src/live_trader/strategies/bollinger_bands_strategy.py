@@ -1,5 +1,5 @@
-from ..alpaca_trader.order import SideSignal
-from typing import Tuple, Dict, Any, List, Union
+from live_trader.alpaca_trader.order import SideSignal
+from typing import Tuple, Dict, Any
 from config import make_logger
 from .utils import fetch_data, normalize_bars
 

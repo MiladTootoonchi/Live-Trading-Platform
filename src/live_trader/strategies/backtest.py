@@ -20,8 +20,7 @@ Args / Returns: see individual functions and public compare_strategies.
 """
 from __future__ import annotations
 
-from typing import Callable, List, Dict, Any, Tuple
-import datetime as dt
+from typing import Callable, List, Dict, Any
 import pandas as pd
 
 from config import make_logger
