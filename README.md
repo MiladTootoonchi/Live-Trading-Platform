@@ -27,6 +27,7 @@ Makka Dulgaeva
 5. [Results](#results)  
     - [Backtesting Results](#backtesting-results)  
     - [Machine Learning Results](#machine-learning-results)
+    - [Live-Testing](#live-testing)
 6. [Discussion](#discussion)  
     - [Future Work](#future-work)
 7. [References](#references)
@@ -389,7 +390,7 @@ These are the strategy names you can choose from.
 - rsi_strategy
 - ai
 
-*We would recomend the rsi_strategy for the time being.*
+*We would recomend the rsi_strategy or the ai for the time being.*
 
 <br>
 
@@ -399,19 +400,29 @@ Follow these short steps to set up your environment:
 
 1. Install Python
     - Check that Python 3.8 or newer is installed:
-        - *python --version*
+```bash
+python --version
+```
 
 2. Create a Virtual Environment
     - macOS / Linux
-        - *python -m venv .venv*
-        - *source .venv/bin/activate*
+        ```bash
+        python -m venv .venv
+        source .venv/bin/activate
+        ```
     - Windows (PowerShell)
-        - *python -m venv .venv*
-        - *.\.venv\Scripts\Activate.ps1*
+        ```bash
+        python -m venv .venv
+        .\.venv\Scripts\Activate.ps1
+        ```
 3. Upgrade Pip
-    - *python -m pip install --upgrade pip*
+    ```bash
+    python -m pip install --upgrade pip
+    ```
 4. Install the Required Packages
-    - *pip install .*
+    ```bash
+    pip install .
+    ```
 
 <br>
 
@@ -425,27 +436,37 @@ The steps below explain how to use its different command-line options.
 2. Run the Program with a Command.
     - The program accepts several command-line flags.  
     - Use this format:
-        - python main.py *[flag]*
+        ```bash
+        python main.py [flag]
+        ```
 
 3. First you need to place an Order (if you do not have any positions in your portfolio).
     - *--order* or *-o*
-    - *python main.py --order*
+    ```bash
+    python main.py --order
+    ```
 
 4. Cancel all open orders (if you regret sending the orders)
     - You can only cancel all orders at the same time.
     - It is possible to cancel orders sendt by the program
     - *--cancel* or *-c*
-    - *python main.py --cancel*
+    ```bash
+    python main.py --cancel
+    ```
 
 5. Update a specific position or all positions
     - Evaluates specifies / all positions using a strategy chosen at startup. Makes an order based on the evaluation.
     - *--update* or *-u*
-    - *python main.py --update [stock symbol, or 'ALL' for all positions]*
+    ```bash
+    python main.py --update [stock symbol, or 'ALL' for all positions]
+    ```
 
 * Run the Live Trading Loop
     - This will run an update every 60 seconds on ALL positions.
     - *--live* or *-l*
-    - *python main.py --live*
+    ```bash
+    python main.py --live
+    ```
 
 
 <br>
@@ -454,7 +475,7 @@ The steps below explain how to use its different command-line options.
 
 <h2 align = "center"> Results </h2>
 
-This chapter presents the results from the backtesting of the rule-based strategies, as well as the evaluation of the machine-learning LSTM model. The goal is to provide an overview of how the strategies performed historically and to assess whether the ML model was able to detect short-term price movements. These results also form the basis for later discussion and improvement.
+This chapter presents the results from the one week live-testing, the backtesting of the rule-based strategies, as well as the evaluation of the machine-learning LSTM model. The goal is to provide an overview of how the strategies performed historically and to assess whether the ML model was able to detect short-term price movements. These results also form the basis for later discussion and improvement.
 
 <h3 align = "center"> Backtesting Results </h3>
 
@@ -502,6 +523,18 @@ Overall, the ML model performs only slightly above random guessing but shows pot
 
 <br>
 
+<h3 align = "center"> Live-Testing </h3>
+
+During the first few days of live-testing, the platform ran on the RSI strategy, which turned out to be very slow and careful. The system waited for the RSI value to move clearly above or below the chosen thresholds before sending any trading signals, which resulted in fewer trades and slower reactions. After three to four days, the strategy was switched over to the AI model instead, since it was expected to take on more risk by using predictions from a simple LSTM-50 model. For the test week, the program started with two shares each in AMD, PLTR, INTC, AVGO, NVDA, GOOGL, and SPY. By the end of the week, the realized PnL reached 751,894.59, matching the total PnL, while both account equity and portfolio value ended at 1,010,352.08. This gave a return of around 290.9%. Even though the results look unusually high, the test clearly shows that the AI strategy behaved much more aggressively and caught more short-term market movements compared to the original RSI or other rule based approaches.
+
+<br>
+
+realized_pnl        | total_pnl           | equity            | cash                  | portfolio_value      | roi_equity_percent
+|-------------------|---------------------|-------------------|-----------------------|----------------------|------------------|
+751894.5900000003   | 751894.5900000003   | 1010352.08        | 1010352.08            | 1010352.08           | 290.9161541420221
+
+<br>
+
 ***
 
 <h2 align = "center"> Discussion </h2>
@@ -514,9 +547,9 @@ On the machinelearning side, the LSTM model showed moderate performance. With a 
 
 <h3 align = "center"> Future Work </h3>
 
-There are several clear directions for future improvement:
+There are several clear directions for future improvement. It is advised that anyone attempting to recreate the program should keep the following points in mind for their own versions:
 
-1. **More advanced ML models**  
+1. **More advanced ML architecture**  
    While it is tempting to use more complex architectures, for example deeper LSTMs, GRUs, CNN-LSTM hybrids, or even transformer models complexity does not always lead to better performance, especially in noisy financial time-series data. A more controlled approach would be to improve preprocessing, expand the feature set, and tune hyperparameters more systematically before moving to more advanced architectures.
 
 2. **Enhanced program architecture**  
