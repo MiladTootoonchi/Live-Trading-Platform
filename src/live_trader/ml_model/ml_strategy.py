@@ -3,12 +3,12 @@ import numpy as np
 import datetime as dt
 from alpaca.trading.client import TradingClient
 
-from ..alpaca_trader.order import SideSignal
+from live_trader.alpaca_trader.order import SideSignal
 from config import make_logger, load_api_keys
-from src.ml_model.data import stock_data_prediction_pipeline, stock_data_feature_engineering, get_one_realtime_bar
-from src.strategies.utils import fetch_data
-from src.ml_model.training import train_model, sequence_split
-from src.ml_model.evaluations import evaluate_model
+from .data import stock_data_prediction_pipeline, stock_data_feature_engineering, get_one_realtime_bar
+from live_trader.strategies.utils import fetch_data
+from .training import train_model, sequence_split
+from .evaluations import evaluate_model
 
 logger = make_logger()
 
