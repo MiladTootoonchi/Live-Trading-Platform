@@ -167,6 +167,103 @@ class AlpacaTrader:
         order = OrderData(symbol = symbol, quantity = qty, side = "buy", type = order_type)
         await self.place_order(order)
 
+    async def close_position(self, symbol: str) -> None:
+        """
+        Closes (liquidates) the entire open position for a given stock symbol.
+
+        This method sends a request to Alpaca’s position liquidation endpoint to
+        close all shares held for the specified symbol at market price. The
+        operation is executed asynchronously using a background thread to avoid
+        blocking the event loop.
+
+        If the position is successfully closed, an informational log message is
+        recorded. If the request fails (e.g., the position does not exist or the
+        API returns an error), an error message containing the response details
+        is logged.
+
+        Args:
+            symbol (str): The stock symbol whose entire position should be closed.
+        """
+        
+        url = f"{self._APCA_API_BASE_URL}/v2/positions/{symbol}"
+        response = await asyncio.to_thread(
+            requests.delete, url, headers=self._HEADERS
+        )
+
+        if response.status_code == 200:
+            logger.info(f"Successfully closed entire position for {symbol}.")
+        else:
+            logger.error(f"Failed to close position for {symbol}: {response.text}")
+
+    async def create_sell_order(self) -> None:
+        """
+        Interactively creates and submits a sell order or closes an entire position.
+
+        This method prompts the user to specify a stock symbol to sell and validates
+        that the asset exists and is tradable via the Alpaca API. The user is then
+        asked to provide either a positive integer quantity to sell or the keyword
+        'all' to liquidate the entire position for the selected symbol.
+
+        If 'all' is provided, the method closes the full position using Alpaca’s
+        position liquidation endpoint, bypassing order creation and submitting
+        a market close for all shares held. If a quantity is provided, the method
+        continues by prompting for a valid order type, constructs an OrderData
+        object, and submits the order using the place_order() method.
+
+        The method handles input validation, ensures asynchronous API safety, and
+        exits early when a full position close is requested.
+        """
+
+        # Asking for stock
+        while True:
+            symbol = input("Which stock do you want to sell (symbol)? ").strip().upper()
+
+            url = f"{self._APCA_API_BASE_URL}/v2/assets/{symbol}"
+            response = requests.get(url, headers = self._HEADERS)
+
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("tradable", False):
+                    break
+                else:
+                    print(f"The symbol '{symbol}' is not valid. Please try another.")
+            else:
+                print(f"The symbol '{symbol}' is not valid or not found. Please try again.")
+
+        # Asking for quantity
+        while True:
+            qty_input = input(
+                "How much do you want to sell (quantity or 'all' to sell entire position)? "
+            ).strip().lower()
+
+            if qty_input == "all":
+                await self.close_position(symbol)
+                return
+
+            try:
+                qty = int(qty_input)
+                if qty > 0:
+                    break
+                else:
+                    print("Quantity must be a positive integer.")
+            except ValueError:
+                print("Please enter a valid integer or 'all'.")
+
+
+        # Asking for order type
+        valid_order_types = ['market', 'limit', 'stop', 'stop_limit', 'trailing_stop']
+
+        while True:
+            order_type = input("What type of order do you want (e.g. market, limit, stop, stop_limit, trailing_stop)? ").lower()
+            if order_type in valid_order_types:
+                break
+
+            print("Invalid order type. Please enter one of the following:", ", ".join(valid_order_types))
+
+
+        order = OrderData(symbol = symbol, quantity = qty, side = "sell", type = order_type)
+        await self.place_order(order)
+
 
 
     async def _wait_until_order_filled(self, order_id: str) -> None:

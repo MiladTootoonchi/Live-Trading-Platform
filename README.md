@@ -436,17 +436,22 @@ The steps below explain how to use its different command-line options.
 2. Run the Program with a Command.
     - The program accepts several command-line flags.  
     - Use this format:
-        ```bash
-        python main.py [flag]
-        ```
-
-3. First you need to place an Order (if you do not have any positions in your portfolio).
-    - *--order* or *-o*
     ```bash
-    python main.py --order
+    python main.py [flag]
     ```
 
-4. Cancel all open orders (if you regret sending the orders)
+3. First you need to place an buy-order (if you do not have any positions in your portfolio).
+    - *--buy* or *-b*
+    ```bash
+    python main.py --buy
+    ```
+- If you need to place an sell-order.
+    - *--sell* or *-s*
+    ```bash
+    python main.py --sell
+    ```
+
+- Cancel all open orders (if you regret sending the orders)
     - You can only cancel all orders at the same time.
     - It is possible to cancel orders sendt by the program
     - *--cancel* or *-c*
@@ -454,7 +459,7 @@ The steps below explain how to use its different command-line options.
     python main.py --cancel
     ```
 
-5. Update a specific position or all positions
+* Update a specific position or all positions
     - Evaluates specifies / all positions using a strategy chosen at startup. Makes an order based on the evaluation.
     - *--update* or *-u*
     ```bash

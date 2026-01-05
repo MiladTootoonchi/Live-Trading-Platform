@@ -12,8 +12,14 @@ def parseInput():
     parser = argparse.ArgumentParser(description = "Put the Alpaca keys in settings.toml and type:\n" \
     "")
 
-    parser.add_argument("--order", 
-                        "-o", 
+    parser.add_argument("--buy", 
+                        "-b", 
+                        action = "store_true", 
+                        help = "places an order. The program will ask questions about the order " \
+                        "and sends it to Alpaca")
+    
+    parser.add_argument("--sell", 
+                        "-s", 
                         action = "store_true", 
                         help = "places an order. The program will ask questions about the order " \
                         "and sends it to Alpaca")
@@ -50,7 +56,9 @@ async def main():
     
     if args.cancel:
         await trader.cancel_all_orders()
-    if args.order:
+    if args.sell:
+        await trader.create_sell_order()
+    if args.buy:
         await trader.create_buy_order()
 
 
