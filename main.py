@@ -28,6 +28,11 @@ def parseInput():
                         "-c", 
                         action = "store_true", 
                         help = "Cancels orders that is not placed.")
+    
+    parser.add_argument("--cancel-last",
+                        "-cl",
+                        action = "store_true",
+                        help = "Cancels the most recently submitted open order.")
 
     parser.add_argument("--live",
                         "-l",
@@ -54,6 +59,8 @@ async def main():
     trader = AlpacaTrader(key, secret_key)
 
     
+    if args.cancel_last:
+        await trader.cancel_last_order()
     if args.cancel:
         await trader.cancel_all_orders()
     if args.sell:
