@@ -157,4 +157,14 @@ def compute_trade_qty(position_data: dict, prob: float) -> int:
 
     qty = int(min(hybrid_qty, risk_qty))
 
+    # If model wants to SELL (negative qty), cap by position size
+    try:
+        position_qty = int(float(position_data.get("qty", 0)))
+
+        if qty < 0:
+            qty = max(qty, -position_qty)
+    except Exception:
+        logger.info("Invalid position quantity data.\n")
+        return 0
+
     return qty
