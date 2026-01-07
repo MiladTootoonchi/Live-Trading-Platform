@@ -100,6 +100,34 @@ class AlpacaTrader:
 
         order_id = response_json["id"]
         await self._wait_until_order_filled(order_id)
+
+    async def close_position(self, symbol: str) -> None:
+        """
+        Closes (liquidates) the entire open position for a given stock symbol.
+
+        This method sends a request to Alpaca’s position liquidation endpoint to
+        close all shares held for the specified symbol at market price. The
+        operation is executed asynchronously using a background thread to avoid
+        blocking the event loop.
+
+        If the position is successfully closed, an informational log message is
+        recorded. If the request fails (e.g., the position does not exist or the
+        API returns an error), an error message containing the response details
+        is logged.
+
+        Args:
+            symbol (str): The stock symbol whose entire position should be closed.
+        """
+        
+        url = f"{self._APCA_API_BASE_URL}/v2/positions/{symbol}"
+        response = await asyncio.to_thread(
+            requests.delete, url, headers=self._HEADERS
+        )
+
+        if response.status_code == 200:
+            logger.info(f"Successfully closed entire position for {symbol}.")
+        else:
+            logger.error(f"Failed to close position for {symbol}: {response.text}")
     
     async def cancel_all_orders(self) -> None:
         """
@@ -112,6 +140,52 @@ class AlpacaTrader:
         url = f"{self._APCA_API_BASE_URL}/v2/orders"
         response = await asyncio.to_thread(requests.delete, url, headers = self._HEADERS)
         logger.info(f"Cancel response: {response.content}\n")
+
+    async def cancel_last_order(self) -> None:
+        """
+        Cancels the most recently submitted open order.
+
+        This method retrieves recent orders from the Alpaca API, identifies the
+        most recent order that is still cancelable (e.g., 'new', 'accepted',
+        or 'partially_filled'), and submits a cancellation request for that order.
+        If no such order exists, the method logs an informational message and exits.
+        """
+
+        # Fetch recent orders (most recent first)
+        url = f"{self._APCA_API_BASE_URL}/v2/orders?limit=10&direction=desc"
+        response = await asyncio.to_thread(requests.get, url, headers=self._HEADERS)
+
+        if response.status_code != 200:
+            logger.error(f"Failed to fetch orders: {response.text}\n")
+            return
+
+        orders = response.json()
+
+        cancelable_statuses = {"new", "accepted", "partially_filled"}
+
+        for order in orders:
+            if order.get("status") in cancelable_statuses:
+                order_id = order["id"]
+                symbol = order.get("symbol")
+
+                cancel_url = f"{self._APCA_API_BASE_URL}/v2/orders/{order_id}"
+                cancel_response = await asyncio.to_thread(
+                    requests.delete, cancel_url, headers=self._HEADERS
+                )
+
+                if cancel_response.status_code in (200, 204):
+                    logger.info(
+                        f"Canceled last open order {order_id} for {symbol}.\n"
+                    )
+                else:
+                    logger.error(
+                        f"Failed to cancel order {order_id}: {cancel_response.text}\n"
+                    )
+                return
+
+        logger.info("No open orders found to cancel.\n")
+    
+
 
     async def create_buy_order(self) -> None:
         """
@@ -166,34 +240,6 @@ class AlpacaTrader:
 
         order = OrderData(symbol = symbol, quantity = qty, side = "buy", type = order_type)
         await self.place_order(order)
-
-    async def close_position(self, symbol: str) -> None:
-        """
-        Closes (liquidates) the entire open position for a given stock symbol.
-
-        This method sends a request to Alpaca’s position liquidation endpoint to
-        close all shares held for the specified symbol at market price. The
-        operation is executed asynchronously using a background thread to avoid
-        blocking the event loop.
-
-        If the position is successfully closed, an informational log message is
-        recorded. If the request fails (e.g., the position does not exist or the
-        API returns an error), an error message containing the response details
-        is logged.
-
-        Args:
-            symbol (str): The stock symbol whose entire position should be closed.
-        """
-        
-        url = f"{self._APCA_API_BASE_URL}/v2/positions/{symbol}"
-        response = await asyncio.to_thread(
-            requests.delete, url, headers=self._HEADERS
-        )
-
-        if response.status_code == 200:
-            logger.info(f"Successfully closed entire position for {symbol}.")
-        else:
-            logger.error(f"Failed to close position for {symbol}: {response.text}")
 
     async def create_sell_order(self) -> None:
         """
