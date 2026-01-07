@@ -451,9 +451,14 @@ The steps below explain how to use its different command-line options.
     python main.py --sell
     ```
 
-- Cancel all open orders (if you regret sending the orders)
-    - You can only cancel all orders at the same time.
-    - It is possible to cancel orders sendt by the program
+- Cancel last given order (if you regret sending the last given orders)
+    - *--cancel-last* or *-cl*
+    ```bash
+    python main.py --cancel-last
+    ```
+
+- Cancel all open orders (if you regret sending every recent order)
+    - This will cancel **all** open orders.
     - *--cancel* or *-c*
     ```bash
     python main.py --cancel
