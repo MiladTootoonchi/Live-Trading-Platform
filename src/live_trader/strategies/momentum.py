@@ -7,7 +7,7 @@ import pandas as pd
 logger = make_logger()
 
 
-def momentum_strategy(position_data: Dict[str, Any]) -> Tuple[SideSignal, int]:
+def momentum_strategy(symbol: str, position_data: Dict[str, Any]) -> Tuple[SideSignal, int]:
     """
     Momentum trading strategy based on intraday movement and current return.
 
@@ -16,6 +16,7 @@ def momentum_strategy(position_data: Dict[str, Any]) -> Tuple[SideSignal, int]:
     buy or sell signals based on strong positive or negative movement.
 
     Args:
+        symbol (str): The symbol of the stock we want to calculate for.
         position_data (dict):
             Should contain:
             symbol: the ticker to evaluate
@@ -27,10 +28,6 @@ def momentum_strategy(position_data: Dict[str, Any]) -> Tuple[SideSignal, int]:
             A pair consisting of a SideSignal value and a quantity. The
             quantity returned here is set to one for valid buy or sell signals.
     """
-    symbol = position_data.get("symbol")
-    if not symbol:
-        logger.error("Momentum strategy received data without a symbol.")
-        return SideSignal.HOLD, 0
 
     bars = position_data.get("history")
 

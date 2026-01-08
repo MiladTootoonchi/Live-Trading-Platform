@@ -13,11 +13,12 @@ from live_trader.ml_model.ml_strategy import AI_strategy
 
 logger = make_logger()
 
-def rule_based_strategy(position_data: dict) -> tuple[SideSignal, int]:
+def rule_based_strategy(symbol: str, position_data: dict) -> tuple[SideSignal, int]:
     """
     Evaluates a trading position from an Alpaca JSON response and recommends an action.
 
     Args:
+        symbol (str): The symbol of the stock we want to calculate for.
         position_data (dict): JSON object from Alpaca API containing position details.
 
     Returns:

@@ -7,7 +7,7 @@ import pandas as pd
 logger = make_logger()
 
 
-def moving_average_strategy(position: Dict[str, Any]) -> Tuple[SideSignal, int]:
+def moving_average_strategy(symbol: str, position: Dict[str, Any]) -> Tuple[SideSignal, int]:
     """
     Moving Average Crossover Strategy.
 
@@ -17,6 +17,7 @@ def moving_average_strategy(position: Dict[str, Any]) -> Tuple[SideSignal, int]:
         - Hold when neither condition is met
 
     Args:
+        symbol (str): The symbol of the stock we want to calculate for.
         position (dict):
             Contains at minimum:
             {
@@ -29,11 +30,6 @@ def moving_average_strategy(position: Dict[str, Any]) -> Tuple[SideSignal, int]:
             - A SideSignal (BUY, SELL, HOLD)
             - Quantity (always 0 here)
     """
-
-    symbol = position.get("symbol")
-    if not symbol:
-        logger.error("Strategy called without a symbol in position data.")
-        return SideSignal.HOLD, 0
 
     bars = position.get("history")
 

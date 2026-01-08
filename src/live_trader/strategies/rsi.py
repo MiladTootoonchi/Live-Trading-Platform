@@ -37,7 +37,7 @@ def calculate_rsi(closes: List[float], period: int = 14) -> float:
     return 100 - (100 / (1 + rs))
 
 
-def rsi_strategy(position_data: Dict[str, Any]) -> Tuple[SideSignal, int]:
+def rsi_strategy(symbol: str, position_data: Dict[str, Any]) -> Tuple[SideSignal, int]:
     """
     A simple RSI-based trading strategy.
 
@@ -47,6 +47,7 @@ def rsi_strategy(position_data: Dict[str, Any]) -> Tuple[SideSignal, int]:
     - Hold otherwise
 
     Args:
+        symbol (str): The symbol of the stock we want to calculate for.
         position_data (Dict[str, Any]):
             A dictionary containing:
             - "symbol": The ticker symbol.
@@ -58,11 +59,6 @@ def rsi_strategy(position_data: Dict[str, Any]) -> Tuple[SideSignal, int]:
             - The first value is a SideSignal (BUY, SELL, HOLD)
             - The second value is the quantity (always 0 here)
     """
-
-    symbol = position_data.get("symbol")
-    if not symbol:
-        logger.error("Position data missing 'symbol'.")
-        return SideSignal.HOLD, 0
 
     bars = position_data.get("history")
 

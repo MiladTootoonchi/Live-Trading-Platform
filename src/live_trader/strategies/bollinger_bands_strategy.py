@@ -6,13 +6,14 @@ from .utils import fetch_data, normalize_bars
 logger = make_logger()
 
 
-def bollinger_bands_strategy(position: Dict[str, Any]) -> Tuple[SideSignal, int]:
+def bollinger_bands_strategy(symbol: str, position: Dict[str, Any]) -> Tuple[SideSignal, int]:
     """
     Bollinger Bands mean reversion strategy.
     Generates a signal when price moves above or below
     the standard deviation bands around a moving average.
 
     Args:
+        symbol (str): The symbol of the stock we want to calculate for.
         position (dict):
             Contains:
                 symbol (str): the ticker symbol
@@ -23,10 +24,6 @@ def bollinger_bands_strategy(position: Dict[str, Any]) -> Tuple[SideSignal, int]
         tuple(SideSignal, int):
             The trade signal and quantity (always zero for safety).
     """
-    symbol = position.get("symbol")
-    if not symbol:
-        logger.error("Bollinger strategy missing symbol.")
-        return SideSignal.HOLD, 0
 
     bars = position.get("history")
 
