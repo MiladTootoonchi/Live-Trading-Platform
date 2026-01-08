@@ -12,20 +12,21 @@ from .evaluations import evaluate_model
 
 logger = make_logger()
 
-async def AI_strategy(position_data: dict) -> tuple[SideSignal, int]:
+async def AI_strategy(symbol: str, position_data: dict = {}) -> tuple[SideSignal, int]:
     """
     Evaluates a trading position from an Alpaca JSON response and recommends an action.
     This strategy will only buy or sell.
 
     Args:
-        position_data (dict): JSON object from Alpaca API containing position details.
+        symbol (str):           a string consisting of the symbol og the stock.
+        position_data (dict):   JSON object from Alpaca API containing position details.
+                                This is only used as a parameter if you have a posistion in that stock.
 
     Returns:
         tuple:
             (SideSignal.BUY or SideSignal.SELL, qty: int)
     """
 
-    symbol = position_data["symbol"]
 
     yesterday = dt.datetime.now(dt.UTC) - dt.timedelta(days = 1)
     mdip = dt.datetime.now(dt.UTC) - dt.timedelta(days = 100)        # more than 50 days in the past (many days in past)
@@ -91,14 +92,24 @@ async def AI_strategy(position_data: dict) -> tuple[SideSignal, int]:
 
 
     # Deciding side and qty
-    qty = compute_trade_qty(position_data, float(prob))
+    has_position = (
+        position_data is not None
+        and float(position_data.get("qty", 0)) > 0
+    )
 
-    if qty == 0:
-        side = SideSignal.HOLD
-    elif signal > 0:
-        side = SideSignal.BUY
+    if has_position:
+        qty = compute_trade_qty(position_data, float(prob))
+
+    elif signal == 1 and prob > 0.5:
+        qty = 1
+
     else:
-        side = SideSignal.SELL
+        qty = 0
+
+    if has_position:
+        side = SideSignal.BUY if signal == 1 else SideSignal.SELL
+    else:
+        side = SideSignal.BUY if qty > 0 else SideSignal.HOLD
 
     return side, qty
 

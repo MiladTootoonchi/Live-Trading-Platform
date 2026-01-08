@@ -4,7 +4,8 @@ from typing import Callable, List, Dict, Any
 import inspect
 
 from .order import OrderData, SideSignal
-from config import make_logger
+from ..ml_model.ml_strategy import AI_strategy
+from config import make_logger, load_watchlist
 
 
 logger = make_logger()
@@ -339,17 +340,16 @@ class AlpacaTrader:
 
 
 
-    async def update(self, strategy: Callable[[Dict[str, Any]], tuple[SideSignal, int]], symbol: str) -> None:
+    async def update(self, strategy: Callable, symbol: str) -> None:
         """
         Updates one or all positions based on the provided trading strategy.
 
-        The 'strategy' function should accept a position dictionary and return a tuple:
-        (signal, quantity), where 'signal' is one of the SideSignal enum values 
-        (BUY, SELL, HOLD), and 'quantity' is the number of shares to trade.
+        The strategy function should accept (symbol, position) and
+        return (signal, quantity). The function may be sync or async.
 
         Args:
-            strategy (Callable[[Dict[str, Any]], Tuple[SideSignal, int]]): 
-                A function that takes a position dict and returns a (signal, quantity) tuple.
+            strategy (Callable): 
+                A function that takes the position dict and returns a (signal, quantity) tuple.
             symbol (str): The stock symbol to update. Use "ALL" to update all positions.
 
         Raises:
@@ -373,10 +373,11 @@ class AlpacaTrader:
             for position in positions_to_update:
                 symbol_i = position.get("symbol")
 
-                if inspect.iscoroutinefunction(strategy):
-                    signal, qty = await strategy(position)    # The ML strategy need awaiting
+                result = strategy(symbol_i, position)
+                if inspect.isawaitable(result):
+                    signal, qty = await result
                 else:
-                    signal, qty = strategy(position)
+                    signal, qty = result
 
                 logger.info(f"{symbol_i}: {signal.value}")
 
@@ -389,7 +390,53 @@ class AlpacaTrader:
                     )
                     tasks.append(self.place_order(order))
 
+            watchlist_tasks = self._analyze_watchlist()
+            tasks.extend(watchlist_tasks)
             await asyncio.gather(*tasks)
 
         except Exception:
             logger.exception(f"Failed to update position(s) for {symbol}")
+
+    async def _analyze_watchlist(self) -> list:
+        """
+        Analyzes symbols in the watchlist and prepares order placement tasks.
+
+        For each symbol in the watchlist, this method runs the AI-based trading
+        strategy to determine whether a trade should be placed. If the strategy
+        returns a signal other than HOLD, a market order is created and the
+        corresponding order placement coroutine is added to the returned list.
+
+        Any exceptions raised while analyzing individual symbols are caught and
+        logged, allowing analysis of remaining symbols to continue.
+
+        Returns:
+            list:
+                A list of order placement coroutines for symbols that generated
+                actionable trading signals. The returned coroutines are intended
+                to be awaited (e.g. via asyncio.gather) by the caller.
+        """
+
+
+        watchlist = load_watchlist()
+        logger.info(f"Checking watchlist: {watchlist}")
+
+        tasks = []
+        for symbol in watchlist:
+            try:
+                signal, qty = await AI_strategy(symbol)    # The ML strategy need awaiting
+
+                logger.info(f"{symbol}: {signal.value}")
+
+                if signal != SideSignal.HOLD:
+                    order = OrderData(
+                        symbol = symbol,
+                        quantity = qty,
+                        side = signal.value,
+                        type = "market"
+                    )
+                    tasks.append(self.place_order(order))
+                    
+            except Exception:
+                logger.exception(f"Failed to analyze {symbol} from watchlist")
+        
+        return tasks
