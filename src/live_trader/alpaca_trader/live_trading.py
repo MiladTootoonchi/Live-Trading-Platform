@@ -366,7 +366,6 @@ class AlpacaTrader:
 
             if len(positions_to_update) == 0:
                 print("Did not find any positions, try --order or -o to place an order... ")
-                raise KeyboardInterrupt
 
             if symbol == "ALL": logger.info("Updating all positions")
             else: logger.info(f"Updating: {symbol}")
