@@ -4,7 +4,6 @@ from typing import Callable, List, Dict, Any
 import inspect
 
 from .order import OrderData, SideSignal
-from ..ml_model.ml_strategy import AI_strategy
 from config import make_logger, load_watchlist
 
 
@@ -340,7 +339,7 @@ class AlpacaTrader:
 
 
 
-    async def update(self, strategy: Callable, symbol: str) -> None:
+    async def update(self, strategy: Callable, analyzer_strategy: Callable, symbol: str) -> None:
         """
         Updates one or all positions based on the provided trading strategy.
 
@@ -350,7 +349,10 @@ class AlpacaTrader:
         Args:
             strategy (Callable): 
                 A function that takes the position dict and returns a (signal, quantity) tuple.
-            symbol (str): The stock symbol to update. Use "ALL" to update all positions.
+            analyzer_strategy(Callable):
+                Same as strategy, however used for watchlist analyzer.
+            symbol (str): 
+                The stock symbol to update. Use "ALL" to update all positions.
 
         Raises:
             Exception: Catches and logs any exceptions that occur during update.
@@ -390,14 +392,14 @@ class AlpacaTrader:
                     )
                     tasks.append(self.place_order(order))
 
-            watchlist_tasks = self._analyze_watchlist()
+            watchlist_tasks = self._analyze_watchlist(analyzer_strategy)
             tasks.extend(watchlist_tasks)
             await asyncio.gather(*tasks)
 
         except Exception:
             logger.exception(f"Failed to update position(s) for {symbol}")
 
-    async def _analyze_watchlist(self) -> list:
+    async def _analyze_watchlist(self, analyzer_strategy: Callable) -> list:
         """
         Analyzes symbols in the watchlist and prepares order placement tasks.
 
@@ -408,6 +410,10 @@ class AlpacaTrader:
 
         Any exceptions raised while analyzing individual symbols are caught and
         logged, allowing analysis of remaining symbols to continue.
+
+        analyzer_strategy(Callable):
+                A function that takes the position dict and returns a (signal, quantity) tuple.
+                however used for analyzing watchlist.
 
         Returns:
             list:
@@ -423,7 +429,7 @@ class AlpacaTrader:
         tasks = []
         for symbol in watchlist:
             try:
-                signal, qty = await AI_strategy(symbol)    # The ML strategy need awaiting
+                signal, qty = await analyzer_strategy(symbol)    # The ML strategy need awaiting
 
                 logger.info(f"{symbol}: {signal.value}")
 

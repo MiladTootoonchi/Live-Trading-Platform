@@ -72,13 +72,15 @@ async def main():
     if args.update:
         symbol = args.update
         strategy = find_strategy()
-        await trader.update(strategy, symbol)
+        analyzer_strategy = find_strategy("ai")
+        await trader.update(strategy, analyzer_strategy, symbol)
     
     if args.live:
         strategy = find_strategy()
+        analyzer_strategy = find_strategy("ai")
         try:
             while True:
-                await trader.update(strategy, "ALL")
+                await trader.update(strategy, analyzer_strategy, "ALL")
                 await asyncio.sleep(60) # sleep for a minute
 
         except (KeyboardInterrupt, asyncio.CancelledError):
