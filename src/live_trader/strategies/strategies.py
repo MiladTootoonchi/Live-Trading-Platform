@@ -70,19 +70,32 @@ strategies = {
 }
 
 
-def find_strategy() -> Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
+def find_strategy(name: str | None = None) -> Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
     """
-    Goes through the strategies dictionary to call on the strategy function 
-    that matches the promt the user inputs.
+    Resolve and return a trading strategy function by name.
+
+    If no strategy name is provided, the user is prompted to select one.
+    The function repeatedly asks for input until a valid strategy name
+    matching a key in the internal ``strategies`` dictionary is supplied.
+
+    Args:
+        name (str | None):
+            The name of the strategy to use. If ``None``, the strategy name
+            is loaded from configuration or requested interactively from
+            the user.
 
     Returns:
-        Callable: the strategy function asked for.
+        Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
+            The strategy function associated with the chosen name.
 
     Raises:
-        KeyError: If the strategy name is not found.
+        KeyboardInterrupt:
+            If the user aborts the selection process.
     """
+    
     while True:
-        name = load_strategy_name()
+        if name == None:
+            name = load_strategy_name()
 
         if name not in strategies:
             name = input("Which strategy do you want to use? ")
