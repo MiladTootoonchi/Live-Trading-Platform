@@ -394,7 +394,21 @@ These are the strategy names you can choose from.
 
 <br>
 
-**How to Install the Required Python Packages**
+**Watchlist:** \
+This feature is optional. If you want the program to always analyze specific stocks, even when you do not currently hold a position, you can define a watchlist.
+Add the stock symbols to the [live] section as a Python list, for example:
+```toml
+[live]
+watchlist = ["AAPL", "GOOG", "SPY"]
+```
+Important:
+- Symbols must be enclosed in quotation marks
+- The list must be enclosed in square brackets ([ ])
+- Separate symbols with commas
+
+<br>
+
+**How to Install the Required Python Packages:**
 
 Follow these short steps to set up your environment:
 
@@ -424,7 +438,7 @@ Follow these short steps to set up your environment:
 
 <br>
 
-**<h4> Usage Guide</h4>**
+**<h4> Usage Guide:</h4>**
 
 The steps below explain how to use its different command-line options.
 
