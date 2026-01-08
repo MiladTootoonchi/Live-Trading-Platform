@@ -4,4 +4,4 @@ alpaca_secret_key = ""
 
 [live]
 strategy = ""
-watchlist = []
+watchlist = ""

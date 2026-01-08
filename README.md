@@ -399,11 +399,10 @@ This feature is optional. If you want the program to always analyze specific sto
 Add the stock symbols to the [live] section as a Python list, for example:
 ```toml
 [live]
-watchlist = ["AAPL", "GOOG", "SPY"]
+watchlist = "AAPL, GOOG, SPY"
 ```
 Important:
-- Symbols must be enclosed in quotation marks
-- The list must be enclosed in square brackets ([ ])
+- The list must be enclosed in quotation marks
 - Separate symbols with commas
 
 <br>

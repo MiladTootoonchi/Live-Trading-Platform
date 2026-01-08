@@ -73,6 +73,28 @@ def load_strategy_name(config_file: str = "settings.toml") -> str:
     return strategy
 
 
+def _normalize_watchlist(value) -> list[str]:
+    if not value:
+        return []
+
+    # Already a list (correct TOML)
+    if isinstance(value, list):
+        return [
+            str(symbol).strip().upper()
+            for symbol in value
+            if str(symbol).strip()
+        ]
+
+    # Env var or misconfigured TOML → comma-separated string
+    if isinstance(value, str):
+        return [
+            symbol.strip().upper()
+            for symbol in value.split(",")
+            if symbol.strip()
+        ]
+
+    raise TypeError("Watchlist must be a list or a comma-separated string")
+
 def load_watchlist(config_file: str = "settings.toml") -> list[str]:
     """
     Load the list of stocks the program is going to watch over whenever it updates posistions.
@@ -90,8 +112,9 @@ def load_watchlist(config_file: str = "settings.toml") -> list[str]:
             live = conf.get("live", {})
             watchlist = live.get("watchlist")
 
-            if watchlist:
-                return watchlist
+            normalized = _normalize_watchlist(watchlist)
+            if normalized:
+                return normalized
 
     except Exception:
         logger.info(
@@ -100,8 +123,9 @@ def load_watchlist(config_file: str = "settings.toml") -> list[str]:
 
     # Fallback to env var
     env_watchlist = os.getenv("watchlist")
-    if env_watchlist:
-        return env_watchlist
+    normalized = _normalize_watchlist(env_watchlist)
+    if normalized:
+        return normalized
 
     logger.warning("Watchlist not found; defaulting to empty list.\n")
     return []

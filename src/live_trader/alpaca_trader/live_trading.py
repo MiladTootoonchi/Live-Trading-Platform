@@ -391,7 +391,7 @@ class AlpacaTrader:
                     )
                     tasks.append(self.place_order(order))
 
-            watchlist_tasks = self._analyze_watchlist(analyzer_strategy)
+            watchlist_tasks = await self._analyze_watchlist(analyzer_strategy)
             tasks.extend(watchlist_tasks)
             await asyncio.gather(*tasks)
 
@@ -423,10 +423,22 @@ class AlpacaTrader:
 
 
         watchlist = load_watchlist()
+
+        if isinstance(watchlist, str):
+            raise ValueError(
+                "Watchlist must be a list of symbols, not a string. "
+                'Example: ["AAPL", "GOOG", "SPY"]'
+            )
+
         logger.info(f"Checking watchlist: {watchlist}")
 
         tasks = []
         for symbol in watchlist:
+            symbol = symbol.strip().upper()
+            if not symbol or len(symbol) < 1:
+                logger.warning("Skipping invalid symbol in watchlist")
+                continue
+
             try:
                 signal, qty = await analyzer_strategy(symbol)    # The ML strategy need awaiting
 
