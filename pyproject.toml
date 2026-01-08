@@ -10,7 +10,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.11"
+python = ">=3.11,<4.0.0"
 
 alpaca_trade_api = "*"
 alpaca-py = "*"
@@ -35,3 +35,6 @@ ipykernel = "*"
 # pytest = "*"
 # black = "*"
 # ruff = "*"
+
+[tool.poetry.scripts]
+trade = "main:cli"

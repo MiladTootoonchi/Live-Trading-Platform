@@ -399,29 +399,27 @@ These are the strategy names you can choose from.
 Follow these short steps to set up your environment:
 
 1. Install Python
-    - Check that Python 3.8 or newer is installed:
-```bash
-python --version
-```
-
-2. Create a Virtual Environment
-    - macOS / Linux
-        ```bash
-        python -m venv .venv
-        source .venv/bin/activate
-        ```
-    - Windows (PowerShell)
-        ```bash
-        python -m venv .venv
-        .\.venv\Scripts\Activate.ps1
-        ```
-3. Upgrade Pip
+    - Make sure Python 3.11 or newer (but < 4.0) is installed:
     ```bash
-    python -m pip install --upgrade pip
+    python --version
     ```
-4. Install the Required Packages
+2. Install Poetry
+    - If you do not already have Poetry installed:
     ```bash
-    pip install .
+    pip install poetry
+    ```
+    - Verify installation
+    ```bash
+    poetry --version
+    ```
+4. Install dependencies
+    - This will create a virtual environment and install the locked dependencies:
+    ```bash
+    poetry install
+    ```
+    - To update dependencies to newer compatible versions:
+    ```bash
+    poetry update
     ```
 
 <br>
@@ -437,45 +435,45 @@ The steps below explain how to use its different command-line options.
     - The program accepts several command-line flags.  
     - Use this format:
     ```bash
-    python main.py [flag]
+    poetry run trade [flag]
     ```
 
 3. First you need to place an buy-order (if you do not have any positions in your portfolio).
     - *--buy* or *-b*
     ```bash
-    python main.py --buy
+    poetry run trade --buy
     ```
 - If you need to place an sell-order.
     - *--sell* or *-s*
     ```bash
-    python main.py --sell
+    poetry run trade --sell
     ```
 
 - Cancel last given order (if you regret sending the last given orders)
     - *--cancel-last* or *-cl*
     ```bash
-    python main.py --cancel-last
+    poetry run trade --cancel-last
     ```
 
 - Cancel all open orders (if you regret sending every recent order)
     - This will cancel **all** open orders.
     - *--cancel* or *-c*
     ```bash
-    python main.py --cancel
+    poetry run trade --cancel
     ```
 
 * Update a specific position or all positions
     - Evaluates specifies / all positions using a strategy chosen at startup. Makes an order based on the evaluation.
     - *--update* or *-u*
     ```bash
-    python main.py --update [stock symbol, or 'ALL' for all positions]
+    poetry run trade --update [stock symbol, or 'ALL' for all positions]
     ```
 
 * Run the Live Trading Loop
     - This will run an update every 60 seconds on ALL positions.
     - *--live* or *-l*
     ```bash
-    python main.py --live
+    poetry run trade --live
     ```
 
 
