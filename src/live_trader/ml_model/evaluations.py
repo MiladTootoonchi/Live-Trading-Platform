@@ -2,8 +2,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from typing import Tuple
-from sklearn.metrics import classification_report, confusion_matrix, f1_score, accuracy_score
+from typing import Tuple, Union
+from sklearn.metrics import classification_report, confusion_matrix, f1_score, roc_auc_score
 
 # Ignoring info + warning + errors: the user do not need to see this
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -18,9 +18,10 @@ logger = make_logger()
 
 
 def evaluate_model(model: Model,
+                   symbol: str,
                    X_test: np.ndarray,
                    y_test: np.ndarray,
-                   save_dir: str = "logfiles"
+                   save_dir: str = "logfiles/evaluations"
                    ) -> Tuple[float, float]:
     """
     Evaluates the trained model on unseen test data and logs performance metrics.
@@ -33,6 +34,8 @@ def evaluate_model(model: Model,
     Args:
         model (Model): 
             The trained LSTM model to be evaluated.
+        symbol (str):
+            The symbol of the stock that the ML-model is predicting on.
         X_test (np.ndarray): 
             Feature sequences used for testing the model.
         y_test (np.ndarray): 
@@ -62,9 +65,19 @@ def evaluate_model(model: Model,
 
     # Compute performance metrics
     try:
+        auc_roc = roc_auc_score(y_test, y_pred)
         f1 = f1_score(y_test, y_pred)
-        accuracy = accuracy_score(y_test, y_pred)
-        logger.info(f"Model evaluation completed — F1: {f1:.4f}, Accuracy: {accuracy:.4f}")
+        brier = brier_score(y_test, y_pred)
+
+        evaluation_score_text = f"""
+
+    Model evaluation completed:
+    AUC-ROC         =   {auc_roc:.4f}
+    f1-score:       =   {f1:.4f}
+    brier-score     =   {brier:.4f}
+        """
+
+        logger.info(evaluation_score_text)
     except Exception as e:
         logger.error(f"Error while computing evaluation metrics: {e}")
         raise
@@ -72,9 +85,10 @@ def evaluate_model(model: Model,
     # Generate and save classification report
     try:
         report = classification_report(y_test, y_pred, digits=4)
-        report_path = os.path.join(save_dir, "classification_report.txt")
+        report_path = os.path.join(save_dir, f"classification_report_{model.name}_{symbol}.txt")
         with open(report_path, "w") as f:
             f.write(report)
+            f.write(evaluation_score_text)
         logger.info(f"Classification report saved to {report_path}")
     except Exception as e:
         logger.error(f"Failed to save classification report: {e}")
@@ -88,11 +102,51 @@ def evaluate_model(model: Model,
         plt.xlabel("Predicted")
         plt.ylabel("Actual")
         plt.tight_layout()
-        cm_path = os.path.join(save_dir, "confusion_matrix.png")
+        cm_path = os.path.join(save_dir, f"confusion_matrix_{model.name}_{symbol}.png")
         plt.savefig(cm_path)
         plt.close()
         logger.info(f"Confusion matrix saved to {cm_path}")
     except Exception as e:
         logger.error(f"Failed to create or save confusion matrix: {e}")
 
-    return f1, accuracy
+    return auc_roc, f1
+
+
+
+def brier_score(
+    y_true: Union[np.ndarray, list],
+    y_prob: Union[np.ndarray, list],
+) -> Tuple[float, float]:
+    """
+    Computes the Brier score for a binary
+    stock direction classification model.
+
+    The Brier score evaluates the calibration quality of
+    predicted probabilities.
+
+    Args:
+        y_true (array-like):
+            Ground-truth binary labels (0 = down, 1 = up).
+            Shape: (n_samples,)
+
+        y_prob (array-like):
+            Predicted probabilities for class 1 (up).
+            Shape: (n_samples,)
+
+    Returns:
+        Tuple[float, float]:
+            brier_score:
+                Mean squared error between predicted probabilities
+                and true binary outcomes. Lower is better.
+    """
+
+    # Convert inputs to NumPy arrays
+    y_true = np.asarray(y_true, dtype=np.float32)
+    y_prob = np.asarray(y_prob, dtype=np.float32)
+
+    # -------------------------
+    # Brier Score
+    # -------------------------
+    brier_score = np.mean((y_prob - y_true) ** 2)
+
+    return brier_score

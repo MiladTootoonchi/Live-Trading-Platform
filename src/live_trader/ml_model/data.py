@@ -1,8 +1,10 @@
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockLatestTradeRequest, StockLatestQuoteRequest
+from alpaca.trading.client import TradingClient
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
+from typing import Tuple, Sequence, Union
 
 from config import load_api_keys, make_logger
 
@@ -273,3 +275,96 @@ def stock_data_prediction_pipeline(df: pd.DataFrame, scaler: StandardScaler) -> 
     X_scaled = scaler.transform(X)
 
     return X_scaled
+
+
+
+def create_sequences(X: Union[Sequence, np.ndarray],
+                        y: Union[Sequence, np.ndarray],
+                        time_steps: int
+                    ) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Generates sequences from input features and targets for time series modeling.
+
+    Args:
+        X (Union[Sequence, np.ndarray]): Feature dataset.
+        y (Union[Sequence, np.ndarray]): Target dataset.
+        time_steps (int): Number of time steps in each sequence.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]:
+            Xs: Array of feature sequences of shape (num_sequences, time_steps, num_features).
+            ys: Array of target values corresponding to each sequence.
+    """
+
+    Xs, ys = [], []
+    for i in range(len(X) - time_steps):
+        Xs.append(X[i:(i + time_steps)])
+
+        if hasattr(y, "iloc"):
+            ys.append(y.iloc[i + time_steps])
+        else:
+            ys.append(y[i + time_steps])
+            
+    return np.array(Xs), np.array(ys)
+
+
+
+def compute_trade_qty(position_data: dict, prob: float) -> int:
+    """
+    Calculates an intelligent stock quantity to trade based on model confidence and risk management.
+
+    The function automatically retrieves your Alpaca account equity, then uses a hybrid 
+    risk model that combines confidence scaling and fixed risk-per-trade rules. This ensures 
+    trades are dynamically sized while respecting account-level risk limits.
+
+    Args:
+        position_data (dict): Alpaca position data containing 'symbol' and price info.
+        prob (float): Model probability (0.0 - 1.0) that the trade prediction is correct.
+
+    Returns:
+        int: Recommended quantity of shares to buy or sell.
+    """
+
+    try:
+        client = TradingClient(KEY, SECRET, paper=True)
+        account = client.get_account()
+        equity = float(account.equity)
+    except Exception as e:
+        logger.info(f"Failed to fetch account equity: {e}")
+        equity = 10000.0  # fallback default for safety
+
+    # Risk parameters
+    confidence_threshold = 0.55
+    max_position_frac = 0.10        # Max 10% of total equity
+    risk_per_trade = 0.01           # Risk 1% of equity per trade
+    stop_pct = 0.02                 # 2% stop loss assumption
+
+    try:
+        price = float(position_data.get("avg_entry_price") or position_data.get("market_price"))
+    except Exception:
+        logger.info("Invalid price data in position_data.")
+        return 0
+
+    # Confidence-based scaling
+    confidence_scale = max(0.0, (prob - confidence_threshold) / (1 - confidence_threshold))
+
+    # Hybrid risk model
+    max_position_value = equity * max_position_frac
+    risk_dollars = equity * risk_per_trade
+
+    hybrid_qty = (max_position_value * confidence_scale) / price
+    risk_qty = risk_dollars / (price * stop_pct)
+
+    qty = int(min(hybrid_qty, risk_qty))
+
+    # If model wants to SELL (negative qty), cap by position size
+    try:
+        position_qty = int(float(position_data.get("qty", 0)))
+
+        if qty < 0:
+            qty = max(qty, -position_qty)
+    except Exception:
+        logger.info("Invalid position quantity data.\n")
+        return 0
+
+    return qty
