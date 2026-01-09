@@ -2,7 +2,7 @@
 # Build artifacts
 # ─────────────────────────────────────────────
 build/
-live_trading_platform.egg-info/
+live_trader.egg-info/
 
 # ─────────────────────────────────────────────
 # Python cache

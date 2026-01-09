@@ -2,8 +2,7 @@ import argparse
 import asyncio
 
 from config import load_api_keys
-from src.alpaca_trader.live_trading import AlpacaTrader
-from src.strategies.strategies import find_strategy
+from live_trader import AlpacaTrader, find_strategy
 
 
 def parseInput():
@@ -13,8 +12,14 @@ def parseInput():
     parser = argparse.ArgumentParser(description = "Put the Alpaca keys in settings.toml and type:\n" \
     "")
 
-    parser.add_argument("--order", 
-                        "-o", 
+    parser.add_argument("--buy", 
+                        "-b", 
+                        action = "store_true", 
+                        help = "places an order. The program will ask questions about the order " \
+                        "and sends it to Alpaca")
+    
+    parser.add_argument("--sell", 
+                        "-s", 
                         action = "store_true", 
                         help = "places an order. The program will ask questions about the order " \
                         "and sends it to Alpaca")
@@ -23,6 +28,11 @@ def parseInput():
                         "-c", 
                         action = "store_true", 
                         help = "Cancels orders that is not placed.")
+    
+    parser.add_argument("--cancel-last",
+                        "-cl",
+                        action = "store_true",
+                        help = "Cancels the most recently submitted open order.")
 
     parser.add_argument("--live",
                         "-l",
@@ -49,22 +59,28 @@ async def main():
     trader = AlpacaTrader(key, secret_key)
 
     
+    if args.cancel_last:
+        await trader.cancel_last_order()
     if args.cancel:
         await trader.cancel_all_orders()
-    if args.order:
+    if args.sell:
+        await trader.create_sell_order()
+    if args.buy:
         await trader.create_buy_order()
 
 
     if args.update:
         symbol = args.update
         strategy = find_strategy()
-        await trader.update(strategy, symbol)
+        analyzer_strategy = find_strategy("ai")
+        await trader.update(strategy, analyzer_strategy, symbol)
     
     if args.live:
         strategy = find_strategy()
+        analyzer_strategy = find_strategy("ai")
         try:
             while True:
-                await trader.update(strategy, "ALL")
+                await trader.update(strategy, analyzer_strategy, "ALL")
                 await asyncio.sleep(60) # sleep for a minute
 
         except (KeyboardInterrupt, asyncio.CancelledError):
@@ -73,6 +89,8 @@ async def main():
         finally:
             pass
 
+def cli():
+    asyncio.run(main())
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -3,29 +3,30 @@ import numpy as np
 import datetime as dt
 from alpaca.trading.client import TradingClient
 
-from ..alpaca_trader.order import SideSignal
+from live_trader.alpaca_trader.order import SideSignal
 from config import make_logger, load_api_keys
-from src.ml_model.data import stock_data_prediction_pipeline, stock_data_feature_engineering, get_one_realtime_bar
-from src.strategies.utils import fetch_data
-from src.ml_model.training import train_model, sequence_split
-from src.ml_model.evaluations import evaluate_model
+from .data import stock_data_prediction_pipeline, stock_data_feature_engineering, get_one_realtime_bar
+from live_trader.strategies.utils import fetch_data
+from .training import train_model, sequence_split
+from .evaluations import evaluate_model
 
 logger = make_logger()
 
-async def AI_strategy(position_data: dict) -> tuple[SideSignal, int]:
+async def AI_strategy(symbol: str, position_data: dict = {}) -> tuple[SideSignal, int]:
     """
     Evaluates a trading position from an Alpaca JSON response and recommends an action.
     This strategy will only buy or sell.
 
     Args:
-        position_data (dict): JSON object from Alpaca API containing position details.
+        symbol (str):           a string consisting of the symbol og the stock.
+        position_data (dict):   JSON object from Alpaca API containing position details.
+                                This is only used as a parameter if you have a posistion in that stock.
 
     Returns:
         tuple:
             (SideSignal.BUY or SideSignal.SELL, qty: int)
     """
 
-    symbol = position_data["symbol"]
 
     yesterday = dt.datetime.now(dt.UTC) - dt.timedelta(days = 1)
     mdip = dt.datetime.now(dt.UTC) - dt.timedelta(days = 100)        # more than 50 days in the past (many days in past)
@@ -91,14 +92,24 @@ async def AI_strategy(position_data: dict) -> tuple[SideSignal, int]:
 
 
     # Deciding side and qty
-    qty = compute_trade_qty(position_data, float(prob))
+    has_position = (
+        position_data is not None
+        and float(position_data.get("qty", 0)) > 0
+    )
 
-    if qty == 0:
-        side = SideSignal.HOLD
-    elif signal > 0:
-        side = SideSignal.BUY
+    if has_position:
+        qty = compute_trade_qty(position_data, float(prob))
+
+    elif signal == 1 and prob > 0.5:
+        qty = 1
+
     else:
-        side = SideSignal.SELL
+        qty = 0
+
+    if has_position:
+        side = SideSignal.BUY if signal == 1 else SideSignal.SELL
+    else:
+        side = SideSignal.BUY if qty > 0 else SideSignal.HOLD
 
     return side, qty
 
@@ -156,5 +167,15 @@ def compute_trade_qty(position_data: dict, prob: float) -> int:
     risk_qty = risk_dollars / (price * stop_pct)
 
     qty = int(min(hybrid_qty, risk_qty))
+
+    # If model wants to SELL (negative qty), cap by position size
+    try:
+        position_qty = int(float(position_data.get("qty", 0)))
+
+        if qty < 0:
+            qty = max(qty, -position_qty)
+    except Exception:
+        logger.info("Invalid position quantity data.\n")
+        return 0
 
     return qty

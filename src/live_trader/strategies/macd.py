@@ -1,4 +1,4 @@
-from ..alpaca_trader.order import SideSignal
+from live_trader.alpaca_trader.order import SideSignal
 from typing import Tuple, Dict, Any, List
 from config import make_logger
 from .utils import fetch_data, normalize_bars
@@ -59,12 +59,13 @@ def calculate_macd(closes: List[float]) -> Tuple[List[float], List[float]]:
     return macd_line, signal_line
 
 
-def macd_strategy(position_data: Dict[str, Any]) -> Tuple[SideSignal, int]:
+def macd_strategy(symbol: str, position_data: Dict[str, Any]) -> Tuple[SideSignal, int]:
     """
     MACD crossover strategy.
     Generates buy or sell signals when MACD crosses the signal line.
 
     Args:
+        symbol (str): The symbol of the stock we want to calculate for.
         position_data (dict):
             Contains:
                 symbol (str): ticker symbol
@@ -75,11 +76,7 @@ def macd_strategy(position_data: Dict[str, Any]) -> Tuple[SideSignal, int]:
         tuple(SideSignal, int):
             Signal and quantity (always 0 for risk management).
     """
-    symbol = position_data.get("symbol")
-    if not symbol:
-        logger.error("MACD strategy missing 'symbol'.")
-        return SideSignal.HOLD, 0
-
+    
     bars = position_data.get("history")
 
     # Fetch if no history provided

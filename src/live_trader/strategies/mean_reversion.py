@@ -1,4 +1,4 @@
-from ..alpaca_trader.order import SideSignal
+from live_trader.alpaca_trader.order import SideSignal
 from typing import Dict, Any, Tuple
 from config import make_logger
 from .utils import fetch_data, normalize_bars
@@ -8,6 +8,7 @@ logger = make_logger()
 
 
 def mean_reversion_strategy(
+    symbol: str,
     position_data: Dict[str, Any],
     window: int = 20
 ) -> Tuple[SideSignal, int]:
@@ -16,6 +17,7 @@ def mean_reversion_strategy(
     to determine if the price has deviated significantly.
 
     Args:
+        symbol (str): The symbol of the stock we want to calculate for.
         position_data (dict):
             Contains:
                 symbol: ticker of the asset
@@ -29,10 +31,6 @@ def mean_reversion_strategy(
             A SideSignal indicating buy, sell, or hold,
             and a recommended quantity of one for buy or sell signals.
     """
-    symbol = position_data.get("symbol")
-    if not symbol:
-        logger.error("Mean reversion strategy invoked without a symbol.")
-        return SideSignal.HOLD, 0
 
     bars = position_data.get("history")
 
