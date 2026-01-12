@@ -49,6 +49,7 @@ def evaluate_model(model: Model,
     """
 
     # Ensure log directory exists
+    save_dir = os.path.join(save_dir, model.name)
     os.makedirs(save_dir, exist_ok = True)
 
     # Reshape target if needed
@@ -84,7 +85,7 @@ def evaluate_model(model: Model,
 
     # Generate and save classification report
     try:
-        report = classification_report(y_test, y_pred, digits=4)
+        report = classification_report(y_test, y_pred, digits = 4)
         report_path = os.path.join(save_dir, f"classification_report_{model.name}_{symbol}.txt")
         with open(report_path, "w") as f:
             f.write(report)
@@ -97,7 +98,7 @@ def evaluate_model(model: Model,
     try:
         cm = confusion_matrix(y_test, y_pred)
         plt.figure(figsize=(5, 4))
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", cbar=False)
+        sns.heatmap(cm, annot = True, fmt = "d", cmap = "Blues", cbar = False)
         plt.title("Confusion Matrix")
         plt.xlabel("Predicted")
         plt.ylabel("Actual")
@@ -141,8 +142,8 @@ def brier_score(
     """
 
     # Convert inputs to NumPy arrays
-    y_true = np.asarray(y_true, dtype=np.float32)
-    y_prob = np.asarray(y_prob, dtype=np.float32)
+    y_true = np.asarray(y_true, dtype = np.float32)
+    y_prob = np.asarray(y_prob, dtype = np.float32)
 
     # -------------------------
     # Brier Score

@@ -112,7 +112,7 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], Model], symbol: str,
 
     # fetching data from 2020 till mdip (mdip till today will be used for prediction)
     df = fetch_data(symbol = symbol, 
-                    start_date = (2020, 1, 1), 
+                    start_date = (1900, 1, 1), 
                     end_date = (mdip.year, mdip.month, mdip.day))
     
     # Feature engineering for training and test data
