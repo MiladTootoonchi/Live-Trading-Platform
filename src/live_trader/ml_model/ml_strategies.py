@@ -1,5 +1,3 @@
-import asyncio
-
 from ..alpaca_trader import SideSignal
 from .training import ML_Pipeline
 from .modelling import build_lstm, build_attention_bilstm

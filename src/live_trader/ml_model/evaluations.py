@@ -11,6 +11,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"   # Completely disable GPU
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"   # Reduces backend logs
 
 from tensorflow.keras.models import Model
+import tensorflow as tf
 
 from config import make_logger
 
@@ -123,7 +124,7 @@ def brier_score(
     stock direction classification model.
 
     The Brier score evaluates the calibration quality of
-    predicted probabilities.
+    predicted probabilities. USE THIS FOR TESTING EVALUASTION ONLY
 
     Args:
         y_true (array-like):
@@ -151,3 +152,28 @@ def brier_score(
     brier_score = np.mean((y_prob - y_true) ** 2)
 
     return brier_score
+
+
+
+@tf.keras.utils.register_keras_serializable()
+def brier(
+    y_true: tf.Tensor,
+    y_pred: tf.Tensor
+) -> tf.Tensor:
+    """
+    TensorFlow Brier score metric for binary classification.
+
+    Args:
+        y_true (tf.Tensor):
+            Ground-truth binary labels.
+
+        y_pred (tf.Tensor):
+            Predicted probabilities for the positive class.
+
+    Returns:
+        tf.Tensor:
+            Mean squared error between probabilities and labels.
+    """
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred = tf.clip_by_value(y_pred, 1e-7, 1.0 - 1e-7)
+    return tf.reduce_mean(tf.square(y_pred - y_true))

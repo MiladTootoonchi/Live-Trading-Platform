@@ -6,9 +6,11 @@ import datetime as dt
 
 from live_trader import SideSignal
 from config import make_logger
-from .data import stock_data_prediction_pipeline, stock_data_feature_engineering, get_one_realtime_bar, compute_trade_qty
+from .data import (
+    stock_data_prediction_pipeline, stock_data_feature_engineering, 
+    get_one_realtime_bar, compute_trade_qty, create_sequences)
 from live_trader.strategies.utils import fetch_data
-from .evaluations import evaluate_model
+from .evaluations import evaluate_model, brier
 
 # Ignoring info + warning + errors: the user do not need to see this
 import os
@@ -18,8 +20,6 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"   # Reduces backend logs
 
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping
-
-from .data import create_sequences
 
 # ------------------------------------------------------------------------
 
@@ -69,7 +69,8 @@ def train_model(X_seq: Union[np.ndarray, list],
         Model: Trained Keras LSTM model.
     """
 
-    early_stop = EarlyStopping(monitor = 'val_loss', patience = 5, restore_best_weights = True)
+    early_stop = EarlyStopping(monitor = 'val_brier', mode = "min", patience = 5, restore_best_weights = True)
+    #early_stop = EarlyStopping(monitor = 'val_auc', mode = "max", patience = 5, restore_best_weights = True)
     
     model.fit(
         X_seq, y_seq, 

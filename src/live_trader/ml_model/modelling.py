@@ -1,5 +1,7 @@
 import numpy as np
-from typing import Union, Tuple, Sequence
+from typing import Union
+
+from .training import brier
 
 # Ignoring info + warning + errors: the user do not need to see this
 import os
@@ -44,7 +46,8 @@ def build_lstm(X_train_seq: Union[np.ndarray, list]) -> Model:
         loss = 'binary_crossentropy', 
         optimizer = Adam(learning_rate=1e-3), 
         metrics = [
-            AUC(name = "roc_auc")
+            AUC(name = "roc_auc"),
+            brier
             ]
     )
     
@@ -91,7 +94,8 @@ def build_attention_bilstm(X_train_seq: Union[np.ndarray, list]) -> Model:
         loss = 'binary_crossentropy',
         optimizer = Adam(learning_rate = 1e-3),
         metrics = [
-            AUC(name = "roc_auc")
+            AUC(name = "roc_auc"),
+            brier
             ]
     )
 
