@@ -1,14 +1,15 @@
 from typing import Callable, Dict, Any
 
 from live_trader.alpaca_trader.order import SideSignal
-from config import make_logger, load_strategy_name
+from live_trader.config import make_logger, load_strategy_name
 
-from .bollinger_bands_strategy import bollinger_bands_strategy
-from .macd import macd_strategy
-from .mean_reversion import mean_reversion_strategy
-from .momentum import momentum_strategy
-from .moving_average_strategy import moving_average_strategy
-from .rsi import rsi_strategy
+from live_trader.strategies.bollinger_bands_strategy import bollinger_bands_strategy
+from live_trader.strategies.macd import macd_strategy
+from live_trader.strategies.mean_reversion import mean_reversion_strategy
+from live_trader.strategies.momentum import momentum_strategy
+from live_trader.strategies.moving_average_strategy import moving_average_strategy
+from live_trader.strategies.rsi import rsi_strategy
+
 from live_trader.ml_model.ml_strategies import (basic_lstm, attention_bilstm, 
                                                 tcn_lite, patchtst_lite, gnn_lite,
                                                 nad_lite, cnn_gru_lite)

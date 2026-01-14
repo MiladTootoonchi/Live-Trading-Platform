@@ -23,9 +23,9 @@ from __future__ import annotations
 from typing import Callable, List, Dict, Any
 import pandas as pd
 
-from config import make_logger
-from ..alpaca_trader.order import SideSignal
-from .utils import fetch_data  # utils.fetch_data must exist and return a DataFrame or list-like
+from live_trader.config import make_logger
+from live_trader.alpaca_trader.order import SideSignal
+from live_trader.strategies.utils import fetch_data  # utils.fetch_data must exist and return a DataFrame or list-like
 
 logger = make_logger()
 

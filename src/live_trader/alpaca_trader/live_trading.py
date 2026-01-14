@@ -1,10 +1,10 @@
 import requests
 import asyncio
-from typing import Callable, List, Dict, Any
+from typing import Callable, List, Dict
 import inspect
 
-from .order import OrderData, SideSignal
-from config import make_logger, load_watchlist
+from live_trader.alpaca_trader.order import OrderData, SideSignal
+from live_trader.config import make_logger, load_watchlist
 
 
 logger = make_logger()

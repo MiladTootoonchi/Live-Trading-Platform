@@ -7,7 +7,7 @@ from alpaca.data.timeframe import TimeFrame
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.historical import StockHistoricalDataClient
 
-from config import load_api_keys, make_logger
+from live_trader.config import load_api_keys, make_logger
 
 logger = make_logger()
 

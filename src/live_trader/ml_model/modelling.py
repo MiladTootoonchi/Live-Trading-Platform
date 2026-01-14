@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Union
 
-from .training import brier
+from live_trader.ml_model.evaluations import brier
 
 # Ignoring info + warning + errors: the user do not need to see this
 import os

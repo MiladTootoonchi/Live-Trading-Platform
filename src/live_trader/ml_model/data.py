@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from typing import Tuple, Sequence, Union
 
-from config import load_api_keys, make_logger
+from live_trader.config import load_api_keys, make_logger
 
 
 # Settings

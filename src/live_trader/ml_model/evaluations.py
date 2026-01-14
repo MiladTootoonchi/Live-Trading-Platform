@@ -1,11 +1,14 @@
-import os
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Tuple, Union
+
 from sklearn.metrics import classification_report, confusion_matrix, f1_score, roc_auc_score
 
+from live_trader.config import make_logger
+
 # Ignoring info + warning + errors: the user do not need to see this
+import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"   # Completely disable GPU
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"   # Reduces backend logs
@@ -13,7 +16,7 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"   # Reduces backend logs
 from tensorflow.keras.models import Model
 import tensorflow as tf
 
-from config import make_logger
+# --------------------------------------------------------------------------------------------
 
 logger = make_logger()
 

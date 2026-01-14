@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "live-trading-platform"
-version = "0.2.1"
+version = "0.2.2"
 description = "Creating new solutions based on the Alpaca platform that can help traders make better-informed decisions and execute trades more efficiently."
 readme = "README.md"
 authors = ["Milad Tootoonchi <milad.tootoonchi04@gmail.com>"]

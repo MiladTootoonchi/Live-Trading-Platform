@@ -1,10 +1,10 @@
-from .backtest import compare_strategies
-from .bollinger_bands_strategy import bollinger_bands_strategy
-from .macd import macd_strategy
-from .mean_reversion import mean_reversion_strategy
-from .momentum import momentum_strategy
-from .moving_average_strategy import moving_average_strategy
-from .rsi import rsi_strategy
+from live_trader.strategies.backtest import compare_strategies
+from live_trader.strategies.bollinger_bands_strategy import bollinger_bands_strategy
+from live_trader.strategies.macd import macd_strategy
+from live_trader.strategies.mean_reversion import mean_reversion_strategy
+from live_trader.strategies.momentum import momentum_strategy
+from live_trader.strategies.moving_average_strategy import moving_average_strategy
+from live_trader.strategies.rsi import rsi_strategy
 
 TEST_MODE = True  
 
