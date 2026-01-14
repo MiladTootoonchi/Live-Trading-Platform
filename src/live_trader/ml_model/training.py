@@ -21,64 +21,113 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"   # Reduces backend logs
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping
 
+from sklearn.isotonic import IsotonicRegression
+
 # ------------------------------------------------------------------------
 
-def sequence_split(X: Union[Sequence, np.ndarray], 
-                   y: Union[Sequence, np.ndarray], 
-                   time_steps: int = 5
-                   ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def sequence_split(
+    X: np.ndarray,
+    y: np.ndarray,
+    time_steps: int = 50,
+    train_ratio: float = 0.7,
+    val_ratio: float = 0.15,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
-    Converts input data into sequences and splits them into training and testing sets.
+    Convert features into time sequences and split chronologically.
 
     Args:
-        X (array-like): Feature dataset to be converted into sequences.
-        y (array-like): Target dataset corresponding to X.
-        time_steps (int, optional): Number of time steps in each sequence. Defaults to 5.
+        X (np.ndarray): Feature matrix.
+        y (np.ndarray): Target vector.
+        time_steps (int): Sequence length.
+        train_ratio (float): Fraction used for training.
+        val_ratio (float): Fraction used for validation.
 
     Returns:
-        tuple: 
-            X_train_seq (array-like): Training sequences for features.
-            X_test_seq (array-like): Testing sequences for features.
-            y_train_seq (array-like): Training sequences for targets.
-            y_test_seq (array-like): Testing sequences for targets.
+        tuple: X_train, X_val, X_test, y_train, y_val, y_test
     """
 
     X_seq, y_seq = create_sequences(X, y, time_steps)
 
-    # Train/test split
-    split = int(0.8 * len(X_seq))
-    X_train_seq, X_test_seq = X_seq[:split], X_seq[split:]
-    y_train_seq, y_test_seq = y_seq[:split], y_seq[split:]
+    n = len(X_seq)
+    train_end = int(train_ratio * n)
+    val_end = int((train_ratio + val_ratio) * n)
 
-    return X_train_seq, X_test_seq, y_train_seq, y_test_seq
+    X_train = X_seq[:train_end]
+    y_train = y_seq[:train_end]
+
+    X_val = X_seq[train_end:val_end]
+    y_val = y_seq[train_end:val_end]
+
+    X_test = X_seq[val_end:]
+    y_test = y_seq[val_end:]
+
+    return X_train, X_val, X_test, y_train, y_val, y_test
 
 
-def train_model(X_seq: Union[np.ndarray, list],
-                y_seq: Union[np.ndarray, list],
-                model: Model
-                ) -> Model:
+
+def calibrate_probabilities(
+    model: Model,
+    X_val: np.ndarray,
+    y_val: np.ndarray,
+) -> IsotonicRegression:
     """
-    Builds and trains an LSTM model on the provided sequences.
+    Fit a probability calibrator on validation predictions.
 
     Args:
-        X_seq (Union[np.ndarray, list]): Input feature sequences for training.
-        y_seq (Union[np.ndarray, list]): Target sequences for training.
-        model (Model): A ML model architecture build by tensorflow blocks.
+        model (Model): Trained classification model.
+        X_val (np.ndarray): Validation sequences.
+        y_val (np.ndarray): Validation targets.
 
     Returns:
-        Model: Trained Keras LSTM model.
+        IsotonicRegression: Fitted probability calibrator.
+    """
+
+    if len(np.unique(y_val)) < 2:
+        return None
+
+    raw_probs = model.predict(X_val).ravel()
+
+    calibrator = IsotonicRegression(out_of_bounds="clip")
+    calibrator.fit(raw_probs, y_val)
+
+    return calibrator
+
+
+
+def train_model(
+    model: Model,
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_val: np.ndarray,
+    y_val: np.ndarray,
+) -> Model:
+    """
+    Train a time-series model using chronological validation.
+
+    Args:
+        model (Model): Compiled Keras model.
+        X_train (np.ndarray): Training sequences.
+        y_train (np.ndarray): Training targets.
+        X_val (np.ndarray): Validation sequences.
+        y_val (np.ndarray): Validation targets.
+
+    Returns:
+        Model: Trained Keras model.
     """
 
     early_stop = EarlyStopping(monitor = 'val_brier', mode = "min", patience = 5, restore_best_weights = True)
     #early_stop = EarlyStopping(monitor = 'val_auc', mode = "max", patience = 5, restore_best_weights = True)
     
     model.fit(
-        X_seq, y_seq, 
-        epochs = 20, 
-        batch_size = 16, 
-        validation_split = 0.1,
-        callbacks = [early_stop],
-        verbose = 2)
+        X_train,
+        y_train,
+        validation_data=(X_val, y_val),
+        epochs=20,
+        batch_size=32,
+        shuffle=False,
+        callbacks=[early_stop],
+        verbose=2,
+    )
     
     return model
 
@@ -106,12 +155,12 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], Model], symbol: str,
         tuple:
             (SideSignal.BUY or SideSignal.SELL, qty: int)
     """
-
+    time_steps = 50
 
     yesterday = dt.datetime.now(dt.UTC) - dt.timedelta(days = 1)
     mdip = dt.datetime.now(dt.UTC) - dt.timedelta(days = 100)        # more than 50 days in the past (many days in past)
 
-    # fetching data from 2020 till mdip (mdip till today will be used for prediction)
+    # fetching data from as early as possible till mdip (mdip till today will be used for prediction)
     df = fetch_data(symbol = symbol, 
                     start_date = (1900, 1, 1), 
                     end_date = (mdip.year, mdip.month, mdip.day))
@@ -119,10 +168,24 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], Model], symbol: str,
     # Feature engineering for training and test data
     X, y, scaler = stock_data_feature_engineering(df)
 
-    X_train, X_test, y_train, y_test = sequence_split(X, y) # splitting
+    X_train, X_val, X_test, y_train, y_val, y_test = sequence_split(X, y) # splitting
 
+    # training
     model = model_builder(X_train)
-    model = train_model(X_train, y_train, model)   # training
+
+    model = train_model(
+        model=model,
+        X_train=X_train,
+        y_train=y_train,
+        X_val=X_val,
+        y_val=y_val,
+    )
+
+    calibrator = calibrate_probabilities(
+        model=model,
+        X_val=X_val,
+        y_val=y_val,
+    )
 
     # Evaluation
     auc_roc, f1 = evaluate_model(model, symbol, X_test, y_test)
@@ -144,7 +207,7 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], Model], symbol: str,
 
     # Now safe to concatenate
     pred_df = pd.concat(
-        [hist_df.tail(50), realtime_bar],
+        [hist_df.tail(time_steps), realtime_bar],
         ignore_index = True
     )
     
@@ -152,21 +215,24 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], Model], symbol: str,
     X = stock_data_prediction_pipeline(pred_df, scaler)
 
     # predicting
-    X_seq = np.expand_dims(X[-50:], axis=0)
-    real_time_prediction = model.predict(X_seq)
+    X_seq = np.expand_dims(X[-time_steps:], axis=0)
+    
+    raw_prob = model.predict(X_seq).item()
 
-    signal = int((real_time_prediction > 0.5).astype(int).item())
-
-    # Getting probability for prediction
-    if signal == 0:
-        prob = 1 - real_time_prediction.item()
+    if calibrator is None:
+        prob = raw_prob
     else:
-        prob = real_time_prediction.item()
+        prob = calibrator.predict([raw_prob])[0]
+
+    signal = int(prob > 0.5)
+
+    direction = "UP" if signal == 1 else "DOWN"
+    confidence = prob if signal == 1 else 1 - prob
 
     info = f"""
 
-    The stock will go (1 for up, 0 for down) = {signal} tommorow 
-    with {(prob * 100):.4f} % probability.
+    The stock ({symbol}) will go {direction} 
+    with {(confidence * 100):.2f} % confidence.
     """
 
     logger.info(info)
