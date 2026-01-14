@@ -376,37 +376,6 @@ This projects pipeline applies structured and repeatable transformations:
 
 <br>
 
-**Strategies:** \
-This prerequisite is not necessary since the program will ask you for your perfered strategy if the program can not find it in the *settings.toml* file. If you wish to write down your perfered strategy, store the name of the strategy under the *[live]* section as strategy (e.g. strategy = "ai"). **Remember to put quote marks around the strategy name**.  
-
-These are the strategy names you can choose from.  
-*Warning: the name of the strategy should be exactly similar to one of the strategy names bellow.*
-- rule_based_strategy
-- bollinger_bands_strategy
-- macd_strategy
-- mean_reversion_strategy
-- momentum_strategy
-- moving_average_strategy
-- rsi_strategy
-- ai
-
-*We would recomend the rsi_strategy or the ai for the time being.*
-
-<br>
-
-**Watchlist:** \
-This feature is optional. If you want the program to always analyze specific stocks, even when you do not currently hold a position, you can define a watchlist.
-Add the stock symbols to the [live] section as a Python list, for example:
-```toml
-[live]
-watchlist = "AAPL, GOOG, SPY"
-```
-Important:
-- The list must be enclosed in quotation marks
-- Separate symbols with commas
-
-<br>
-
 **How to Install the Required Python Packages:**
 
 Follow these short steps to set up your environment:
@@ -434,6 +403,49 @@ Follow these short steps to set up your environment:
     ```bash
     poetry update
     ```
+
+<br>
+
+**Strategies:** \
+This prerequisite is not necessary since the program will ask you for your perfered strategy if the program can not find it in the *settings.toml* file. If you wish to write down your perfered strategy, store the name of the strategy under the *[live]* section as strategy (e.g. strategy = "ai"). **Remember to put quote marks around the strategy name**.  
+
+These are the strategy names you can choose from:  
+- rule_based_strategy
+- bollinger_bands_strategy
+- macd_strategy
+- mean_reversion_strategy
+- momentum_strategy
+- moving_average_strategy
+- rsi_strategy
+
+These are the AI strategies (Neural nettwork architecture) you can choose from:
+- lstm
+- bilstm
+- tcn
+- patchtst
+- gnn
+- nad
+- cnn_gru
+
+<br>
+
+*Warning: the name of the strategy should be exactly similar to one of the strategy names bellow.*
+
+*We would recomend the rsi_strategy or the cnn_gru for the time being.*
+*We would recomend to avoid using tcn, patchtst, lstm and bilstm as the models gave the worst evaluation.*
+
+<br>
+
+**Watchlist:** \
+This feature is optional. If you want the program to always analyze specific stocks, even when you do not currently hold a position, you can define a watchlist.
+Add the stock symbols to the [live] section as a Python list, for example:
+```toml
+[live]
+watchlist = "AAPL, GOOG, SPY"
+```
+Important:
+- The list must be enclosed in quotation marks
+- Separate symbols with commas
 
 <br>
 
