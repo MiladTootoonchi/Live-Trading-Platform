@@ -116,7 +116,6 @@ def train_model(
     """
 
     early_stop = EarlyStopping(monitor = 'val_brier', mode = "min", patience = 5, restore_best_weights = True)
-    #early_stop = EarlyStopping(monitor = 'val_auc', mode = "max", patience = 5, restore_best_weights = True)
     
     model.fit(
         X_train,

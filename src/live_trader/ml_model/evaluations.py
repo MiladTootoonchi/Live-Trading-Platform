@@ -73,7 +73,7 @@ def evaluate_model(model: Model,
 
         evaluation_score_text = f"""
 
-    Model evaluation completed:
+    Model evaluation for {symbol} completed:
     AUC-ROC         =   {auc_roc:.4f}
     f1-score:       =   {f1:.4f}
     brier-score     =   {brier:.4f}
