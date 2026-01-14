@@ -9,7 +9,9 @@ from .mean_reversion import mean_reversion_strategy
 from .momentum import momentum_strategy
 from .moving_average_strategy import moving_average_strategy
 from .rsi import rsi_strategy
-from live_trader.ml_model.ml_strategies import AI_strategy, attention_bilstm_strategy
+from live_trader.ml_model.ml_strategies import (basic_lstm, attention_bilstm, 
+                                                tcn_lite, patchtst_lite, gnn_lite,
+                                                nad_lite, cnn_gru_lite)
 
 logger = make_logger()
 
@@ -66,8 +68,13 @@ strategies = {
     "momentum_strategy": momentum_strategy,
     "moving_average_strategy": moving_average_strategy,
     "rsi_strategy": rsi_strategy,
-    "ai": AI_strategy,
-    "attention_bilstm_strategy": attention_bilstm_strategy,
+    "lstm": basic_lstm,
+    "bilstm": attention_bilstm,
+    "tcn": tcn_lite,
+    "patchtst": patchtst_lite,
+    "gnn": gnn_lite,
+    "nad": nad_lite,
+    "cnn_gru": cnn_gru_lite,
 }
 
 
