@@ -4,7 +4,7 @@ from alpaca.trading.client import TradingClient
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from typing import Tuple, Sequence, Union
+from typing import Tuple, Sequence, Union, List
 
 from live_trader.config import load_api_keys, make_logger
 
@@ -17,264 +17,206 @@ client = StockHistoricalDataClient(api_key = KEY, secret_key = SECRET)
 
 BASE_URL = "https://paper-api.alpaca.markets"
 
+FEATURE_COLUMNS: List[str] = [
+    "open", "high", "low", "close_z", "volume_z", "trade_count",
+    "vwap", "SMA5", "SMA20", "SMA50",
+    "price_change", "RSI", "MACD", "MACD_Signal",
+]
 
 
-async def get_one_realtime_bar(symbol: str) -> pd.DataFrame:
+async def get_one_realtime_bar(symbol: str, last_close: float) -> pd.DataFrame:
     """
-    Retrieves the most recent real-time trade (and optional quote) for a given stock
-    symbol using Alpaca's REST API and constructs a synthetic OHLCV bar.
+    Retrieves the most recent real-time trade for a given stock symbol using
+    Alpaca's REST API and constructs a synthetic OHLCV bar that preserves
+    price continuity with historical data.
 
-    This function replaces the slower WebSocket streaming approach by using the
-    'LatestTrade' and 'LatestQuote' REST endpoints, enabling near-instant response times
-    (~30 - 120 ms). Because real-time data is based on a single trade snapshot, the bar
-    represents a minimal OHLCV structure with:
+    This function replaces the slower WebSocket streaming approach by using
+    the 'LatestTrade' REST endpoint, enabling near-instant response times
+    (~30–120 ms). Because real-time data is based on a single trade snapshot,
+    the bar is constructed using the previous historical close to avoid
+    zero-range candles and feature distribution shifts.
 
-        - open:  latest trade price
-        - high:  latest trade price
-        - low:   latest trade price
+    The resulting synthetic bar follows these rules:
+
+        - open:  previous historical close
+        - high:  max(previous close, latest trade price)
+        - low:   min(previous close, latest trade price)
         - close: latest trade price
         - volume: reported trade size (or fallback if unavailable)
         - trade_count: 1
-        - vwap: equal to the trade price
+        - vwap: equal to the latest trade price
 
-    The resulting DataFrame is compatible with your existing feature-engineering and
-    prediction pipelines, which expect historical-style rows with OHLCV fields.
+    This structure ensures consistency with historical OHLCV bars and keeps
+    technical indicators (RSI, MACD, SMA) well-behaved at inference time.
 
     Args:
         symbol (str):
             Ticker symbol to query (e.g., "AAPL").
 
+        last_close (float):
+            The most recent historical closing price for the symbol.
+            This value is used to construct a realistic OHLC range for
+            the synthetic realtime bar.
+
     Returns:
         pd.DataFrame:
-            A single-row DataFrame containing:
+            A single-row DataFrame containing the following columns:
+
                 ['timestamp', 'open', 'high', 'low', 'close',
                  'volume', 'trade_count', 'vwap']
 
-            If no trade is available, returns a row of safe fallback values.
+            If no realtime trade is available, a safe fallback bar is returned
+            using the provided `last_close` and zero volume.
     """
 
     client = StockHistoricalDataClient(KEY, SECRET)
 
-    # Fetch latest trade
-    trade_req = StockLatestTradeRequest(symbol_or_symbols = symbol)
-    quote_req = StockLatestQuoteRequest(symbol_or_symbols = symbol)
+    trade_req = StockLatestTradeRequest(symbol_or_symbols=symbol)
 
     try:
         latest_trade = client.get_latest_trade(trade_req)
-
     except Exception:
-        # Fallback empty bar
-        now = pd.Timestamp.utcnow()
         return pd.DataFrame([{
-            "timestamp": now,
-            "open": None,
-            "high": None,
-            "low": None,
-            "close": None,
+            "timestamp": pd.Timestamp.utcnow(),
+            "open": last_close,
+            "high": last_close,
+            "low": last_close,
+            "close": last_close,
             "volume": 0,
             "trade_count": 0,
-            "vwap": None
+            "vwap": last_close,
         }])
-
-    # Fetch latest quote for context (more stable than trades alone)
-    try:
-        latest_quote = client.get_latest_quote(quote_req)
-        bid = latest_quote.bid_price or None
-        ask = latest_quote.ask_price or None
-    except:
-        bid = None
-        ask = None
 
     price = float(latest_trade.price)
     size = float(latest_trade.size or 1)
 
-    # Build synthetic OHLCV
     bar = {
         "timestamp": latest_trade.timestamp,
-        "open": price,
-        "high": price,
-        "low": price,
+        "open": last_close,
+        "high": max(last_close, price),
+        "low": min(last_close, price),
         "close": price,
         "volume": size,
         "trade_count": 1,
-        "vwap": price
+        "vwap": price,
     }
-
-    # Ensure consistency — replace None with NaN
-    df = df.replace({None: np.nan})
-
-    # If the bar is all NaN (API hiccup), create a safe fallback
-    if df[["open", "high", "low", "close"]].isna().all(axis=None):
-        logger.warning(f"Realtime bar empty for {symbol}, applying fallback bar.")
-        df["open"] = df["open"].fillna(0)
-        df["high"] = df["high"].fillna(0)
-        df["low"] = df["low"].fillna(0)
-        df["close"] = df["close"].fillna(0)
-        df["vwap"] = df["close"]
-        df["volume"] = df["volume"].fillna(0)
-        df["trade_count"] = df["trade_count"].fillna(0)
 
     return pd.DataFrame([bar])
 
 
 
-def stock_data_feature_engineering(df: pd.DataFrame) -> tuple[np.ndarray, pd.Series]:
+def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Perform feature engineering and preprocessing for stock price prediction.
-
-    This function prepares a stock market DataFrame for LSTM or other machine learning models
-    by adding technical indicators, computing price changes, creating a target variable, 
-    and scaling the features.
-
-    Steps:
-    1. Reset index and ensure 'timestamp' is a datetime index.
-    2. Add technical indicators:
-        - SMA5, SMA20, SMA50: Simple Moving Averages
-        - Price change: difference of closing prices
-        - RSI: Relative Strength Index (14-day window)
-        - MACD: Moving Average Convergence Divergence
-        - MACD_Signal: 9-day EMA of MACD
-    3. Drop rows with NaN values (resulting from rolling/EMA calculations)
-    4. Create binary target: 1 if next day's close is higher than current day, else 0
-    5. Scale all features using StandardScaler (mean=0, std=1)
-    
-    Args:
-        df : pd.DataFrame
-            DataFrame containing stock data with at least the following columns:
-            ['timestamp', 'open', 'high', 'low', 'close', 'volume', 'trade_count', 'vwap']
-
-    Returns:
-        X_scaled : np.ndarray
-            Standardized feature matrix including technical indicators.
-        y : pd.Series
-            Binary target variable indicating whether the next day's close is higher (1) or not (0).
-
-    Notes:
-        - Ensure 'timestamp' is present in the DataFrame.
-        - The function drops initial rows affected by rolling calculations.
-        - Features are scaled across all numeric columns, including the target column.
-        Make sure to handle the target appropriately if needed (e.g., exclude from scaling if required).
-    """
-
-    df.reset_index(inplace = True)
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    df.set_index('timestamp', inplace = True)
-
-    # Adding more feautures, SMA
-    df['SMA5']  = df['close'].rolling(window=5).mean()
-    df['SMA20'] = df['close'].rolling(window=20).mean()
-    df['SMA50'] = df['close'].rolling(window=50).mean()
-
-    # Adding price change
-    df['price_change'] = df['close'].diff()
-
-    # Calculating and adding RSI
-    window = 14
-    delta = df['close'].diff()
-
-    gain = delta.clip(lower = 0)
-    loss = -delta.clip(upper = 0)
-
-    avg_gain = gain.rolling(window = window).mean()
-    avg_loss = loss.rolling(window = window).mean()
-
-    rs = avg_gain / avg_loss
-    df['RSI'] = 100 - (100 / (1 + rs))
-
-    # Short-term EMA (12), long-term EMA (26)
-    ema12 = df['close'].ewm(span = 12, adjust = False).mean()
-    ema26 = df['close'].ewm(span = 26, adjust = False).mean()
-
-    # MACD line
-    df['MACD'] = ema12 - ema26
-
-    # Signal line (9-day EMA of MACD)
-    df['MACD_Signal'] = df['MACD'].ewm(span = 9, adjust = False).mean()
-
-    df = df.dropna()
-
-    # Addind a target
-    df = df.copy()
-    df['target'] = (df['close'].shift(-1) > df['close']).astype(int)
-    df = df[:-1]  # Remove last row with NaN target
-
-    # Splitting data
-    features = ['open', 'high', 'low', 'close', 'volume', 'trade_count',
-                'vwap', 'SMA5', 'SMA20', 'SMA50', 'price_change', 'RSI', 'MACD', 'MACD_Signal']
-
-    X = df[features]
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-
-    y = df['target'].loc[X.index]  # align target
-
-    return X_scaled, y, scaler
-
-
-def stock_data_prediction_pipeline(df: pd.DataFrame, scaler: StandardScaler) -> np.ndarray:
-    """
-    Prepare new stock data for prediction by applying the same feature engineering 
-    as during training, without fitting the scaler or creating targets.
+    Compute all technical indicators consistently for both
+    training and inference.
 
     Args:
-        df : pd.DataFrame
-            New stock data with required columns.
-        scaler : StandardScaler
-            Pre-fitted scaler from the training phase.
+        df (pd.DataFrame): OHLCV dataframe indexed by timestamp.
 
     Returns:
-        X_scaled : np.ndarray
-            Scaled feature matrix ready for model.predict().
+        pd.DataFrame: Feature-enriched dataframe.
     """
-
     df = df.copy()
 
-    df = df.reset_index()
-
-    if 'timestamp' not in df.columns:
-        if 'index' in df.columns:
-            df.rename(columns={'index': 'timestamp'}, inplace=True)
-        else:
-            raise KeyError("No 'timestamp' column found in prediction DataFrame.")
-    
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    df.set_index('timestamp', inplace=True)
-
-    # SMA
-    df['SMA5']  = df['close'].rolling(window=5).mean()
-    df['SMA20'] = df['close'].rolling(window=20).mean()
-    df['SMA50'] = df['close'].rolling(window=50).mean()
+    # Moving averages
+    df["SMA5"] = df["close"].rolling(5).mean()
+    df["SMA20"] = df["close"].rolling(20).mean()
+    df["SMA50"] = df["close"].rolling(50).mean()
 
     # Price change
-    df['price_change'] = df['close'].diff()
+    df["price_change"] = df["close"].diff()
 
-    # RSI (14-day)
-    window = 14
-    delta = df['close'].diff()
+    # RSI
+    delta = df["close"].diff()
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
-    avg_gain = gain.rolling(window=window).mean()
-    avg_loss = loss.rolling(window=window).mean()
+
+    avg_gain = gain.rolling(14).mean()
+    avg_loss = loss.rolling(14).mean()
     rs = avg_gain / avg_loss
-    df['RSI'] = 100 - (100 / (1 + rs))
+    df["RSI"] = 100 - (100 / (1 + rs))
 
     # MACD
-    ema12 = df['close'].ewm(span=12, adjust=False).mean()
-    ema26 = df['close'].ewm(span=26, adjust=False).mean()
-    df['MACD'] = ema12 - ema26
-    df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+    ema12 = df["close"].ewm(span=12, adjust=False).mean()
+    ema26 = df["close"].ewm(span=26, adjust=False).mean()
+    df["MACD"] = ema12 - ema26
+    df["MACD_Signal"] = df["MACD"].ewm(span=9, adjust=False).mean()
 
+    # Z-score normalization (past-only)
+    df["close_z"] = rolling_zscore(df["close"])
+    df["volume_z"] = rolling_zscore(df["volume"])
+
+    return df
+
+
+
+def create_target(df: pd.DataFrame) -> pd.Series:
+    """
+    Create a binary classification target with no leakage.
+
+    Target = 1 if next close is higher than current close.
+
+    Args:
+        df (pd.DataFrame): Feature dataframe.
+
+    Returns:
+        pd.Series: Binary target aligned with features.
+    """
+    return (df["close"].shift(-1) > df["close"]).astype(int)
+
+
+
+def prepare_training_data(
+    df: pd.DataFrame,
+) -> Tuple[np.ndarray, np.ndarray, StandardScaler]:
+    """
+    Prepare training features, targets, and fitted scaler.
+
+    Args:
+        df (pd.DataFrame): Raw OHLCV dataframe.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray, StandardScaler]:
+            X: Scaled feature matrix
+            y: Target vector
+            scaler: Fitted StandardScaler
+    """
+    df = compute_features(df)
+    df["target"] = create_target(df)
     df = df.dropna()
 
-    features = [
-        'open', 'high', 'low', 'close', 'volume', 'trade_count',
-        'vwap', 'SMA5', 'SMA20', 'SMA50', 'price_change', 'RSI', 'MACD', 'MACD_Signal'
-    ]
-    X = df[features]
+    X_raw = df[FEATURE_COLUMNS].values
+    y = df["target"].values
 
-    X_scaled = scaler.transform(X)
+    scaler = StandardScaler()
+    X = scaler.fit_transform(X_raw)
 
-    return X_scaled
+    scaler.feature_columns = FEATURE_COLUMNS.copy()
+
+    return X, y, scaler
+
+
+def prepare_prediction_data(
+    df: pd.DataFrame,
+    scaler: StandardScaler,
+) -> np.ndarray:
+    """
+    Prepare features for inference using a pre-fitted scaler.
+
+    Args:
+        df (pd.DataFrame): Raw OHLCV dataframe (historical + realtime).
+        scaler (StandardScaler): Fitted scaler from training.
+
+    Returns:
+        np.ndarray: Scaled feature matrix.
+    """
+    df = compute_features(df)
+    df = df.dropna()
+
+    X_raw = df[scaler.feature_columns].values
+    X = scaler.transform(X_raw)
+
+    return X
 
 
 
@@ -368,3 +310,19 @@ def compute_trade_qty(position_data: dict, prob: float) -> int:
         return 0
 
     return qty
+
+
+def rolling_zscore(series: pd.Series, window: int = 100) -> pd.Series:
+    """
+    Compute a rolling z-score using only past information.
+
+    Args:
+        series (pd.Series): Input time series.
+        window (int): Rolling window length.
+
+    Returns:
+        pd.Series: Z-scored series with no lookahead bias.
+    """
+    mean = series.rolling(window).mean().shift(1)
+    std = series.rolling(window).std().shift(1)
+    return (series - mean) / std

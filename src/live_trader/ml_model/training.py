@@ -2,13 +2,18 @@ import numpy as np
 from typing import Callable
 import pandas as pd
 import datetime as dt
+from pathlib import Path
+import joblib
 
 from live_trader.alpaca_trader.order import SideSignal
 from live_trader.strategies.utils import fetch_data
 from live_trader.config import make_logger
+import live_trader.ml_model.models
+from live_trader.ml_model.layers import *
+
 
 from live_trader.ml_model.evaluations import evaluate_model
-from live_trader.ml_model.data import (stock_data_prediction_pipeline, stock_data_feature_engineering, 
+from live_trader.ml_model.data import (prepare_training_data, prepare_prediction_data, 
                                        get_one_realtime_bar, compute_trade_qty, create_sequences)
 
 from sklearn.isotonic import IsotonicRegression
@@ -21,6 +26,7 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"   # Reduces backend logs
 
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping
+import tensorflow as tf
 
 # ------------------------------------------------------------------------
 
@@ -153,43 +159,82 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], Model], symbol: str,
         tuple:
             (SideSignal.BUY or SideSignal.SELL, qty: int)
     """
-    time_steps = 50
+
+
+    BASE_DIR = Path(__file__).resolve().parent
+    MODEL_DIR = BASE_DIR / "models"
+    MODEL_DIR.mkdir(exist_ok=True)
+
+    model_name = model_builder.__name__
+
+    MODEL_PATH = MODEL_DIR / f"{model_name}_{symbol}_model.keras"
+    SCALER_PATH = MODEL_DIR / f"{model_name}_{symbol}_scaler.pkl"
+    CALIBRATOR_PATH = MODEL_DIR / f"{model_name}_{symbol}_calibrator.pkl"
+
+
+    time_steps = 10
+    lookback_days = 750
 
     yesterday = dt.datetime.now(dt.UTC) - dt.timedelta(days = 1)
-    mdip = dt.datetime.now(dt.UTC) - dt.timedelta(days = 100)        # more than 50 days in the past (many days in past)
+    INDICATOR_WARMUP = 150      # must cover largest rolling window
+    PRED_HISTORY = 150
+
+    mdip = dt.datetime.now(dt.UTC) - dt.timedelta(
+        days = INDICATOR_WARMUP + PRED_HISTORY
+    )        # more than 50 days in the past (many days in past)
+
+    start_dt = dt.datetime.now(dt.UTC) - dt.timedelta(days=lookback_days)
+    start_date = (start_dt.year, start_dt.month, start_dt.day)
+
 
     # fetching data from as early as possible till mdip (mdip till today will be used for prediction)
     df = fetch_data(symbol = symbol, 
-                    start_date = (1900, 1, 1), 
+                    start_date = start_date, 
                     end_date = (mdip.year, mdip.month, mdip.day))
     
-    # Feature engineering for training and test data
-    X, y, scaler = stock_data_feature_engineering(df)
+    # Feature engineering for training and test data, then training
+    if MODEL_PATH.exists() and SCALER_PATH.exists():
+        logger.info(f"Loading existing model for {symbol}")
+        model = tf.keras.models.load_model(MODEL_PATH)
+        scaler = joblib.load(SCALER_PATH)
 
-    X_train, X_val, X_test, y_train, y_val, y_test = sequence_split(X, y) # splitting
+        if CALIBRATOR_PATH.exists():
+            calibrator = joblib.load(CALIBRATOR_PATH)
+        else:
+            calibrator = None
 
-    # training
-    model = model_builder(X_train)
+    else:
+        logger.info(f"No existing model found for {symbol}, training...")
 
-    model = train_model(
-        model=model,
-        X_train=X_train,
-        y_train=y_train,
-        X_val=X_val,
-        y_val=y_val,
-    )
+        X, y, scaler = prepare_training_data(df)
+        X_train, X_val, X_test, y_train, y_val, y_test = sequence_split(X, y)
 
-    calibrator = calibrate_probabilities(
-        model=model,
-        X_val=X_val,
-        y_val=y_val,
-    )
+        model = model_builder(X_train)
 
-    # Evaluation
-    auc_roc, f1 = evaluate_model(model, symbol, X_test, y_test)
+        model = train_model(
+            model=model,
+            X_train=X_train,
+            y_train=y_train,
+            X_val=X_val,
+            y_val=y_val,
+        )
 
+        calibrator = calibrate_probabilities(
+            model=model,
+            X_val=X_val,
+            y_val=y_val,
+        )
+
+        if calibrator is not None:
+            joblib.dump(calibrator, CALIBRATOR_PATH)
+
+        # Evaluation
+        auc_roc, f1 = evaluate_model(model, symbol, X_test, y_test)
+
+        joblib.dump(scaler, SCALER_PATH)
+        model.save(MODEL_PATH)
+    
     # Fetching mdip data till today (realtime data)
-    realtime_bar = await get_one_realtime_bar(symbol = symbol)
 
     hist_df = fetch_data(symbol = symbol, 
                         start_date = (mdip.year, mdip.month, mdip.day), 
@@ -197,20 +242,25 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], Model], symbol: str,
     
     hist_df = hist_df.reset_index()     # making sure there isnt any dobble index
 
+    last_close = hist_df.iloc[-1]['close']
+    realtime_bar = await get_one_realtime_bar(symbol = symbol, last_close = last_close)
+
     # Drop fully-NA rows
     realtime_bar = realtime_bar.dropna(how = "all")
 
     # Drop fully-NA columns (this is what removes the FutureWarning)
     realtime_bar = realtime_bar.dropna(axis = 1, how = "all")
 
-    # Now safe to concatenate
+    PRED_HISTORY = 150  # must exceed max indicator window
+
     pred_df = pd.concat(
-        [hist_df.tail(time_steps), realtime_bar],
-        ignore_index = True
+        [hist_df.tail(PRED_HISTORY), realtime_bar],
+        ignore_index=True
     )
+
     
     # Preprocessing pred_data
-    X = stock_data_prediction_pipeline(pred_df, scaler)
+    X = prepare_prediction_data(pred_df, scaler)
 
     # predicting
     X_seq = np.expand_dims(X[-time_steps:], axis=0)
