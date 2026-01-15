@@ -14,6 +14,8 @@ from live_trader.ml_model.ml_strategies import (basic_lstm, attention_bilstm,
                                                 tcn_lite, patchtst_lite, gnn_lite,
                                                 nad_lite, cnn_gru_lite)
 
+from live_trader.tree_based_models.tree_based_strategies import (xgboost, catboost, random_forest, lightgbm)
+
 logger = make_logger()
 
 def rule_based_strategy(symbol: str, position_data: dict) -> tuple[SideSignal, int]:
@@ -76,6 +78,10 @@ strategies = {
     "gnn": gnn_lite,
     "nad": nad_lite,
     "cnn_gru": cnn_gru_lite,
+    "random_forest": random_forest,
+    "lightgbm": lightgbm,
+    "xgboost": xgboost,
+    "catboost": catboost,
 }
 
 
