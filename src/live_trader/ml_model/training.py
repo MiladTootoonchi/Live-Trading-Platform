@@ -8,11 +8,9 @@ import joblib
 from live_trader.alpaca_trader.order import SideSignal
 from live_trader.strategies.utils import fetch_data
 from live_trader.config import make_logger
-import live_trader.ml_model.models
-from live_trader.ml_model.layers import *
 
-
-from live_trader.ml_model.evaluations import evaluate_model
+from live_trader.ml_model.layers import (Patchify, GraphMessagePassing, ExpandDims, AutoencoderClassifierLite)
+from live_trader.ml_model.evaluations import evaluate_model, brier
 from live_trader.ml_model.data import (prepare_training_data, prepare_prediction_data, 
                                        get_one_realtime_bar, compute_trade_qty, create_sequences)
 
@@ -159,7 +157,6 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], Model], symbol: str,
         tuple:
             (SideSignal.BUY or SideSignal.SELL, qty: int)
     """
-
 
     BASE_DIR = Path(__file__).resolve().parent
     MODEL_DIR = BASE_DIR / "models"

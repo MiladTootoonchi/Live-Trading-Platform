@@ -158,7 +158,7 @@ def brier_score(
 
 
 
-@tf.keras.utils.register_keras_serializable()
+@tf.keras.utils.register_keras_serializable(package="LiveTrader")
 def brier(
     y_true: tf.Tensor,
     y_pred: tf.Tensor

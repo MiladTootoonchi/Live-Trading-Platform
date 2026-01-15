@@ -13,7 +13,7 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.saving import register_keras_serializable
 
 
-@register_keras_serializable(package="custom")
+@register_keras_serializable(package="LiveTrader")
 class Patchify(tf.keras.layers.Layer):
     """
     Splits a temporal sequence into non-overlapping patches.
@@ -100,7 +100,7 @@ class Patchify(tf.keras.layers.Layer):
 
 
 
-@register_keras_serializable(package="custom")
+@register_keras_serializable(package="LiveTrader")
 class GraphMessagePassing(tf.keras.layers.Layer):
     """
     Lightweight graph message-passing layer with learned adjacency.
@@ -208,7 +208,7 @@ class GraphMessagePassing(tf.keras.layers.Layer):
 
 
 
-@register_keras_serializable(package="custom")
+@register_keras_serializable(package="LiveTrader")
 class ExpandDims(tf.keras.layers.Layer):
     """
     Layer wrapper around `tf.expand_dims` for safe model serialization.
@@ -253,7 +253,7 @@ class ExpandDims(tf.keras.layers.Layer):
 
 
 
-@register_keras_serializable(package="custom")
+@register_keras_serializable(package="LiveTrader")
 class AutoencoderClassifierLite(tf.keras.Model):
     """
     Autoencoder + Classifier with internal reconstruction loss.
