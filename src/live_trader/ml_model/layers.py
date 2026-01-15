@@ -261,6 +261,8 @@ class AutoencoderClassifierLite(tf.keras.Model):
     Keras 3-safe implementation using subclassed Model.
     """
 
+    expects_sequence = True
+
     def __init__(
         self,
         n_features: int,

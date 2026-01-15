@@ -220,34 +220,34 @@ def prepare_prediction_data(
 
 
 
-def create_sequences(X: Union[Sequence, np.ndarray],
-                        y: Union[Sequence, np.ndarray],
-                        time_steps: int
-                    ) -> Tuple[np.ndarray, np.ndarray]:
+def create_sequences(
+    X: np.ndarray,
+    y: np.ndarray,
+    time_steps: int,
+) -> tuple[np.ndarray, np.ndarray]:
     """
-    Generates sequences from input features and targets for time series modeling.
+    Create rolling time-window sequences.
+
+    For N = time_steps:
+    - Training: multiple overlapping sequences
+    - Inference: exactly ONE valid sequence
 
     Args:
-        X (Union[Sequence, np.ndarray]): Feature dataset.
-        y (Union[Sequence, np.ndarray]): Target dataset.
-        time_steps (int): Number of time steps in each sequence.
+        X: (N, F) feature matrix
+        y: (N,) targets (dummy allowed for inference)
+        time_steps: sequence length
 
     Returns:
-        Tuple[np.ndarray, np.ndarray]:
-            Xs: Array of feature sequences of shape (num_sequences, time_steps, num_features).
-            ys: Array of target values corresponding to each sequence.
+        X_seq: (N - T + 1, T, F)
+        y_seq: (N - T + 1,)
     """
-
     Xs, ys = [], []
-    for i in range(len(X) - time_steps):
-        Xs.append(X[i:(i + time_steps)])
 
-        if hasattr(y, "iloc"):
-            ys.append(y.iloc[i + time_steps])
-        else:
-            ys.append(y[i + time_steps])
-            
-    return np.array(Xs), np.array(ys)
+    for i in range(len(X) - time_steps + 1):
+        Xs.append(X[i : i + time_steps])
+        ys.append(y[i + time_steps - 1])
+
+    return np.asarray(Xs), np.asarray(ys)
 
 
 

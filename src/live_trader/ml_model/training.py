@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Callable
+from typing import Callable, Optional, Any
 import pandas as pd
 import datetime as dt
 from pathlib import Path
@@ -8,6 +8,10 @@ import joblib
 from live_trader.alpaca_trader.order import SideSignal
 from live_trader.strategies.utils import fetch_data
 from live_trader.config import make_logger
+from live_trader.ml_model.utils import (
+    ProbabilisticClassifier, ModelArtifact, extract_positive_class_probability,
+    is_sequence_model, get_expected_feature_dim
+)
 
 from live_trader.ml_model.layers import (Patchify, GraphMessagePassing, ExpandDims, AutoencoderClassifierLite)
 from live_trader.ml_model.evaluations import evaluate_model, brier
@@ -69,26 +73,50 @@ def sequence_split(
 
 
 def calibrate_probabilities(
-    model: Model,
+    model: ProbabilisticClassifier,
     X_val: np.ndarray,
     y_val: np.ndarray,
-) -> IsotonicRegression:
+) -> Optional[IsotonicRegression]:
     """
-    Fit a probability calibrator on validation predictions.
+    Fits an isotonic probability calibrator using validation data.
+
+    This function is framework-agnostic and supports:
+    - scikit-learn / XGBoost / LightGBM (predict_proba)
+    - Keras / TensorFlow (predict)
+
+    Calibration is skipped if the validation targets
+    contain only a single class.
 
     Args:
-        model (Model): Trained classification model.
-        X_val (np.ndarray): Validation sequences.
-        y_val (np.ndarray): Validation targets.
+        model (ProbabilisticClassifier):
+            Trained probabilistic classifier.
+        X_val (np.ndarray):
+            Validation feature matrix.
+        y_val (np.ndarray):
+            Binary validation labels.
 
     Returns:
-        IsotonicRegression: Fitted probability calibrator.
+        Optional[IsotonicRegression]:
+            Fitted isotonic calibrator, or None if calibration
+            is not possible.
     """
 
+    # Cannot calibrate if only one class is present
     if len(np.unique(y_val)) < 2:
         return None
 
-    raw_probs = model.predict(X_val).ravel()
+    # Get raw probabilities (positive class)
+    
+    if is_sequence_model(model):
+        X_val_ = X_val
+    else:
+        X_val_ = X_val[:, -1, :]
+
+    raw_probs = extract_positive_class_probability(model, X_val_)
+
+    # Defensive reshaping
+    raw_probs = np.asarray(raw_probs).reshape(-1)
+    y_val = np.asarray(y_val).reshape(-1)
 
     calibrator = IsotonicRegression(out_of_bounds="clip")
     calibrator.fit(raw_probs, y_val)
@@ -98,7 +126,7 @@ def calibrate_probabilities(
 
 
 def train_model(
-    model: Model,
+    model: ProbabilisticClassifier,
     X_train: np.ndarray,
     y_train: np.ndarray,
     X_val: np.ndarray,
@@ -108,31 +136,62 @@ def train_model(
     Train a time-series model using chronological validation.
 
     Args:
-        model (Model): Compiled Keras model.
+        model (ProbabilisticClassifier): Compiled Keras model.
         X_train (np.ndarray): Training sequences.
         y_train (np.ndarray): Training targets.
         X_val (np.ndarray): Validation sequences.
         y_val (np.ndarray): Validation targets.
 
     Returns:
-        Model: Trained Keras model.
+        Model:
+            Trains a model using the appropriate strategy depending on framework.
+
+            - Keras models: uses epochs, callbacks, validation
+            - sklearn-style models: calls fit(X, y)
     """
 
-    early_stop = EarlyStopping(monitor = 'val_brier', mode = "min", patience = 5, restore_best_weights = True)
     
-    model.fit(
-        X_train,
-        y_train,
-        validation_data=(X_val, y_val),
-        epochs=20,
-        batch_size=32,
-        shuffle=False,
-        callbacks=[early_stop],
-        verbose=2,
-    )
-    
-    return model
+    # --- reshape inputs if needed ---
+    if is_sequence_model(model):
+        X_train_ = X_train
+        X_val_ = X_val
+    else:
+        X_train_ = X_train[:, -1, :]
+        X_val_ = X_val[:, -1, :]
 
+
+    # --- Keras-style training ---
+    if isinstance(model, Model):
+        early_stop = EarlyStopping(
+            monitor="val_brier",
+            mode="min",
+            patience=5,
+            restore_best_weights=True,
+        )
+
+        model.fit(
+            X_train_,
+            y_train,
+            validation_data=(X_val_, y_val),
+            epochs=20,
+            batch_size=32,
+            shuffle=False,
+            callbacks=[early_stop],
+            verbose=2,
+        )
+        return model
+
+    # --- sklearn / XGB / LGBM / CatBoost ---
+    fit_kwargs = {}
+
+    if "eval_set" in model.fit.__code__.co_varnames:
+        fit_kwargs["eval_set"] = [(X_val_, y_val)]
+
+    if "verbose" in model.fit.__code__.co_varnames:
+        fit_kwargs["verbose"] = False
+
+    model.fit(X_train_, y_train, **fit_kwargs)
+    return model
 
 logger = make_logger()
 
@@ -142,16 +201,22 @@ logger = make_logger()
 
 
 
-async def ML_Pipeline(model_builder: Callable[[np.ndarray], Model], symbol: str, position_data: dict) -> tuple[SideSignal, int]:
+async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassifier], 
+                      symbol: str, position_data: dict) -> tuple[SideSignal, int]:
     """
     Evaluates a trading position from an Alpaca JSON response and recommends an action.
     This strategy will only buy or sell.
 
     Args:
-        model (Model):          A tensorflow build ML model.
-        symbol (str):           a string consisting of the symbol og the stock.
-        position_data (dict):   JSON object from Alpaca API containing position details.
-                                This is only used as a parameter if you have a posistion in that stock.
+        model_builder (Callable[[np.ndarray], ProbabilisticClassifier]):
+            Function that constructs and returns an untrained model.
+
+        symbol (str):   
+            a string consisting of the symbol og the stock.
+
+        position_data (dict):   
+            JSON object from Alpaca API containing position details.
+            This is only used as a parameter if you have a posistion in that stock.
 
     Returns:
         tuple:
@@ -162,14 +227,10 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], Model], symbol: str,
     MODEL_DIR = BASE_DIR / "models"
     MODEL_DIR.mkdir(exist_ok=True)
 
-    model_name = model_builder.__name__
+    model_name = getattr(model_builder, "__name__", model_builder.__class__.__name__)
 
-    MODEL_PATH = MODEL_DIR / f"{model_name}_{symbol}_model.keras"
-    SCALER_PATH = MODEL_DIR / f"{model_name}_{symbol}_scaler.pkl"
-    CALIBRATOR_PATH = MODEL_DIR / f"{model_name}_{symbol}_calibrator.pkl"
+    MODEL_PATH = MODEL_DIR / f"{model_name}_{symbol}.joblib"
 
-
-    time_steps = 10
     lookback_days = 750
 
     yesterday = dt.datetime.now(dt.UTC) - dt.timedelta(days = 1)
@@ -190,15 +251,12 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], Model], symbol: str,
                     end_date = (mdip.year, mdip.month, mdip.day))
     
     # Feature engineering for training and test data, then training
-    if MODEL_PATH.exists() and SCALER_PATH.exists():
-        logger.info(f"Loading existing model for {symbol}")
-        model = tf.keras.models.load_model(MODEL_PATH)
-        scaler = joblib.load(SCALER_PATH)
+    if MODEL_PATH.exists():
+        artifact = joblib.load(MODEL_PATH)
+        model = artifact.model
+        scaler = artifact.scaler
+        calibrator = artifact.calibrator
 
-        if CALIBRATOR_PATH.exists():
-            calibrator = joblib.load(CALIBRATOR_PATH)
-        else:
-            calibrator = None
 
     else:
         logger.info(f"No existing model found for {symbol}, training...")
@@ -206,8 +264,10 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], Model], symbol: str,
         X, y, scaler = prepare_training_data(df)
         X_train, X_val, X_test, y_train, y_val, y_test = sequence_split(X, y)
 
+        # Build (architecture only)
         model = model_builder(X_train)
 
+        # Train
         model = train_model(
             model=model,
             X_train=X_train,
@@ -222,15 +282,18 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], Model], symbol: str,
             y_val=y_val,
         )
 
-        if calibrator is not None:
-            joblib.dump(calibrator, CALIBRATOR_PATH)
-
         # Evaluation
         auc_roc, f1 = evaluate_model(model, symbol, X_test, y_test)
 
-        joblib.dump(scaler, SCALER_PATH)
-        model.save(MODEL_PATH)
-    
+        artifact = ModelArtifact(
+            model=model,
+            scaler=scaler,
+            calibrator=calibrator,
+        )
+
+        joblib.dump(artifact, MODEL_PATH)
+
+
     # Fetching mdip data till today (realtime data)
 
     hist_df = fetch_data(symbol = symbol, 
@@ -257,17 +320,52 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], Model], symbol: str,
 
     
     # Preprocessing pred_data
-    X = prepare_prediction_data(pred_df, scaler)
+    X_flat = prepare_prediction_data(pred_df, scaler)
 
-    # predicting
-    X_seq = np.expand_dims(X[-time_steps:], axis=0)
-    
-    raw_prob = model.predict(X_seq).item()
+    expected_features = get_expected_feature_dim(model)
 
-    if calibrator is None:
-        prob = raw_prob
+    if expected_features is not None:
+        if X_flat.shape[1] != expected_features:
+            raise RuntimeError(
+                f"Feature mismatch at prediction time. "
+                f"Model expects {expected_features} features, "
+                f"but got {X_flat.shape[1]}"
+            )
+
+    TIME_STEPS = 50
+
+    if is_sequence_model(model):
+        # --- sequence model ---
+        if len(X_flat) < TIME_STEPS:
+            raise RuntimeError(
+                f"Not enough data for LSTM prediction: "
+                f"need {TIME_STEPS}, got {len(X_flat)}"
+            )
+
+        X_seq, _ = create_sequences(
+            X_flat,
+            np.zeros(len(X_flat)),
+            TIME_STEPS
+        )
+
+        if len(X_seq) == 0:
+            raise RuntimeError(
+                f"create_sequences returned empty array. "
+                f"X_flat shape={X_flat.shape}, TIME_STEPS={TIME_STEPS}"
+            )
+
+        X_last = X_seq[-1:]   # (1, T, F)
+
     else:
+        # --- classical ML ---
+        X_last = X_flat[-1:]       # (1, F)
+
+    raw_prob = extract_positive_class_probability(model, X_last)[0]
+
+    if calibrator is not None:
         prob = calibrator.predict([raw_prob])[0]
+    else:
+        prob = raw_prob
 
     signal = int(prob > 0.5)
 

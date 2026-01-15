@@ -6,6 +6,7 @@ from typing import Tuple, Union
 from sklearn.metrics import classification_report, confusion_matrix, f1_score, roc_auc_score
 
 from live_trader.config import make_logger
+from live_trader.ml_model.utils import get_model_name, extract_positive_class_probability, adapt_X_for_model
 
 # Ignoring info + warning + errors: the user do not need to see this
 import os
@@ -36,8 +37,8 @@ def evaluate_model(model: Model,
     The function avoids console output and logs all activity instead.
 
     Args:
-        model (Model): 
-            The trained LSTM model to be evaluated.
+        model:
+            Trained model (Keras, sklearn, XGBoost, etc.)
         symbol (str):
             The symbol of the stock that the ML-model is predicting on.
         X_test (np.ndarray): 
@@ -53,7 +54,9 @@ def evaluate_model(model: Model,
     """
 
     # Ensure log directory exists
-    save_dir = os.path.join(save_dir, model.name)
+    model_name = get_model_name(model)
+    save_dir = os.path.join(save_dir, model_name)
+
     os.makedirs(save_dir, exist_ok = True)
 
     # Reshape target if needed
@@ -62,7 +65,8 @@ def evaluate_model(model: Model,
 
     # Predict probabilities and apply threshold
     try:
-        y_pred_prob = model.predict(X_test, verbose=0)
+        X_test_ = adapt_X_for_model(model, X_test)
+        y_pred_prob = extract_positive_class_probability(model, X_test_)
         y_pred = (y_pred_prob > 0.5).astype(int)
     except Exception as e:
         logger.error(f"Model prediction failed during evaluation: {e}")
@@ -90,7 +94,7 @@ def evaluate_model(model: Model,
     # Generate and save classification report
     try:
         report = classification_report(y_test, y_pred, digits = 4)
-        report_path = os.path.join(save_dir, f"classification_report_{model.name}_{symbol}.txt")
+        report_path = os.path.join(save_dir, f"classification_report_{model_name}_{symbol}.txt")
         with open(report_path, "w") as f:
             f.write(report)
             f.write(evaluation_score_text)
@@ -107,7 +111,7 @@ def evaluate_model(model: Model,
         plt.xlabel("Predicted")
         plt.ylabel("Actual")
         plt.tight_layout()
-        cm_path = os.path.join(save_dir, f"confusion_matrix_{model.name}_{symbol}.png")
+        cm_path = os.path.join(save_dir, f"confusion_matrix_{model_name}_{symbol}.png")
         plt.savefig(cm_path)
         plt.close()
         logger.info(f"Confusion matrix saved to {cm_path}")
