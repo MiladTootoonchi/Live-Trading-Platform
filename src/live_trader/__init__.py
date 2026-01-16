@@ -3,7 +3,7 @@ from .alpaca_trader.order import SideSignal
 from .strategies.strategies import find_strategy
 from .config import load_api_keys
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = [
     "Milad Tootoonchi",
     "Makka Dulgaeva"

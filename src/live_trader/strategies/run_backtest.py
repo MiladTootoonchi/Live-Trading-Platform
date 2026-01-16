@@ -6,6 +6,11 @@ from live_trader.strategies.momentum import momentum_strategy
 from live_trader.strategies.moving_average_strategy import moving_average_strategy
 from live_trader.strategies.rsi import rsi_strategy
 
+from live_trader.ml_model.ml_strategies import *
+from live_trader.tree_based_models.tree_based_strategies import *
+
+import asyncio
+
 TEST_MODE = True  
 
 strategies = {
@@ -15,9 +20,20 @@ strategies = {
     'Momentum': momentum_strategy,
     'MA': moving_average_strategy,
     'RSI': rsi_strategy,
+    "LSTM": basic_lstm,
+    "BiLSTM": attention_bilstm,
+    "TCN": tcn_lite,
+    "PatchTST": patchtst_lite,
+    "GNN": gnn_lite,
+    "NAD": nad_lite,
+    "CNN-GRU": cnn_gru_lite,
+    "XGBoost": xgboost,
+    "Random Forest": random_forest,
+    "LightGBM": lightgbm,
+    "CatBoost": catboost,
 }
 
-def main():
+async def main():
     print("Starting Backtest")
     print("───────────────────────────────────────────────")
     print(f"Symbol: TSLA")
@@ -25,7 +41,7 @@ def main():
     print(f"Mode: {'TEST' if TEST_MODE else 'LIVE'}\n")
     
     try:
-        results = compare_strategies(
+        results = await compare_strategies(
             symbol='TSLA',
             strategies=strategies,
             days=30,
@@ -61,4 +77,4 @@ def main():
         print("\n No results returned from compare_strategies()")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

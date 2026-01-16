@@ -22,13 +22,13 @@ from __future__ import annotations
 
 from typing import Callable, List, Dict, Any
 import pandas as pd
+import inspect
 
 from live_trader.config import make_logger
 from live_trader.alpaca_trader.order import SideSignal
-from live_trader.strategies.utils import fetch_data  # utils.fetch_data must exist and return a DataFrame or list-like
+from live_trader.strategies.utils import fetch_data
 
 logger = make_logger()
-
 
 def _df_to_full_bars(df: pd.DataFrame) -> List[Dict[str, Any]]:
     """
@@ -201,6 +201,7 @@ class Backtester:
         self.initial_cash = initial_cash
         self.position_size_pct = position_size_pct
         self.test_mode = test_mode
+        self._strategy_state = {}
 
         self.bars: List[Dict[str, Any]] = []
 
@@ -231,7 +232,7 @@ class Backtester:
             return position_qty
         return 0
 
-    def run_strategy(self, strategy_func: Callable, lookback: int = 20) -> pd.DataFrame:
+    async def run_strategy(self, strategy_func: Callable, lookback: int = 20) -> pd.DataFrame:
         """
         Run the strategy step-by-step and produce a time series of portfolio value.
 
@@ -250,14 +251,20 @@ class Backtester:
         trades: List[Dict[str, Any]] = []
 
         # Monkey patch utils.fetch_data so strategies that call it get the current slice
-        from . import utils as utils_module
-        original_fetch = getattr(utils_module, "fetch_data", None)
+        import live_trader.strategies.utils as strat_utils
+        import live_trader.ml_model.training as ml_training
+
+        original_fetch_strat = strat_utils.fetch_data
+        original_fetch_ml = ml_training.fetch_data
+
 
         def _mock_fetch(symbol: str, *args, **kwargs):
             # Return the bars up to current step (copy to avoid accidental mutation)
             return list(self._current_bars)
 
-        utils_module.fetch_data = _mock_fetch
+        strat_utils.fetch_data = _mock_fetch
+        ml_training.fetch_data = _mock_fetch
+
 
         try:
             # iterate through time steps
@@ -277,13 +284,31 @@ class Backtester:
                     "current_price": current_price,
                 }
 
+
+                state = self._strategy_state.setdefault(strategy_func, {})
+                position_data["state"] = state
+
                 try:
-                    signal, qty = strategy_func(position_data)
+                    result = strategy_func(self.symbol, position_data)
+
+                    if inspect.iscoroutine(result):
+                        result = await result
+
+                    if (not isinstance(result, tuple) or len(result) != 2):
+                        raise ValueError(
+                            f"{strategy_func.__name__} must return (signal, qty), got {result}"
+                        )
+
+                    signal, qty = result
+
                 except Exception as e:
                     import traceback
                     traceback.print_exc()
-                    logger.error(f"Strategy {getattr(strategy_func, '__name__', '<unknown>')} failed at {date}: {e}")
+                    logger.error(
+                        f"Strategy {getattr(strategy_func, '__name__', '<unknown>')} failed at {date}: {e}"
+                    )
                     signal, qty = SideSignal.HOLD, 0
+
 
                 # If strategy returned no quantity, calculate a sensible one
                 if qty == 0 and signal != SideSignal.HOLD:
@@ -314,9 +339,8 @@ class Backtester:
                 dates.append(date)
 
         finally:
-            # restore original fetch_data
-            if original_fetch is not None:
-                utils_module.fetch_data = original_fetch
+            strat_utils.fetch_data = original_fetch_strat
+            ml_training.fetch_data = original_fetch_ml
 
         # store trades as DataFrame for metric calculations
         self.trades = pd.DataFrame(trades) if trades else pd.DataFrame()
@@ -376,7 +400,7 @@ class Backtester:
         }
 
 
-def compare_strategies(
+async def compare_strategies(
     symbol: str,
     strategies: Dict[str, Callable],
     days: int = 30,
@@ -406,8 +430,14 @@ def compare_strategies(
     for name, func in strategies.items():
         logger.info(f"Testing strategy: {name}")
         try:
-            backtester = Backtester(symbol, days=days, initial_cash=initial_cash, test_mode=test_mode)
-            history = backtester.run_strategy(func)
+            backtester = Backtester(
+                symbol,
+                days=days,
+                initial_cash=initial_cash,
+                test_mode=test_mode,
+            )
+
+            history = await backtester.run_strategy(func)
             metrics = backtester.calculate_metrics(history)
 
             # attach metadata
@@ -441,7 +471,7 @@ def compare_strategies(
     return df
 
 
-def run_multi_symbol_backtest(
+async def run_multi_symbol_backtest(
     symbols: List[str],
     strategies: Dict[str, Callable],
     days: int = 30,
@@ -454,7 +484,7 @@ def run_multi_symbol_backtest(
     all_results = []
     for s in symbols:
         try:
-            res = compare_strategies(s, strategies, days=days, initial_cash=initial_cash, test_mode=test_mode)
+            res = await compare_strategies(s, strategies, days=days, initial_cash=initial_cash, test_mode=test_mode)
             all_results.append(res)
         except Exception as e:
             logger.exception(f"Failed backtest for {s}: {e}")

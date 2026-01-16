@@ -2,6 +2,8 @@ import datetime as dt
 import pandas as pd
 from typing import Dict, Any, List, Union
 import pandas as pd
+from functools import lru_cache
+from tenacity import retry, wait_exponential, stop_after_attempt
 
 from alpaca.data.timeframe import TimeFrame
 from alpaca.data.requests import StockBarsRequest
@@ -15,6 +17,15 @@ KEY, SECRET = load_api_keys()
 
 client = StockHistoricalDataClient(api_key = KEY, secret_key = SECRET)
 
+@retry(
+    wait=wait_exponential(multiplier=1, min=2, max=30),
+    stop=stop_after_attempt(5),
+)
+def _get_bars(request_params):
+    return client.get_stock_bars(request_params)
+
+
+@lru_cache(maxsize=128)
 def fetch_data(symbol: str,
                start_date: tuple[int, int, int] = (2020, 1, 1),
                end_date: tuple[int, int, int] = (2025, 1, 1),
@@ -41,7 +52,7 @@ def fetch_data(symbol: str,
         end = end
     )
 
-    bars = client.get_stock_bars(request_params)
+    bars = _get_bars(request_params)
 
     # Convert to DataFrame
     df = bars.df
