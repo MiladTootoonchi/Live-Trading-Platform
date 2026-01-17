@@ -43,133 +43,28 @@ def _df_to_full_bars(df: pd.DataFrame) -> List[Dict[str, Any]]:
     Returns:
         List of dicts with full bar fields.
     """
-    if df is None or df.empty:
-        return []
-
-    # Prefer index as timestamp; if index is not datetime, try a 't' or 'time' column
-    use_index = df.index is not None
-
-    bars: List[Dict[str, Any]] = []
-    # Standardize common column name variants
-    def _col(row, keys, default=0.0):
-        for k in keys:
-            if k in row:
-                return row[k]
-        return default
+    bars = []
 
     for idx, row in df.iterrows():
-        # timestamp: try index first, then columns
-        if use_index:
-            ts = idx
-            # idx may be Timestamp or plain string; convert to ISO-like string
-            try:
-                t_str = ts.isoformat()
-            except Exception:
-                t_str = str(ts)
-        else:
-            t_str = str(_col(row, ["t", "time", "timestamp"], ""))
+        bar = {
+            "t": str(idx),
+            "o": row.get("open"),
+            "h": row.get("high"),
+            "l": row.get("low"),
+            "c": row.get("close"),
+            "v": row.get("volume"),
+        }
 
-        # extract OHLCV with fallback names
-        o = _col(row, ["o", "open"], 0.0)
-        h = _col(row, ["h", "high"], 0.0)
-        l = _col(row, ["l", "low"], 0.0)
-        c = _col(row, ["c", "close"], 0.0)
-        v = _col(row, ["v", "volume"], 0)
+        # PASS THROUGH — do not alter
+        if "trade_count" in row:
+            bar["trade_count"] = row["trade_count"]
 
-        try:
-            o = float(o)
-        except Exception:
-            o = 0.0
-        try:
-            h = float(h)
-        except Exception:
-            h = 0.0
-        try:
-            l = float(l)
-        except Exception:
-            l = 0.0
-        try:
-            c = float(c)
-        except Exception:
-            c = 0.0
-        try:
-            v = int(v)
-        except Exception:
-            v = 0
+        if "vwap" in row:
+            bar["vwap"] = row["vwap"]
 
-        bars.append({"t": t_str, "o": o, "h": h, "l": l, "c": c, "v": v})
+        bars.append(bar)
 
     return bars
-
-
-def _normalize_raw_bars(raw) -> List[Dict[str, Any]]:
-    """
-    Accepts either a DataFrame, a list of dicts, or a list of numeric values
-    and returns a list of full-bar dicts.
-
-    If raw is a DataFrame, convert via _df_to_full_bars.
-    If raw is a list of dicts and already contains full fields, keep them (with coercion).
-    If raw is a list of numbers or dicts with only 'c', build minimal full bars with 0 for missing fields.
-    """
-    # DataFrame path
-    if isinstance(raw, pd.DataFrame):
-        return _df_to_full_bars(raw)
-
-    if raw is None:
-        return []
-
-    if isinstance(raw, list) and len(raw) == 0:
-        return []
-
-    bars: List[Dict[str, Any]] = []
-    if isinstance(raw, list):
-        first = raw[0]
-        if isinstance(first, dict):
-            # try to extract full fields or coerce
-            for item in raw:
-                t = item.get("t") or item.get("time") or ""
-                o = item.get("o") or item.get("open") or 0.0
-                h = item.get("h") or item.get("high") or 0.0
-                l = item.get("l") or item.get("low") or 0.0
-                c = item.get("c") or item.get("close") or 0.0
-                v = item.get("v") or item.get("volume") or 0
-                try:
-                    o = float(o)
-                except Exception:
-                    o = 0.0
-                try:
-                    h = float(h)
-                except Exception:
-                    h = 0.0
-                try:
-                    l = float(l)
-                except Exception:
-                    l = 0.0
-                try:
-                    c = float(c)
-                except Exception:
-                    c = 0.0
-                try:
-                    v = int(v)
-                except Exception:
-                    v = 0
-                bars.append({"t": str(t), "o": o, "h": h, "l": l, "c": c, "v": v})
-            return bars
-
-        # list of numbers or strings -> treat as close prices
-        if isinstance(first, (int, float, str)):
-            for item in raw:
-                try:
-                    c = float(item)
-                except Exception:
-                    c = 0.0
-                bars.append({"t": "", "o": c, "h": c, "l": c, "c": c, "v": 0})
-            return bars
-
-    # Unknown type
-    logger.error("Unsupported bars payload type in _normalize_raw_bars")
-    return []
-
 
 class Backtester:
     """
@@ -205,15 +100,12 @@ class Backtester:
 
         self.bars: List[Dict[str, Any]] = []
 
-        # simple single-batch fetch (fetch_data may support date slicing in future)
-        logger.info(f"Fetching historical data for {symbol}")
-        raw = fetch_data(symbol)  # fetch_data is expected to return a DataFrame or list-like
-        normalized = _normalize_raw_bars(raw)
-        if not normalized:
-            raise ValueError(f"No data fetched for {symbol}")
-        self.bars = normalized
+        df = fetch_data(symbol)
 
-        logger.info(f"Total bars fetched for {symbol}: {len(self.bars)}")
+        if isinstance(df, pd.DataFrame):
+            self.bars = _df_to_full_bars(df)
+        else:
+            self.bars = df
 
     def calculate_quantity(self, signal: SideSignal, cash: float, position_qty: int, current_price: float) -> int:
         """
@@ -257,10 +149,52 @@ class Backtester:
         original_fetch_strat = strat_utils.fetch_data
         original_fetch_ml = ml_training.fetch_data
 
-
         def _mock_fetch(symbol: str, *args, **kwargs):
-            # Return the bars up to current step (copy to avoid accidental mutation)
-            return list(self._current_bars)
+            df = pd.DataFrame(self._current_bars)
+
+            for col in ["trade_count", "vwap"]:
+                if col not in df.columns:
+                    df[col] = pd.NA
+
+            if "t" in df.columns:
+                # t is always (symbol, pandas.Timestamp)
+                def extract_ts(t):
+                    if isinstance(t, tuple):
+                        return t[-1]
+                    return t
+
+                df["timestamp"] = df["t"].apply(extract_ts)
+                df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
+                df = df.dropna(subset=["timestamp"])
+
+                # enforce clean tz-aware DatetimeIndex
+                df["timestamp"] = df["timestamp"].astype("datetime64[ns, UTC]")
+
+                df = df.rename(columns={
+                    "o": "open",
+                    "h": "high",
+                    "l": "low",
+                    "c": "close",
+                    "v": "volume",
+                })
+
+                df = df.drop(columns=["t"])
+
+            else:
+                raise RuntimeError("_mock_fetch: missing timestamp column")
+
+
+            # Set clean DatetimeIndex
+            df = df.set_index("timestamp")
+            df.index = pd.DatetimeIndex(df.index)
+
+            # Final safety check
+            if not isinstance(df.index, pd.DatetimeIndex):
+                raise RuntimeError(
+                    f"_mock_fetch produced invalid index: {type(df.index)}"
+                )
+
+            return df
 
         strat_utils.fetch_data = _mock_fetch
         ml_training.fetch_data = _mock_fetch
@@ -282,6 +216,7 @@ class Backtester:
                     "history": list(self._current_bars),
                     "avg_entry_price": position_avg_price,
                     "current_price": current_price,
+                    "backtest": True
                 }
 
 
@@ -290,7 +225,7 @@ class Backtester:
 
                 try:
                     result = strategy_func(self.symbol, position_data)
-
+                    
                     if inspect.iscoroutine(result):
                         result = await result
 
@@ -437,7 +372,7 @@ async def compare_strategies(
                 test_mode=test_mode,
             )
 
-            history = await backtester.run_strategy(func)
+            history = await backtester.run_strategy(func, lookback = 500)
             metrics = backtester.calculate_metrics(history)
 
             # attach metadata

@@ -31,26 +31,21 @@ def moving_average_strategy(symbol: str, position: Dict[str, Any]) -> Tuple[Side
             - Quantity (always 0 here)
     """
 
-    bars = position.get("history")
+    bars = normalize_bars(position.get("history"))
 
-    # If no local history, fetch from API
-    if bars is None or (isinstance(bars, pd.DataFrame) and bars.empty) or (isinstance(bars, list) and len(bars) == 0):
-        logger.warning(f"[MA Strategy] No history for {symbol}. Fetching from API.")
-        bars = fetch_data(symbol)  # FIXED: removed unsupported "limit" argument
+    if bars.empty:
+        bars = normalize_bars(fetch_data(symbol))
 
-    if bars is None:
-        logger.error(f"[MA Strategy] API returned no data for {symbol}.")
+    if bars.empty:
         return SideSignal.HOLD, 0
 
-    # Normalize formats (dicts with {"c": close})
-    bars = normalize_bars(bars)
 
     if len(bars) < 200:
         logger.info(f"[MA Strategy] Not enough data for {symbol}. Need 200 bars.")
         return SideSignal.HOLD, 0
 
     # Extract closing prices
-    closes = [float(bar["c"]) for bar in bars]
+    closes = bars["close"].astype(float).tolist()
 
     current = closes[-1]
     ma20 = sum(closes[-20:]) / 20

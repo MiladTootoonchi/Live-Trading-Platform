@@ -14,8 +14,8 @@ from live_trader.ml_model.utils import (
 )
 
 from live_trader.ml_model.layers import (Patchify, GraphMessagePassing, ExpandDims, AutoencoderClassifierLite)
-from live_trader.ml_model.evaluations import evaluate_model, brier
-from live_trader.ml_model.data import (prepare_training_data, prepare_prediction_data, 
+from live_trader.ml_model.evaluations import evaluate_model
+from live_trader.ml_model.data import (prepare_training_data, prepare_prediction_data, ensure_clean_timestamp,
                                        get_one_realtime_bar, compute_trade_qty, create_sequences)
 
 from sklearn.isotonic import IsotonicRegression
@@ -199,6 +199,22 @@ logger = make_logger()
 
 # -----------------------------------------------------------------------------------------------------
 
+def sanitize_time_index(df: pd.DataFrame, context: str) -> pd.DataFrame:
+    if not isinstance(df.index, pd.DatetimeIndex):
+        raise RuntimeError(f"{context}: index is not DatetimeIndex")
+
+    if df.index.tz is None:
+        df.index = df.index.tz_localize("UTC")
+
+    bad = df.index.isna()
+    if bad.any():
+        logger.error(f"{context}: dropping {bad.sum()} invalid timestamps")
+        df = df.loc[~bad]
+
+    if df.empty:
+        raise RuntimeError(f"{context}: dataframe empty after timestamp cleanup")
+
+    return df.sort_index()
 
 
 async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassifier], 
@@ -222,6 +238,39 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassif
         tuple:
             (SideSignal.BUY or SideSignal.SELL, qty: int)
     """
+
+    # ---- BACKTEST MODE ----
+    if position_data.get("backtest", False):
+        # Use historical bars only (no realtime bar)
+        hist = pd.DataFrame(position_data["history"])
+
+        hist["timestamp"] = pd.to_datetime(hist["t"], utc=True)
+        hist = hist.rename(columns={
+            "o": "open",
+            "h": "high",
+            "l": "low",
+            "c": "close",
+            "v": "volume",
+        }).set_index("timestamp")
+
+        hist = hist.sort_index()
+
+        TIME_STEPS = 200
+        if len(hist) < TIME_STEPS:
+            return SideSignal.HOLD, 0
+
+        pred_df = hist.tail(TIME_STEPS + 1).copy()
+                
+        for col in ["vwap", "trade_count"]:
+            if col not in pred_df.columns:
+                pred_df.loc[:, col] = 0.0
+
+
+        pred_df = pred_df.dropna(how="any")
+
+        if len(pred_df) < TIME_STEPS:
+            return SideSignal.HOLD, 0
+
 
     BASE_DIR = Path(__file__).resolve().parent
     MODEL_DIR = BASE_DIR / "models"
@@ -249,6 +298,9 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassif
     df = fetch_data(symbol = symbol, 
                     start_date = start_date, 
                     end_date = (mdip.year, mdip.month, mdip.day))
+    df = ensure_clean_timestamp(df)
+    
+    df = sanitize_time_index(df, "TRAINING DATA")
     
     # Feature engineering for training and test data, then training
     if MODEL_PATH.exists():
@@ -296,30 +348,58 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassif
 
     # Fetching mdip data till today (realtime data)
 
-    hist_df = fetch_data(symbol = symbol, 
-                        start_date = (mdip.year, mdip.month, mdip.day), 
-                        end_date = (yesterday.year, yesterday.month, yesterday.day))
-    
-    hist_df = hist_df.reset_index()     # making sure there isnt any dobble index
+    if not position_data.get("backtest", False):
+        today = dt.datetime.now(dt.UTC)
 
-    last_close = hist_df.iloc[-1]['close']
-    realtime_bar = await get_one_realtime_bar(symbol = symbol, last_close = last_close)
+        hist_df = fetch_data(
+            symbol=symbol,
+            start_date=(mdip.year, mdip.month, mdip.day),
+            end_date=(today.year, today.month, today.day)
+        )
 
-    # Drop fully-NA rows
-    realtime_bar = realtime_bar.dropna(how = "all")
+        hist_df = sanitize_time_index(hist_df, "PREDICTION DATA")
+        hist_df = hist_df.reset_index()     # making sure there isnt any dobble index
 
-    # Drop fully-NA columns (this is what removes the FutureWarning)
-    realtime_bar = realtime_bar.dropna(axis = 1, how = "all")
+        if hist_df.empty:
+            logger.error("Prediction history empty after timestamp normalization")
+            return SideSignal.HOLD, 0
 
-    PRED_HISTORY = 150  # must exceed max indicator window
 
-    pred_df = pd.concat(
-        [hist_df.tail(PRED_HISTORY), realtime_bar],
-        ignore_index=True
-    )
+        last_close = hist_df.iloc[-1]['close']
+        realtime_bar = await get_one_realtime_bar(symbol = symbol, last_close = last_close)
 
-    
+        # Drop fully-NA rows
+        realtime_bar = realtime_bar.dropna(how = "all")
+
+        # Drop fully-NA columns (this is what removes the FutureWarning)
+        realtime_bar = realtime_bar.dropna(axis = 1, how = "all")
+
+        PRED_HISTORY = 200  # must exceed max indicator window
+
+        pred_df = pd.concat(
+            [hist_df.tail(PRED_HISTORY), realtime_bar],
+            ignore_index=True
+        ).copy()
+        pred_df = ensure_clean_timestamp(pred_df)
+
+        for col in ["vwap", "trade_count"]:
+            if col not in pred_df.columns:
+                pred_df.loc[:, col] = 0.0
+
+
+
     # Preprocessing pred_data
+    EXPECTED_COLS = ["open", "high", "low", "close", "volume", "trade_count", "vwap"]
+
+    missing = [c for c in EXPECTED_COLS if c not in pred_df.columns]
+
+    if missing:
+        logger.error(
+            f"Missing columns BEFORE prepare_prediction_data: {missing}. "
+            f"Available columns: {list(pred_df.columns)}"
+        )
+        raise RuntimeError(f"Missing features: {missing}")
+
     X_flat = prepare_prediction_data(pred_df, scaler)
 
     expected_features = get_expected_feature_dim(model)
@@ -349,7 +429,7 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassif
         )
 
         if len(X_seq) == 0:
-            raise RuntimeError(
+            logger.error(
                 f"create_sequences returned empty array. "
                 f"X_flat shape={X_flat.shape}, TIME_STEPS={TIME_STEPS}"
             )

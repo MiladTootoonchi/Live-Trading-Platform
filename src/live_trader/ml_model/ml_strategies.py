@@ -1,5 +1,3 @@
-import asyncio
-
 from live_trader.config import make_logger
 from live_trader.alpaca_trader.order import SideSignal
 from live_trader.ml_model.training import ML_Pipeline
@@ -8,9 +6,6 @@ from live_trader.ml_model.modelling import (build_lstm, build_attention_bilstm,
                                             build_autoencoder_classifier_lite, build_cnn_gru_lite)
 
 logger = make_logger()
-
-ML_SEMAPHORE = asyncio.Semaphore(1)
-
 
 async def basic_lstm(symbol: str, position_data: dict = None) -> tuple[SideSignal, int]:
     """
@@ -29,12 +24,8 @@ async def basic_lstm(symbol: str, position_data: dict = None) -> tuple[SideSigna
     if position_data is None:
         position_data = {}
 
-    try:
-        async with ML_SEMAPHORE:
-            side, qty = await ML_Pipeline(build_lstm, symbol, position_data)
-    except Exception as e:
-        logger.error(f"ML strategy failed: {e}")
-        return SideSignal.HOLD, 0
+
+    side, qty = await ML_Pipeline(build_lstm, symbol, position_data)
     
     return side, qty
 
@@ -56,12 +47,8 @@ async def attention_bilstm(symbol: str, position_data: dict = None) -> tuple[Sid
     if position_data is None:
         position_data = {}
 
-    try:
-        async with ML_SEMAPHORE:
-            side, qty = await ML_Pipeline(build_attention_bilstm, symbol, position_data)
-    except Exception as e:
-        logger.error(f"ML strategy failed: {e}")
-        return SideSignal.HOLD, 0
+
+    side, qty = await ML_Pipeline(build_attention_bilstm, symbol, position_data)
 
     return side, qty
 
@@ -83,12 +70,7 @@ async def tcn_lite(symbol: str, position_data: dict = None) -> tuple[SideSignal,
     if position_data is None:
         position_data = {}
 
-    try:    
-        async with ML_SEMAPHORE:
-            side, qty = await ML_Pipeline(build_tcn_lite, symbol, position_data)
-    except Exception as e:
-        logger.error(f"ML strategy failed: {e}")
-        return SideSignal.HOLD, 0
+    side, qty = await ML_Pipeline(build_tcn_lite, symbol, position_data)
 
     return side, qty
 
@@ -110,12 +92,8 @@ async def patchtst_lite(symbol: str, position_data: dict = None) -> tuple[SideSi
     if position_data is None:
         position_data = {}
 
-    try:
-        async with ML_SEMAPHORE:
-            side, qty = await ML_Pipeline(build_patchtst_lite, symbol, position_data)
-    except Exception as e:
-        logger.error(f"ML strategy failed: {e}")
-        return SideSignal.HOLD, 0
+
+    side, qty = await ML_Pipeline(build_patchtst_lite, symbol, position_data)
 
     return side, qty
 
@@ -137,12 +115,8 @@ async def gnn_lite(symbol: str, position_data: dict = None) -> tuple[SideSignal,
     if position_data is None:
         position_data = {}
 
-    try:
-        async with ML_SEMAPHORE:
-            side, qty = await ML_Pipeline(build_gnn_lite, symbol, position_data)
-    except Exception as e:
-        logger.error(f"ML strategy failed: {e}")
-        return SideSignal.HOLD, 0
+
+    side, qty = await ML_Pipeline(build_gnn_lite, symbol, position_data)
 
     return side, qty
 
@@ -164,12 +138,8 @@ async def nad_lite(symbol: str, position_data: dict = None) -> tuple[SideSignal,
     if position_data is None:
         position_data = {}
 
-    try:
-        async with ML_SEMAPHORE:
-            side, qty = await ML_Pipeline(build_autoencoder_classifier_lite, symbol, position_data)
-    except Exception as e:
-        logger.error(f"ML strategy failed: {e}")
-        return SideSignal.HOLD, 0
+
+    side, qty = await ML_Pipeline(build_autoencoder_classifier_lite, symbol, position_data)
 
     return side, qty
 
@@ -191,11 +161,7 @@ async def cnn_gru_lite(symbol: str, position_data: dict = None) -> tuple[SideSig
     if position_data is None:
         position_data = {}
 
-    try:
-        async with ML_SEMAPHORE:
-            side, qty = await ML_Pipeline(build_cnn_gru_lite, symbol, position_data)
-    except Exception as e:
-        logger.error(f"ML strategy failed: {e}")
-        return SideSignal.HOLD, 0
+
+    side, qty = await ML_Pipeline(build_cnn_gru_lite, symbol, position_data)
 
     return side, qty

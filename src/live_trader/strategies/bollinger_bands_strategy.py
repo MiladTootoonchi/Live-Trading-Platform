@@ -25,21 +25,20 @@ def bollinger_bands_strategy(symbol: str, position: Dict[str, Any]) -> Tuple[Sid
             The trade signal and quantity (always zero for safety).
     """
 
-    bars = position.get("history")
+    bars = normalize_bars(position.get("history"))
 
-    # Fetch remote data if nothing was provided
-    if bars is None or (isinstance(bars, list) and len(bars) == 0):
-        logger.warning(f"No history for {symbol}. Fetching price data.")
-        bars = fetch_data(symbol)
+    if bars.empty:
+        bars = normalize_bars(fetch_data(symbol))
 
-    # Format cleanup so nothing crashes
-    bars = normalize_bars(bars)
+    if bars.empty:
+        return SideSignal.HOLD, 0
+
 
     if len(bars) < 20:
         logger.warning(f"Not enough data for {symbol}. Need twenty bars minimum.")
         return SideSignal.HOLD, 0
 
-    closes = [float(bar["c"]) for bar in bars]
+    closes = bars["close"].astype(float).tolist()
 
     # Compute simple moving average
     sma20 = sum(closes[-20:]) / 20

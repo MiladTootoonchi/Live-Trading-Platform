@@ -32,19 +32,16 @@ def mean_reversion_strategy(
             and a recommended quantity of one for buy or sell signals.
     """
 
-    bars = position_data.get("history")
+    bars = normalize_bars(position_data.get("history"))
 
-    if bars is None or (isinstance(bars, pd.DataFrame) and bars.empty) or (isinstance(bars, list) and len(bars) == 0):
-        logger.warning(f"Mean reversion strategy found no history. Fetching fresh data for {symbol}.")
-        bars = fetch_data(symbol)
+    if bars.empty:
+        bars = normalize_bars(fetch_data(symbol))
 
-    bars = normalize_bars(bars)
-
-    if len(bars) == 0:
-        logger.warning("Mean reversion strategy received no usable price history.")
+    if bars.empty:
         return SideSignal.HOLD, 0
 
-    closes = [float(bar["c"]) for bar in bars]
+
+    closes = bars["close"].astype(float).tolist()
 
     current_price = closes[-1]
 

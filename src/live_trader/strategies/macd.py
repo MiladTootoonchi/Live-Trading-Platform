@@ -77,21 +77,20 @@ def macd_strategy(symbol: str, position_data: Dict[str, Any]) -> Tuple[SideSigna
             Signal and quantity (always 0 for risk management).
     """
     
-    bars = position_data.get("history")
+    bars = normalize_bars(position_data.get("history"))
 
-    # Fetch if no history provided
-    if bars is None or (isinstance(bars, list) and len(bars) == 0):
-        logger.warning(f"No price history found for {symbol}. Fetching from API...")
-        bars = fetch_data(symbol)
+    if bars.empty:
+        bars = normalize_bars(fetch_data(symbol))
 
-    # Fix: Normalize everything to the same clean format
-    bars = normalize_bars(bars)
+    if bars.empty:
+        return SideSignal.HOLD, 0
+
 
     if len(bars) < 35:
         logger.info(f"Not enough data to compute MACD for {symbol}. Need 35 bars.")
         return SideSignal.HOLD, 0
 
-    closes = [float(bar["c"]) for bar in bars]
+    closes = bars["close"].astype(float).tolist()
 
     macd_line, signal_line = calculate_macd(closes)
 

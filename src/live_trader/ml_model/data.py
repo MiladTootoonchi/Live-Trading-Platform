@@ -326,3 +326,27 @@ def rolling_zscore(series: pd.Series, window: int = 100) -> pd.Series:
     mean = series.rolling(window).mean().shift(1)
     std = series.rolling(window).std().shift(1)
     return (series - mean) / std
+
+
+def ensure_clean_timestamp(df: pd.DataFrame) -> pd.DataFrame:
+    if "timestamp" in df.columns:
+        def unwrap(x):
+            if isinstance(x, tuple):
+                return x[-1]
+            return x
+
+        df["timestamp"] = df["timestamp"].apply(unwrap)
+        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
+        df = df.dropna(subset=["timestamp"])
+        df = df.set_index("timestamp")
+
+    elif isinstance(df.index, pd.MultiIndex):
+        df.index = df.index.get_level_values(-1)
+
+    df.index = pd.to_datetime(df.index, utc=True, errors="coerce")
+    df = df.loc[~df.index.isna()]
+
+    if df.empty:
+        raise RuntimeError("No valid timestamps after normalization")
+
+    return df

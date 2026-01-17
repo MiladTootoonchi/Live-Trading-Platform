@@ -60,29 +60,21 @@ def rsi_strategy(symbol: str, position_data: Dict[str, Any]) -> Tuple[SideSignal
             - The second value is the quantity (always 0 here)
     """
 
-    bars = position_data.get("history")
+    bars = normalize_bars(position_data.get("history"))
 
-    history_missing = (
-        bars is None or
-        (isinstance(bars, pd.DataFrame) and bars.empty) or
-        (isinstance(bars, list) and len(bars) == 0)
-    )
+    if bars.empty:
+        bars = normalize_bars(fetch_data(symbol))
 
-    if history_missing:
-        logger.warning(f"[RSI] No history found for {symbol}. Fetching from API.")
-        bars = fetch_data(symbol)
 
     if bars is None:
         logger.error(f"[RSI] Unable to fetch data for {symbol}.")
         return SideSignal.HOLD, 0
 
-    bars = normalize_bars(bars)
-
     if len(bars) < 15:
         logger.info(f"[RSI] Not enough historical bars to compute RSI for {symbol}.")
         return SideSignal.HOLD, 0
 
-    closes = [float(bar["c"]) for bar in bars]
+    closes = bars["close"].astype(float).tolist()
     rsi = calculate_rsi(closes[-15:])
 
     logger.info(f"[{symbol}] RSI: {rsi:.2f}")
