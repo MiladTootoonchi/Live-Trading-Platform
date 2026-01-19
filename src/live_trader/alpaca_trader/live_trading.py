@@ -457,3 +457,44 @@ class AlpacaTrader:
                 logger.exception(f"Failed to analyze {symbol} from watchlist")
         
         return tasks
+
+
+
+    async def live(self, strategy: Callable) -> None:
+        """
+        Runs the trader in continuous live-trading mode using a given strategy.
+
+        This method enters an infinite asynchronous loop that periodically
+        updates all current positions and analyzes the watchlist by invoking
+        the provided strategy. On each iteration, it calls `update()` with
+        the strategy applied to all positions ("ALL") and then sleeps for
+        a fixed interval (60 seconds) before repeating.
+
+        The loop continues indefinitely until interrupted by the user
+        (KeyboardInterrupt) or cancelled by the event loop
+        (asyncio.CancelledError), at which point the trader shuts down
+        gracefully.
+
+        Args:
+            strategy (Callable):
+                A trading strategy function used for both position updates
+                and watchlist analysis. The function may be synchronous or
+                asynchronous and must return a tuple of
+                (SideSignal, quantity).
+
+        Raises:
+            KeyboardInterrupt:
+                Raised when the user manually stops the live trading loop.
+            asyncio.CancelledError:
+                Raised when the task running this method is cancelled.
+        """
+        try:
+            while True:
+                await self.update(strategy, strategy, "ALL")
+                await asyncio.sleep(60) # sleep for a minute
+
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            print("\nShutting down... ")
+
+        finally:
+            pass
