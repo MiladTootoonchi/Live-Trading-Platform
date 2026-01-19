@@ -10,7 +10,7 @@ from live_trader.strategies.utils import fetch_data
 from live_trader.config import make_logger
 from live_trader.ml_model.utils import (
     ProbabilisticClassifier, ModelArtifact, extract_positive_class_probability,
-    is_sequence_model, get_expected_feature_dim
+    is_sequence_model, get_expected_feature_dim, get_model_name,
 )
 
 from live_trader.ml_model.layers import (Patchify, GraphMessagePassing, ExpandDims, AutoencoderClassifierLite)
@@ -72,7 +72,7 @@ def sequence_split(
 
 
 
-def calibrate_probabilities(
+def _calibrate_probabilities(
     model: ProbabilisticClassifier,
     X_val: np.ndarray,
     y_val: np.ndarray,
@@ -199,7 +199,32 @@ logger = make_logger()
 
 # -----------------------------------------------------------------------------------------------------
 
-def sanitize_time_index(df: pd.DataFrame, context: str) -> pd.DataFrame:
+def _sanitize_time_index(df: pd.DataFrame, context: str) -> pd.DataFrame:
+    """
+    Validates and normalizes a DataFrame's DatetimeIndex.
+
+    This function ensures that the DataFrame index is a valid
+    'pandas.DatetimeIndex', localizes naive timestamps to UTC,
+    removes rows with invalid (NaT) timestamps, and sorts the
+    DataFrame by time.
+
+    If the index is not a DatetimeIndex or if the DataFrame becomes
+    empty after cleanup, a RuntimeError is raised. Any dropped
+    timestamps are logged with contextual information to aid debugging.
+
+    Args:
+        df (pd.DataFrame):
+            The input DataFrame whose index is expected to represent time.
+        context (str):
+            A descriptive label used in log messages and exception text
+            to identify the caller or data source.
+
+    Returns:
+        pd.DataFrame:
+            A cleaned DataFrame with a timezone-aware UTC DatetimeIndex
+            and sorted in ascending time order.
+    """
+
     if not isinstance(df.index, pd.DatetimeIndex):
         raise RuntimeError(f"{context}: index is not DatetimeIndex")
 
@@ -215,6 +240,283 @@ def sanitize_time_index(df: pd.DataFrame, context: str) -> pd.DataFrame:
         raise RuntimeError(f"{context}: dataframe empty after timestamp cleanup")
 
     return df.sort_index()
+
+
+
+def _backtest_mode(position_data: dict) -> tuple[SideSignal, int]:
+    """
+    Generates a trading signal using historical data in backtesting mode.
+
+    This function operates exclusively on historical bar data provided
+    in the 'position_data' dictionary and does not use any realtime or
+    streaming market data. It constructs a time-indexed OHLCV DataFrame
+    from the historical bars, performs minimal feature preparation, and
+    determines whether enough data exists to generate a model prediction.
+
+    If there is insufficient historical data after preprocessing or
+    cleanup, the function returns a HOLD signal with zero quantity.
+
+    This function is intended to be called only when the
+    'position_data["backtest"]' flag is set to True.
+
+    Args:
+        position_data (dict):
+            Dictionary containing historical bar data under the key
+            "history", formatted as a list of Alpaca-style bar objects.
+            The dictionary must also include '"backtest": True'.
+
+    Returns:
+        tuple[SideSignal, int]:
+            A tuple of (signal, quantity). If there is insufficient data
+            to perform a prediction, the function returns
+            (SideSignal.HOLD, 0).
+    """
+    
+    # Use historical bars only (no realtime bar)
+    hist = pd.DataFrame(position_data["history"])
+
+    hist["timestamp"] = pd.to_datetime(hist["t"], utc=True)
+    hist = hist.rename(columns={
+        "o": "open",
+        "h": "high",
+        "l": "low",
+        "c": "close",
+        "v": "volume",
+    }).set_index("timestamp")
+
+    hist = hist.sort_index()
+
+    TIME_STEPS = 200
+    if len(hist) < TIME_STEPS:
+        return SideSignal.HOLD, 0
+
+    pred_df = hist.tail(TIME_STEPS + 1).copy()
+            
+    for col in ["vwap", "trade_count"]:
+        if col not in pred_df.columns:
+            pred_df.loc[:, col] = 0.0
+
+
+    pred_df = pred_df.dropna(how="any")
+
+    if len(pred_df) < TIME_STEPS:
+        return SideSignal.HOLD, 0
+
+
+
+def _check_model_existence(
+    model_builder: Callable[[np.ndarray], ProbabilisticClassifier],
+    symbol: str,
+    df: pd.DataFrame,
+) -> ModelArtifact:
+    """
+    Loads a persisted model artifact or trains and saves a new one.
+
+    If a model artifact exists for the given model builder and symbol,
+    it is loaded from disk. Otherwise, a new model is trained using the
+    provided historical data, evaluated, calibrated, and persisted.
+
+    Args:
+        model_builder:
+            Callable that builds an untrained probabilistic classifier.
+        symbol:
+            Trading symbol associated with the model.
+        df:
+            Historical market data used for training if no model exists.
+
+    Returns:
+        ModelArtifact
+    """
+
+    base_dir = Path(__file__).resolve().parent
+    model_dir = base_dir / "models"
+    model_dir.mkdir(exist_ok=True)
+
+    model_name = get_model_name(model_builder)
+
+    model_path = model_dir / f"{model_name}_{symbol}.joblib"
+
+    if model_path.exists():
+        artifact = joblib.load(model_path)
+        model = artifact.model
+        scaler = artifact.scaler
+        calibrator = artifact.calibrator
+
+    else:
+        logger.info(f"No existing model found for {symbol}, training...")
+
+        X, y, scaler = prepare_training_data(df)
+        X_train, X_val, X_test, y_train, y_val, y_test = sequence_split(X, y)
+
+        # Build (architecture only)
+        model = model_builder(X_train)
+
+        # Train
+        model = train_model(
+            model = model,
+            X_train = X_train,
+            y_train = y_train,
+            X_val = X_val,
+            y_val = y_val,
+        )
+
+        calibrator = _calibrate_probabilities(
+            model = model,
+            X_val = X_val,
+            y_val = y_val,
+        )
+
+        # Evaluation
+        _, _ = evaluate_model(model, symbol, X_test, y_test)
+
+        artifact = ModelArtifact(
+            model=model,
+            scaler=scaler,
+            calibrator=calibrator,
+        )
+
+        joblib.dump(artifact, model_path)
+
+    return artifact
+
+
+
+async def _build_prediction_dataframe(
+    symbol: str,
+    pred_start_date: dt.datetime,
+) -> pd.DataFrame:
+    """
+    Fetches and prepares historical and realtime market data for prediction.
+
+    Combines historical bars from `pred_start_date` to now with the latest
+    realtime bar, normalizes timestamps, and ensures required raw columns exist.
+
+    Args:
+        symbol (str):
+            Trading symbol (e.g. "AAPL").
+        pred_start_date (dt.datetime):
+            Earliest timestamp used for prediction history.
+
+    Returns:
+        pd.DataFrame:
+            Cleaned, time-ordered DataFrame ready for feature preprocessing.
+
+    Raises:
+        RuntimeError:
+            If no valid historical data is available after cleanup.
+    """
+    # Fetching pred_start_date data till today (realtime data)
+    today = dt.datetime.now(dt.UTC)
+
+    hist_df = fetch_data(
+        symbol=symbol,
+        start_date=(pred_start_date.year, pred_start_date.month, pred_start_date.day),
+        end_date=(today.year, today.month, today.day)
+    )
+
+    hist_df = _sanitize_time_index(hist_df, "PREDICTION DATA")
+    hist_df = hist_df.reset_index()     # ensure no double index
+
+    if hist_df.empty:
+        raise RuntimeError("Prediction history empty after timestamp normalization")
+
+    last_close = hist_df.iloc[-1]["close"]
+    realtime_bar = await get_one_realtime_bar(
+        symbol=symbol,
+        last_close=last_close,
+    )
+
+    # Drop fully-NA rows/columns
+    realtime_bar = realtime_bar.dropna(how="all")
+    realtime_bar = realtime_bar.dropna(axis=1, how="all")
+
+    PRED_HISTORY = 200  # must exceed max indicator window
+
+    pred_df = pd.concat(
+        [hist_df.tail(PRED_HISTORY), realtime_bar],
+        ignore_index=True,
+    ).copy()
+
+    pred_df = ensure_clean_timestamp(pred_df)
+
+    for col in ["vwap", "trade_count"]:
+        if col not in pred_df.columns:
+            pred_df.loc[:, col] = 0.0
+
+    return pred_df
+
+
+
+def _prepare_model_input(
+    pred_df: pd.DataFrame,
+    scaler: Any,
+    model: ProbabilisticClassifier,
+    time_steps: int = 50,
+) -> np.ndarray:
+    """
+    Converts prediction data into a model-ready input tensor.
+
+    Validates feature columns, applies scaling, enforces expected feature
+    dimensions, and adapts the shape for sequence or non-sequence models.
+
+    Args:
+        pred_df (pd.DataFrame):
+            Cleaned prediction DataFrame containing raw features.
+        scaler (Any):
+            Fitted feature scaler used during training.
+        model (ProbabilisticClassifier):
+            Trained model used to determine input shape requirements.
+        time_steps (int):
+            Sequence length for sequence-based models.
+
+    Returns:
+        np.ndarray:
+            Final input tensor suitable for direct model inference.
+
+    Raises:
+        RuntimeError:
+            If required features are missing or data is insufficient.
+    """
+    EXPECTED_COLS = [
+    "open", "high", "low", "close",
+    "volume", "trade_count", "vwap",
+    ]
+
+    missing = [c for c in EXPECTED_COLS if c not in pred_df.columns]
+    if missing:
+        raise RuntimeError(f"Missing prediction features: {missing}")
+
+    X_flat = prepare_prediction_data(pred_df, scaler)
+
+    expected_features = get_expected_feature_dim(model)
+    if expected_features is not None and X_flat.shape[1] != expected_features:
+        raise RuntimeError(
+            f"Feature mismatch: expected {expected_features}, got {X_flat.shape[1]}"
+        )
+
+    if is_sequence_model(model):
+        if len(X_flat) < time_steps:
+            raise RuntimeError(
+                f"Not enough data for sequence prediction: "
+                f"need {time_steps}, got {len(X_flat)}"
+            )
+
+        X_seq, _ = create_sequences(
+            X_flat,
+            np.zeros(len(X_flat)),
+            time_steps,
+        )
+
+        if len(X_seq) == 0:
+            raise RuntimeError("create_sequences returned empty array")
+
+        X_last = X_seq[-1:]   # (1, T, F)
+
+    else:
+        X_last = X_flat[-1:]  # (1, F)
+
+    return X_last
+
 
 
 async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassifier], 
@@ -239,206 +541,48 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassif
             (SideSignal.BUY or SideSignal.SELL, qty: int)
     """
 
-    # ---- BACKTEST MODE ----
     if position_data.get("backtest", False):
-        # Use historical bars only (no realtime bar)
-        hist = pd.DataFrame(position_data["history"])
-
-        hist["timestamp"] = pd.to_datetime(hist["t"], utc=True)
-        hist = hist.rename(columns={
-            "o": "open",
-            "h": "high",
-            "l": "low",
-            "c": "close",
-            "v": "volume",
-        }).set_index("timestamp")
-
-        hist = hist.sort_index()
-
-        TIME_STEPS = 200
-        if len(hist) < TIME_STEPS:
-            return SideSignal.HOLD, 0
-
-        pred_df = hist.tail(TIME_STEPS + 1).copy()
-                
-        for col in ["vwap", "trade_count"]:
-            if col not in pred_df.columns:
-                pred_df.loc[:, col] = 0.0
-
-
-        pred_df = pred_df.dropna(how="any")
-
-        if len(pred_df) < TIME_STEPS:
-            return SideSignal.HOLD, 0
-
-
-    BASE_DIR = Path(__file__).resolve().parent
-    MODEL_DIR = BASE_DIR / "models"
-    MODEL_DIR.mkdir(exist_ok=True)
-
-    model_name = getattr(model_builder, "__name__", model_builder.__class__.__name__)
-
-    MODEL_PATH = MODEL_DIR / f"{model_name}_{symbol}.joblib"
+        return _backtest_mode(position_data)
 
     lookback_days = 750
 
-    yesterday = dt.datetime.now(dt.UTC) - dt.timedelta(days = 1)
     INDICATOR_WARMUP = 150      # must cover largest rolling window
     PRED_HISTORY = 150
 
-    mdip = dt.datetime.now(dt.UTC) - dt.timedelta(
+    pred_start_date = dt.datetime.now(dt.UTC) - dt.timedelta(
         days = INDICATOR_WARMUP + PRED_HISTORY
-    )        # more than 50 days in the past (many days in past)
+    )        # must be more than 50 days in the past
 
     start_dt = dt.datetime.now(dt.UTC) - dt.timedelta(days=lookback_days)
     start_date = (start_dt.year, start_dt.month, start_dt.day)
 
 
-    # fetching data from as early as possible till mdip (mdip till today will be used for prediction)
+    # fetching data from as early as possible till pred_start_date (pred_start_date till today will be used for prediction)
     df = fetch_data(symbol = symbol, 
                     start_date = start_date, 
-                    end_date = (mdip.year, mdip.month, mdip.day))
+                    end_date = (pred_start_date.year, pred_start_date.month, pred_start_date.day))
     df = ensure_clean_timestamp(df)
     
-    df = sanitize_time_index(df, "TRAINING DATA")
+    df = _sanitize_time_index(df, "TRAINING DATA")
     
-    # Feature engineering for training and test data, then training
-    if MODEL_PATH.exists():
-        artifact = joblib.load(MODEL_PATH)
-        model = artifact.model
-        scaler = artifact.scaler
-        calibrator = artifact.calibrator
+    artifact = _check_model_existence(...)
+    scaler = artifact.scaler
+    model = artifact.model
+    calibrator = artifact.calibrator
 
 
-    else:
-        logger.info(f"No existing model found for {symbol}, training...")
+    pred_df = await _build_prediction_dataframe(
+        symbol=symbol,
+        pred_start_date=pred_start_date,
+    )
 
-        X, y, scaler = prepare_training_data(df)
-        X_train, X_val, X_test, y_train, y_val, y_test = sequence_split(X, y)
+    X_last = _prepare_model_input(
+        pred_df=pred_df,
+        scaler=scaler,
+        model=model,
+        time_steps=50,
+    )
 
-        # Build (architecture only)
-        model = model_builder(X_train)
-
-        # Train
-        model = train_model(
-            model=model,
-            X_train=X_train,
-            y_train=y_train,
-            X_val=X_val,
-            y_val=y_val,
-        )
-
-        calibrator = calibrate_probabilities(
-            model=model,
-            X_val=X_val,
-            y_val=y_val,
-        )
-
-        # Evaluation
-        auc_roc, f1 = evaluate_model(model, symbol, X_test, y_test)
-
-        artifact = ModelArtifact(
-            model=model,
-            scaler=scaler,
-            calibrator=calibrator,
-        )
-
-        joblib.dump(artifact, MODEL_PATH)
-
-
-    # Fetching mdip data till today (realtime data)
-
-    if not position_data.get("backtest", False):
-        today = dt.datetime.now(dt.UTC)
-
-        hist_df = fetch_data(
-            symbol=symbol,
-            start_date=(mdip.year, mdip.month, mdip.day),
-            end_date=(today.year, today.month, today.day)
-        )
-
-        hist_df = sanitize_time_index(hist_df, "PREDICTION DATA")
-        hist_df = hist_df.reset_index()     # making sure there isnt any dobble index
-
-        if hist_df.empty:
-            logger.error("Prediction history empty after timestamp normalization")
-            return SideSignal.HOLD, 0
-
-
-        last_close = hist_df.iloc[-1]['close']
-        realtime_bar = await get_one_realtime_bar(symbol = symbol, last_close = last_close)
-
-        # Drop fully-NA rows
-        realtime_bar = realtime_bar.dropna(how = "all")
-
-        # Drop fully-NA columns (this is what removes the FutureWarning)
-        realtime_bar = realtime_bar.dropna(axis = 1, how = "all")
-
-        PRED_HISTORY = 200  # must exceed max indicator window
-
-        pred_df = pd.concat(
-            [hist_df.tail(PRED_HISTORY), realtime_bar],
-            ignore_index=True
-        ).copy()
-        pred_df = ensure_clean_timestamp(pred_df)
-
-        for col in ["vwap", "trade_count"]:
-            if col not in pred_df.columns:
-                pred_df.loc[:, col] = 0.0
-
-
-
-    # Preprocessing pred_data
-    EXPECTED_COLS = ["open", "high", "low", "close", "volume", "trade_count", "vwap"]
-
-    missing = [c for c in EXPECTED_COLS if c not in pred_df.columns]
-
-    if missing:
-        logger.error(
-            f"Missing columns BEFORE prepare_prediction_data: {missing}. "
-            f"Available columns: {list(pred_df.columns)}"
-        )
-        raise RuntimeError(f"Missing features: {missing}")
-
-    X_flat = prepare_prediction_data(pred_df, scaler)
-
-    expected_features = get_expected_feature_dim(model)
-
-    if expected_features is not None:
-        if X_flat.shape[1] != expected_features:
-            raise RuntimeError(
-                f"Feature mismatch at prediction time. "
-                f"Model expects {expected_features} features, "
-                f"but got {X_flat.shape[1]}"
-            )
-
-    TIME_STEPS = 50
-
-    if is_sequence_model(model):
-        # --- sequence model ---
-        if len(X_flat) < TIME_STEPS:
-            raise RuntimeError(
-                f"Not enough data for LSTM prediction: "
-                f"need {TIME_STEPS}, got {len(X_flat)}"
-            )
-
-        X_seq, _ = create_sequences(
-            X_flat,
-            np.zeros(len(X_flat)),
-            TIME_STEPS
-        )
-
-        if len(X_seq) == 0:
-            logger.error(
-                f"create_sequences returned empty array. "
-                f"X_flat shape={X_flat.shape}, TIME_STEPS={TIME_STEPS}"
-            )
-
-        X_last = X_seq[-1:]   # (1, T, F)
-
-    else:
-        # --- classical ML ---
-        X_last = X_flat[-1:]       # (1, F)
 
     raw_prob = extract_positive_class_probability(model, X_last)[0]
 

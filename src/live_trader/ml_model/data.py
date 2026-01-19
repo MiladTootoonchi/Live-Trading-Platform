@@ -1,10 +1,10 @@
 from alpaca.data.historical import StockHistoricalDataClient
-from alpaca.data.requests import StockLatestTradeRequest, StockLatestQuoteRequest
+from alpaca.data.requests import StockLatestTradeRequest
 from alpaca.trading.client import TradingClient
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from typing import Tuple, Sequence, Union, List
+from typing import Tuple, List
 
 from live_trader.config import load_api_keys, make_logger
 
