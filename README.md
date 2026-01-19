@@ -239,7 +239,7 @@ In trading, there are several key strategies that guide decision making. These s
 <br>
 
 ![A graph of trading strategy AI-generated content may be incorrect.](https://www.5paisa.com/finschool/wp-content/uploads/2022/12/macd-vs-relative.jpeg "MACD vs. RSI") \
-Figure 4: (Ajay, 2022) The figure shows us different trading strategy methods based on MACD and RSI
+Figure 4: (Ajay, 2022) The figure demonstrates MACD and RSI strategies.
 
 <br>
 
