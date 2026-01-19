@@ -30,41 +30,7 @@ from live_trader.strategies.utils import fetch_data
 
 logger = make_logger()
 
-def _df_to_full_bars(df: pd.DataFrame) -> List[Dict[str, Any]]:
-    """
-    Convert a DataFrame returned by your fetch_data into the full-bar list.
 
-    The function accepts a variety of column names and normalizes them into:
-    t (ISO timestamp string), o, h, l, c, v
-
-    Args:
-        df: pandas.DataFrame with OHLCV data and a DatetimeIndex or timestamp column.
-
-    Returns:
-        List of dicts with full bar fields.
-    """
-    bars = []
-
-    for idx, row in df.iterrows():
-        bar = {
-            "t": str(idx),
-            "o": row.get("open"),
-            "h": row.get("high"),
-            "l": row.get("low"),
-            "c": row.get("close"),
-            "v": row.get("volume"),
-        }
-
-        # PASS THROUGH — do not alter
-        if "trade_count" in row:
-            bar["trade_count"] = row["trade_count"]
-
-        if "vwap" in row:
-            bar["vwap"] = row["vwap"]
-
-        bars.append(bar)
-
-    return bars
 
 class Backtester:
     """
@@ -103,7 +69,7 @@ class Backtester:
         df = fetch_data(symbol)
 
         if isinstance(df, pd.DataFrame):
-            self.bars = _df_to_full_bars(df)
+            self.bars = self._df_to_full_bars(df)
         else:
             self.bars = df
 
@@ -124,7 +90,7 @@ class Backtester:
             return position_qty
         return 0
 
-    async def run_strategy(self, strategy_func: Callable, lookback: int = 20) -> pd.DataFrame:
+    async def run_strategy(self, strategy_func: Callable, lookback: int = 50) -> pd.DataFrame:
         """
         Run the strategy step-by-step and produce a time series of portfolio value.
 
@@ -334,11 +300,46 @@ class Backtester:
             'win_rate_pct': round(win_rate, 2)
         }
 
+    def _df_to_full_bars(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
+        """
+        Convert a DataFrame returned by your fetch_data into the full-bar list.
 
-async def compare_strategies(
+        The function accepts a variety of column names and normalizes them into:
+        t (ISO timestamp string), o, h, l, c, v
+
+        Args:
+            df: pandas.DataFrame with OHLCV data and a DatetimeIndex or timestamp column.
+
+        Returns:
+            List of dicts with full bar fields.
+        """
+        bars = []
+
+        for idx, row in df.iterrows():
+            bar = {
+                "t": str(idx),
+                "o": row.get("open"),
+                "h": row.get("high"),
+                "l": row.get("low"),
+                "c": row.get("close"),
+                "v": row.get("volume"),
+            }
+
+            # PASS THROUGH — do not alter
+            if "trade_count" in row:
+                bar["trade_count"] = row["trade_count"]
+
+            if "vwap" in row:
+                bar["vwap"] = row["vwap"]
+
+            bars.append(bar)
+
+        return bars
+
+async def _compare_strategies(
     symbol: str,
     strategies: Dict[str, Callable],
-    days: int = 30,
+    days: int = 80,
     initial_cash: float = 10000,
     test_mode: bool = False
 ) -> pd.DataFrame:
@@ -372,7 +373,7 @@ async def compare_strategies(
                 test_mode=test_mode,
             )
 
-            history = await backtester.run_strategy(func, lookback = 500)
+            history = await backtester.run_strategy(func, lookback = 50)
             metrics = backtester.calculate_metrics(history)
 
             # attach metadata
@@ -419,7 +420,7 @@ async def run_multi_symbol_backtest(
     all_results = []
     for s in symbols:
         try:
-            res = await compare_strategies(s, strategies, days=days, initial_cash=initial_cash, test_mode=test_mode)
+            res = await _compare_strategies(s, strategies, days=days, initial_cash=initial_cash, test_mode=test_mode)
             all_results.append(res)
         except Exception as e:
             logger.exception(f"Failed backtest for {s}: {e}")

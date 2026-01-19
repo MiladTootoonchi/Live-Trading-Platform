@@ -1,50 +1,28 @@
-from live_trader.strategies.backtest import compare_strategies
-from live_trader.strategies.bollinger_bands_strategy import bollinger_bands_strategy
-from live_trader.strategies.macd import macd_strategy
-from live_trader.strategies.mean_reversion import mean_reversion_strategy
-from live_trader.strategies.momentum import momentum_strategy
-from live_trader.strategies.moving_average_strategy import moving_average_strategy
-from live_trader.strategies.rsi import rsi_strategy
+from live_trader.strategies.backtest import run_multi_symbol_backtest
+from live_trader.config import load_watchlist
 
-from live_trader.ml_model.ml_strategies import *
-from live_trader.tree_based_models.tree_based_strategies import *
+from live_trader.strategies.strategies import strategies as old_strategies
 
 import asyncio
 
 TEST_MODE = True  
 
-strategies = {
-    'Bollinger Bands': bollinger_bands_strategy,
-    'MACD': macd_strategy,
-    'Mean Reversion': mean_reversion_strategy,
-    'Momentum': momentum_strategy,
-    'MA': moving_average_strategy,
-    'RSI': rsi_strategy,
-    "LSTM": basic_lstm,
-    "BiLSTM": attention_bilstm,
-    "TCN": tcn_lite,
-    "PatchTST": patchtst_lite,
-    "GNN": gnn_lite,
-    "NAD": nad_lite,
-    "CNN-GRU": cnn_gru_lite,
-    "XGBoost": xgboost,
-    "Random Forest": random_forest,
-    "LightGBM": lightgbm,
-    "CatBoost": catboost,
-}
+strategies = dict(old_strategies)
+strategies.pop("rule_based_strategy", None)
+symbols = load_watchlist()
 
 async def main():
     print("Starting Backtest")
     print("───────────────────────────────────────────────")
-    print(f"Symbol: TSLA")
+    print(f"Symbol: {symbols}")
     print(f"Strategies: {len(strategies)}")
     print(f"Mode: {'TEST' if TEST_MODE else 'LIVE'}\n")
     
     try:
-        results = await compare_strategies(
-            symbol='TSLA',
+        results = await run_multi_symbol_backtest(
+            symbols = symbols,
             strategies=strategies,
-            days=30,
+            days=80,
             initial_cash=10000,
             test_mode=TEST_MODE
         )

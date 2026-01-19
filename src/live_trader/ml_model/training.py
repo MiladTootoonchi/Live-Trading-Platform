@@ -10,7 +10,7 @@ from live_trader.strategies.utils import fetch_data
 from live_trader.config import make_logger
 from live_trader.ml_model.utils import (
     ProbabilisticClassifier, ModelArtifact, extract_positive_class_probability,
-    is_sequence_model, get_expected_feature_dim, get_model_name,
+    is_sequence_model, get_expected_feature_dim
 )
 
 from live_trader.ml_model.layers import (Patchify, GraphMessagePassing, ExpandDims, AutoencoderClassifierLite)
@@ -243,69 +243,6 @@ def _sanitize_time_index(df: pd.DataFrame, context: str) -> pd.DataFrame:
 
 
 
-def _backtest_mode(position_data: dict) -> tuple[SideSignal, int]:
-    """
-    Generates a trading signal using historical data in backtesting mode.
-
-    This function operates exclusively on historical bar data provided
-    in the 'position_data' dictionary and does not use any realtime or
-    streaming market data. It constructs a time-indexed OHLCV DataFrame
-    from the historical bars, performs minimal feature preparation, and
-    determines whether enough data exists to generate a model prediction.
-
-    If there is insufficient historical data after preprocessing or
-    cleanup, the function returns a HOLD signal with zero quantity.
-
-    This function is intended to be called only when the
-    'position_data["backtest"]' flag is set to True.
-
-    Args:
-        position_data (dict):
-            Dictionary containing historical bar data under the key
-            "history", formatted as a list of Alpaca-style bar objects.
-            The dictionary must also include '"backtest": True'.
-
-    Returns:
-        tuple[SideSignal, int]:
-            A tuple of (signal, quantity). If there is insufficient data
-            to perform a prediction, the function returns
-            (SideSignal.HOLD, 0).
-    """
-    
-    # Use historical bars only (no realtime bar)
-    hist = pd.DataFrame(position_data["history"])
-
-    hist["timestamp"] = pd.to_datetime(hist["t"], utc=True)
-    hist = hist.rename(columns={
-        "o": "open",
-        "h": "high",
-        "l": "low",
-        "c": "close",
-        "v": "volume",
-    }).set_index("timestamp")
-
-    hist = hist.sort_index()
-
-    TIME_STEPS = 200
-    if len(hist) < TIME_STEPS:
-        return SideSignal.HOLD, 0
-
-    pred_df = hist.tail(TIME_STEPS + 1).copy()
-            
-    for col in ["vwap", "trade_count"]:
-        if col not in pred_df.columns:
-            pred_df.loc[:, col] = 0.0
-
-
-    pred_df = pred_df.dropna(how="any")
-
-    if len(pred_df) < TIME_STEPS:
-        return SideSignal.HOLD, 0
-
-    return SideSignal.HOLD, 0
-
-
-
 def _check_model_existence(
     model_builder: Callable[[np.ndarray], ProbabilisticClassifier],
     symbol: str,
@@ -334,9 +271,8 @@ def _check_model_existence(
     model_dir = base_dir / "models"
     model_dir.mkdir(exist_ok=True)
 
-    model_name = get_model_name(model_builder)
-
-    model_path = model_dir / f"{model_name}_{symbol}.joblib"
+    model_id = f"{model_builder.__name__}_{symbol}"
+    model_path = model_dir / f"{model_id}.joblib"
 
     if model_path.exists():
         artifact = joblib.load(model_path)
@@ -432,7 +368,7 @@ async def _build_prediction_dataframe(
     realtime_bar = realtime_bar.dropna(how="all")
     realtime_bar = realtime_bar.dropna(axis=1, how="all")
 
-    PRED_HISTORY = 200  # must exceed max indicator window
+    PRED_HISTORY = 50  # must exceed max indicator window
 
     pred_df = pd.concat(
         [hist_df.tail(PRED_HISTORY), realtime_bar],
@@ -489,6 +425,12 @@ def _prepare_model_input(
         raise RuntimeError(f"Missing prediction features: {missing}")
 
     X_flat = prepare_prediction_data(pred_df, scaler)
+
+    if X_flat.shape[0] == 0:
+        raise RuntimeError(
+            "prepare_prediction_data returned empty array "
+            "(insufficient history after indicators)"
+        )
 
     expected_features = get_expected_feature_dim(model)
     if expected_features is not None and X_flat.shape[1] != expected_features:
@@ -547,26 +489,43 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassif
             (SideSignal.BUY or SideSignal.SELL, qty: int)
     """
 
-    if position_data.get("backtest", False):
-        return _backtest_mode(position_data)
+    is_backtest = position_data.get("backtest", False)
+    if is_backtest:
+        # last available bar timestamp
+        current_ts = pd.to_datetime(position_data["history"][-1]["t"], utc=True)
+    else:
+        current_ts = dt.datetime.now(dt.UTC)
+
+
 
     lookback_days = 750
 
-    INDICATOR_WARMUP = 150      # must cover largest rolling window
-    PRED_HISTORY = 150
+    INDICATOR_WARMUP = 50      # must cover largest rolling window
+    PRED_HISTORY = 50
 
-    pred_start_date = dt.datetime.now(dt.UTC) - dt.timedelta(
+    TIME_STEPS = 50
+
+    MIN_BARS = max(
+        INDICATOR_WARMUP,
+        PRED_HISTORY,
+        TIME_STEPS,
+    )
+
+
+    pred_start_date = current_ts - dt.timedelta(
         days = INDICATOR_WARMUP + PRED_HISTORY
     )        # must be more than 50 days in the past
 
-    start_dt = dt.datetime.now(dt.UTC) - dt.timedelta(days=lookback_days)
+    start_dt = pred_start_date - dt.timedelta(days=lookback_days)
     start_date = (start_dt.year, start_dt.month, start_dt.day)
 
+    end_dt = pred_start_date - dt.timedelta(days=1)
+    end_date = (end_dt.year, end_dt.month, end_dt.day)
 
     # fetching data from as early as possible till pred_start_date (pred_start_date till today will be used for prediction)
     df = fetch_data(symbol = symbol, 
                     start_date = start_date, 
-                    end_date = (pred_start_date.year, pred_start_date.month, pred_start_date.day))
+                    end_date = end_date)
     df = ensure_clean_timestamp(df)
     
     df = _sanitize_time_index(df, "TRAINING DATA")
@@ -576,11 +535,37 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassif
     model = artifact.model
     calibrator = artifact.calibrator
 
+    if is_backtest:
+        hist = pd.DataFrame(position_data["history"])
+        hist["timestamp"] = pd.to_datetime(hist["t"], utc=True)
+        hist = hist.rename(columns={
+            "o": "open",
+            "h": "high",
+            "l": "low",
+            "c": "close",
+            "v": "volume",
+        }).set_index("timestamp")
 
-    pred_df = await _build_prediction_dataframe(
-        symbol=symbol,
-        pred_start_date=pred_start_date,
-    )
+
+        pred_df = hist.tail(PRED_HISTORY).copy()
+
+        for col in ["vwap", "trade_count"]:
+            if col not in pred_df.columns:
+                pred_df[col] = 0.0
+
+        if len(pred_df) < MIN_BARS:
+            logger.debug(
+                f"{symbol}: skipping prediction (warmup) "
+                f"(have {len(pred_df)}, need {MIN_BARS})"
+            )
+            return SideSignal.HOLD, 0
+
+
+    else:
+        pred_df = await _build_prediction_dataframe(
+            symbol=symbol,
+            pred_start_date=pred_start_date,
+        )
 
     X_last = _prepare_model_input(
         pred_df=pred_df,
