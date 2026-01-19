@@ -302,6 +302,8 @@ def _backtest_mode(position_data: dict) -> tuple[SideSignal, int]:
     if len(pred_df) < TIME_STEPS:
         return SideSignal.HOLD, 0
 
+    return SideSignal.HOLD, 0
+
 
 
 def _check_model_existence(
@@ -346,7 +348,7 @@ def _check_model_existence(
         logger.info(f"No existing model found for {symbol}, training...")
 
         X, y, scaler = prepare_training_data(df)
-        X_train, X_val, X_test, y_train, y_val, y_test = sequence_split(X, y)
+        X_train, X_val, X_test, y_train, y_val, y_test = sequence_split(X, y, 200)
 
         # Build (architecture only)
         model = model_builder(X_train)
@@ -508,7 +510,11 @@ def _prepare_model_input(
         )
 
         if len(X_seq) == 0:
-            raise RuntimeError("create_sequences returned empty array")
+            raise RuntimeError(
+                f"create_sequences returned empty array "
+                f"(X_flat = {X_flat.shape}, time_steps = {time_steps})"
+            )
+
 
         X_last = X_seq[-1:]   # (1, T, F)
 
@@ -565,7 +571,7 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassif
     
     df = _sanitize_time_index(df, "TRAINING DATA")
     
-    artifact = _check_model_existence(...)
+    artifact = _check_model_existence(model_builder, symbol, df)
     scaler = artifact.scaler
     model = artifact.model
     calibrator = artifact.calibrator
