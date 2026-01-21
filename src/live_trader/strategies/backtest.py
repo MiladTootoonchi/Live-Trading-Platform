@@ -27,6 +27,7 @@ import inspect
 from live_trader.config import make_logger
 from live_trader.alpaca_trader.order import SideSignal
 from live_trader.strategies.utils import fetch_data
+from live_trader.ml_model.data import MIN_LOOKBACK
 
 logger = make_logger()
 
@@ -38,40 +39,27 @@ class Backtester:
 
     Args:
         symbol: ticker to backtest
-        days: approximate number of days to fetch (best-effort)
         initial_cash: starting cash
         position_size_pct: fraction of available cash to use when buying
         test_mode: currently unused, included for compatibility
-
-    Usage:
-        backtester = Backtester("TSLA", days=30)
-        history = backtester.run_strategy(my_strategy)
-        metrics = backtester.calculate_metrics(history)
     """
 
     def __init__(
         self,
         symbol: str,
-        days: int = 30,
         initial_cash: float = 10000,
         position_size_pct: float = 0.95,
         test_mode: bool = False,
     ):
         self.symbol = symbol
-        self.days = days
         self.initial_cash = initial_cash
         self.position_size_pct = position_size_pct
         self.test_mode = test_mode
         self._strategy_state = {}
 
-        self.bars: List[Dict[str, Any]] = []
+        self.df = fetch_data(symbol)
+        self.bars = self._df_to_full_bars(self.df)
 
-        df = fetch_data(symbol)
-
-        if isinstance(df, pd.DataFrame):
-            self.bars = self._df_to_full_bars(df)
-        else:
-            self.bars = df
 
     def calculate_quantity(self, signal: SideSignal, cash: float, position_qty: int, current_price: float) -> int:
         """
@@ -90,7 +78,7 @@ class Backtester:
             return position_qty
         return 0
 
-    async def run_strategy(self, strategy_func: Callable, lookback: int = 50) -> pd.DataFrame:
+    async def run_strategy(self, strategy_func: Callable, lookback: int) -> pd.DataFrame:
         """
         Run the strategy step-by-step and produce a time series of portfolio value.
 
@@ -101,6 +89,37 @@ class Backtester:
         Returns:
             pandas.DataFrame with columns ['date', 'portfolio_value']
         """
+
+        total_days = len(self.bars)
+        warmup_days = lookback
+        test_days = total_days - lookback
+
+        start_date = pd.to_datetime(self.bars[lookback]["t"]).date()
+        end_date = pd.to_datetime(self.bars[-1]["t"]).date()
+
+        logger.info(
+            f"""
+            Backtest period for {self.symbol}
+            --------------------------------
+            Total trading days : {total_days}
+            Warmup days        : {warmup_days}
+            Test days          : {test_days}
+            Test start date    : {start_date}
+            Test end date      : {end_date}
+            """
+        )
+
+        if lookback < MIN_LOOKBACK:
+            raise ValueError(
+                f"[Backtester] lookback={lookback} too small for ML strategies "
+                f"(min {MIN_LOOKBACK})"
+            )
+
+        if len(self.bars) <= lookback:
+            raise ValueError(
+                f"[Backtester] Not enough data: bars={len(self.bars)}, lookback={lookback}"
+            )
+
         cash = self.initial_cash
         position_qty = 0
         position_avg_price = 0.0
@@ -117,10 +136,6 @@ class Backtester:
 
         def _mock_fetch(symbol: str, *args, **kwargs):
             df = pd.DataFrame(self._current_bars)
-
-            for col in ["trade_count", "vwap"]:
-                if col not in df.columns:
-                    df[col] = pd.NA
 
             if "t" in df.columns:
                 # t is always (symbol, pandas.Timestamp)
@@ -360,7 +375,7 @@ async def _compare_strategies(
 
     logger.info("\n" + "=" * 60)
     logger.info(f"Starting backtest for {symbol} with {len(strategies)} strategies")
-    logger.info(f"Days: {days}, Initial Cash: ${initial_cash}")
+    logger.info(f"Initial Cash: ${initial_cash}")
     logger.info("=" * 60 + "\n")
 
     for name, func in strategies.items():
@@ -368,12 +383,17 @@ async def _compare_strategies(
         try:
             backtester = Backtester(
                 symbol,
-                days=days,
                 initial_cash=initial_cash,
                 test_mode=test_mode,
             )
 
-            history = await backtester.run_strategy(func, lookback = 50)
+            total_bars = len(backtester.bars)
+            lookback = max(
+                total_bars - days,
+                MIN_LOOKBACK
+            )
+
+            history = await backtester.run_strategy(func, lookback = lookback)
             metrics = backtester.calculate_metrics(history)
 
             # attach metadata
@@ -420,7 +440,7 @@ async def run_multi_symbol_backtest(
     all_results = []
     for s in symbols:
         try:
-            res = await _compare_strategies(s, strategies, days=days, initial_cash=initial_cash, test_mode=test_mode)
+            res = await _compare_strategies(s, strategies, initial_cash=initial_cash, test_mode=test_mode, days = days)
             all_results.append(res)
         except Exception as e:
             logger.exception(f"Failed backtest for {s}: {e}")

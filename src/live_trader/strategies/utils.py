@@ -27,8 +27,7 @@ def _get_bars(request_params):
 
 def fetch_data(symbol: str,
                start_date: tuple[int, int, int] = (2020, 1, 1),
-               end_date: tuple[int, int, int] = (2025, 1, 1),
-               limit: int | None = None) -> pd.DataFrame:
+               end_date: tuple[int, int, int] = (2026, 1, 1)) -> pd.DataFrame:
 
     if client is None:
         logger.error("Alpaca client not initialized")

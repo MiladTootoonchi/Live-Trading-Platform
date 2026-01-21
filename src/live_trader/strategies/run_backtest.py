@@ -7,24 +7,36 @@ import asyncio
 
 TEST_MODE = True  
 
-strategies = dict(old_strategies)
-strategies.pop("rule_based_strategy", None)
+all_strategies = dict(old_strategies)
+all_strategies.pop("rule_based_strategy", None)
+
+financial_strategies = dict(all_strategies)
+ml_strategies_list = ["lstm", "bilstm", "tcn", "patchtst", "gnn", "nad", "cnn_gru", "random_forest", "lightgbm", "xgboost", "catboost"]
+
+for strat in ml_strategies_list:
+    financial_strategies.pop(strat, None)
+
+ml_strategies = {
+    k: v for k, v in all_strategies.items()
+    if k in ml_strategies_list
+}
+
 symbols = load_watchlist()
 
-async def main():
+async def main(strategies, symbols):
     print("Starting Backtest")
     print("───────────────────────────────────────────────")
     print(f"Symbol: {symbols}")
-    print(f"Strategies: {len(strategies)}")
+    print(f"Strategies: {len(financial_strategies)}")
     print(f"Mode: {'TEST' if TEST_MODE else 'LIVE'}\n")
     
     try:
         results = await run_multi_symbol_backtest(
             symbols = symbols,
             strategies=strategies,
-            days=80,
             initial_cash=10000,
-            test_mode=TEST_MODE
+            test_mode=TEST_MODE,
+            days = 60
         )
     except Exception as e:
         print(f"Error during backtest: {e}")
@@ -55,4 +67,4 @@ async def main():
         print("\n No results returned from compare_strategies()")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main(ml_strategies, symbols))

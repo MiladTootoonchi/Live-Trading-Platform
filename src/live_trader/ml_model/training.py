@@ -16,7 +16,7 @@ from live_trader.ml_model.utils import (
 from live_trader.ml_model.layers import (Patchify, GraphMessagePassing, ExpandDims, AutoencoderClassifierLite)
 from live_trader.ml_model.evaluations import evaluate_model
 from live_trader.ml_model.data import (prepare_training_data, prepare_prediction_data, ensure_clean_timestamp,
-                                       get_one_realtime_bar, compute_trade_qty, create_sequences)
+                                       get_one_realtime_bar, compute_trade_qty, create_sequences, MIN_LOOKBACK)
 
 from sklearn.isotonic import IsotonicRegression
 
@@ -368,7 +368,7 @@ async def _build_prediction_dataframe(
     realtime_bar = realtime_bar.dropna(how="all")
     realtime_bar = realtime_bar.dropna(axis=1, how="all")
 
-    PRED_HISTORY = 50  # must exceed max indicator window
+    PRED_HISTORY = 51  # must exceed max indicator window
 
     pred_df = pd.concat(
         [hist_df.tail(PRED_HISTORY), realtime_bar],
@@ -497,29 +497,21 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassif
         current_ts = dt.datetime.now(dt.UTC)
 
 
+    # ml_training_lookback >= PRED_HISTORY
+    ml_training_lookback = 750
 
-    lookback_days = 750
-
-    INDICATOR_WARMUP = 50      # must cover largest rolling window
-    PRED_HISTORY = 50
+    INDICATOR_WARMUP = MIN_LOOKBACK
 
     TIME_STEPS = 50
+    PRED_HISTORY = TIME_STEPS + INDICATOR_WARMUP
 
-    MIN_BARS = max(
-        INDICATOR_WARMUP,
-        PRED_HISTORY,
-        TIME_STEPS,
-    )
+    # pred_start_date must be more than 50 days in the past
+    pred_start_date = current_ts - dt.timedelta(days = PRED_HISTORY)
 
-
-    pred_start_date = current_ts - dt.timedelta(
-        days = INDICATOR_WARMUP + PRED_HISTORY
-    )        # must be more than 50 days in the past
-
-    start_dt = pred_start_date - dt.timedelta(days=lookback_days)
+    start_dt = pred_start_date - dt.timedelta(days = ml_training_lookback)
     start_date = (start_dt.year, start_dt.month, start_dt.day)
 
-    end_dt = pred_start_date - dt.timedelta(days=1)
+    end_dt = pred_start_date - dt.timedelta(days = 1)
     end_date = (end_dt.year, end_dt.month, end_dt.day)
 
     # fetching data from as early as possible till pred_start_date (pred_start_date till today will be used for prediction)
@@ -546,19 +538,11 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassif
             "v": "volume",
         }).set_index("timestamp")
 
-
         pred_df = hist.tail(PRED_HISTORY).copy()
 
         for col in ["vwap", "trade_count"]:
             if col not in pred_df.columns:
                 pred_df[col] = 0.0
-
-        if len(pred_df) < MIN_BARS:
-            logger.debug(
-                f"{symbol}: skipping prediction (warmup) "
-                f"(have {len(pred_df)}, need {MIN_BARS})"
-            )
-            return SideSignal.HOLD, 0
 
 
     else:

@@ -75,7 +75,7 @@ def evaluate_model(model: Model,
     # Compute performance metrics
     try:
         auc_roc = roc_auc_score(y_test, y_pred)
-        f1 = f1_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred, zero_division = 0)
         brier = brier_score(y_test, y_pred)
 
         evaluation_score_text = f"""

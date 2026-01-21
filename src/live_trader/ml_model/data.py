@@ -23,6 +23,23 @@ FEATURE_COLUMNS: List[str] = [
     "price_change", "RSI", "MACD", "MACD_Signal",
 ]
 
+SMA_WINDOWS = [5, 20, 50]
+RSI_WINDOW = 14
+
+MACD_FAST = 12
+MACD_SLOW = 26
+MACD_SIGNAL = 9
+MACD_STABILIZATION = MACD_SLOW * 3
+
+ZSCORE_WINDOW = 100
+
+MIN_LOOKBACK = max(
+    max(SMA_WINDOWS),
+    RSI_WINDOW,
+    MACD_STABILIZATION,
+    ZSCORE_WINDOW,
+)
+
 
 async def get_one_realtime_bar(symbol: str, last_close: float) -> pd.DataFrame:
     """
@@ -119,9 +136,8 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
     # Moving averages
-    df["SMA5"] = df["close"].rolling(5).mean()
-    df["SMA20"] = df["close"].rolling(20).mean()
-    df["SMA50"] = df["close"].rolling(50).mean()
+    for window in SMA_WINDOWS:
+        df[f"SMA{window}"] = df["close"].rolling(window).mean()
 
     # Price change
     df["price_change"] = df["close"].diff()
@@ -131,20 +147,20 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
 
-    avg_gain = gain.rolling(14).mean()
-    avg_loss = loss.rolling(14).mean()
+    avg_gain = gain.rolling(RSI_WINDOW).mean()
+    avg_loss = loss.rolling(RSI_WINDOW).mean()
     rs = avg_gain / avg_loss
     df["RSI"] = 100 - (100 / (1 + rs))
 
     # MACD
-    ema12 = df["close"].ewm(span=12, adjust=False).mean()
-    ema26 = df["close"].ewm(span=26, adjust=False).mean()
-    df["MACD"] = ema12 - ema26
-    df["MACD_Signal"] = df["MACD"].ewm(span=9, adjust=False).mean()
+    ema_fast = df["close"].ewm(span=MACD_FAST, adjust=False).mean()
+    ema_slow = df["close"].ewm(span=MACD_SLOW, adjust=False).mean()
+    df["MACD"] = ema_fast - ema_slow
+    df["MACD_Signal"] = df["MACD"].ewm(span=MACD_SIGNAL, adjust=False).mean()
 
     # Z-score normalization (past-only)
-    df["close_z"] = rolling_zscore(df["close"])
-    df["volume_z"] = rolling_zscore(df["volume"])
+    df["close_z"] = rolling_zscore(df["close"], window = ZSCORE_WINDOW)
+    df["volume_z"] = rolling_zscore(df["volume"], window = ZSCORE_WINDOW)
 
     return df
 
@@ -185,13 +201,14 @@ def prepare_training_data(
     df["target"] = create_target(df)
     df = df.dropna()
 
-    X_raw = df[FEATURE_COLUMNS].values
-    y = df["target"].values
+    X_raw = df[FEATURE_COLUMNS]
+    y = df["target"]
 
     scaler = StandardScaler()
+    scaler.set_output(transform = "pandas")
     X = scaler.fit_transform(X_raw)
 
-    scaler.feature_columns = FEATURE_COLUMNS.copy()
+    scaler.feature_columns = FEATURE_COLUMNS
 
     return X, y, scaler
 
@@ -213,10 +230,10 @@ def prepare_prediction_data(
     df = compute_features(df)
     df = df.dropna()
 
-    X_raw = df[scaler.feature_columns].values
-    X = scaler.transform(X_raw)
+    X_raw = df[scaler.feature_columns]
+    X = scaler.transform(X_raw.values)
 
-    return X
+    return np.asarray(X)
 
 
 
@@ -312,7 +329,7 @@ def compute_trade_qty(position_data: dict, prob: float) -> int:
     return qty
 
 
-def rolling_zscore(series: pd.Series, window: int = 100) -> pd.Series:
+def rolling_zscore(series: pd.Series, window: int) -> pd.Series:
     """
     Compute a rolling z-score using only past information.
 
