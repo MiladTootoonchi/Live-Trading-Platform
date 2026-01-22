@@ -1,13 +1,15 @@
+from __future__ import annotations
+
 import datetime as dt
 import pandas as pd
-from typing import Dict, Any, List, Union
-import pandas as pd
+from typing import Iterable, Mapping, Union
+from tenacity import retry, wait_exponential, stop_after_attempt
 
 from alpaca.data.timeframe import TimeFrame
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.historical import StockHistoricalDataClient
 
-from config import load_api_keys, make_logger
+from live_trader.config import load_api_keys, make_logger
 
 logger = make_logger()
 
@@ -15,17 +17,28 @@ KEY, SECRET = load_api_keys()
 
 client = StockHistoricalDataClient(api_key = KEY, secret_key = SECRET)
 
+@retry(
+    wait=wait_exponential(multiplier=1, min=2, max=30),
+    stop=stop_after_attempt(5),
+)
+def _get_bars(request_params):
+    return client.get_stock_bars(request_params)
+
+
 def fetch_data(symbol: str,
                start_date: tuple[int, int, int] = (2020, 1, 1),
-               end_date: tuple[int, int, int] = (2025, 1, 1),
-               limit: int | None = None) -> pd.DataFrame:
+               end_date: tuple[int, int, int] = (2026, 1, 1)) -> pd.DataFrame:
 
     if client is None:
         logger.error("Alpaca client not initialized")
         return pd.DataFrame()
 
-    start = dt.date(*start_date)
-    end = dt.date(*end_date)
+    y, m, d = start_date
+    start = dt.date(y, m, max(1, d))
+
+    y, m, d = end_date
+    end = dt.date(y, m, max(1, d))
+
 
     today = dt.date.today()
     if end > today:
@@ -41,65 +54,103 @@ def fetch_data(symbol: str,
         end = end
     )
 
-    bars = client.get_stock_bars(request_params)
+    bars = _get_bars(request_params)
 
     # Convert to DataFrame
     df = bars.df
 
-    if df is None or df.empty:
-        return pd.DataFrame()
+    # Flatten symbol level
+    if isinstance(df.index, pd.MultiIndex):
+        df = df.reset_index(level=0, drop=True)
 
-    # Apply manual limit
-    if limit is not None:
-        df = df.sort_index().tail(limit)
+    # Enforce UTC DatetimeIndex
+    df.index = pd.to_datetime(df.index, utc=True)
+
+    KEEP = ["open", "high", "low", "close", "volume", "trade_count", "vwap"]
+    df = df[[c for c in KEEP if c in df.columns]]
 
     return df
 
+BarLike = Union[
+    pd.DataFrame,
+    Iterable[Mapping[str, object]]
+]
 
-def normalize_bars(bars: Union[pd.DataFrame, List[Any]]) -> List[Dict[str, float]]:
+
+def normalize_bars(bars: BarLike) -> pd.DataFrame:
     """
-    Convert bar data into a consistent format: [{"c": close_price}, ...]
+    Normalize OHLCV bar data into a pandas DataFrame with full column names.
+
+    This function accepts bar data in multiple common formats and guarantees
+    a standardized output suitable for indicator calculations and ML models.
+
+    Accepted input formats:
+        1. pandas.DataFrame with columns:
+            - Full names: open, high, low, close, volume
+            - Short names: o, h, l, c, v
+        2. Iterable of dict-like objects with keys:
+            - Alpaca-style: o, h, l, c, v, t
+            - Full names: open, high, low, close, volume, time/timestamp
+
+    Output guarantees:
+        - pandas.DataFrame
+        - Columns: open, high, low, close, volume
+        - DatetimeIndex (UTC, tz-aware)
+        - Sorted by timestamp ascending
+        - Numeric columns coerced to float (volume -> int)
 
     Args:
-        bars (Union[pd.DataFrame, List[Any]]):
-            Bar data in various formats:
-            - DataFrame with 'c' or 'close'
-            - List of dicts
-            - List of floats / ints / strings
+        bars:
+            Raw bar data (DataFrame or iterable of bar dictionaries).
 
     Returns:
-        List[Dict[str, float]]:
-            Normalized close data.
+        pd.DataFrame:
+            Normalized OHLCV DataFrame. Empty if input is invalid or empty.
     """
     if bars is None:
-        return []
+        return pd.DataFrame()
 
-    # If bar data is a DataFrame
     if isinstance(bars, pd.DataFrame):
-        if "c" in bars.columns:
-            return bars[["c"]].to_dict("records")
-        if "close" in bars.columns:
-            return bars.rename(columns={"close": "c"})[["c"]].to_dict("records")
+        df = bars.copy()
+    else:
+        try:
+            df = pd.DataFrame(list(bars))
+        except Exception:
+            return pd.DataFrame()
 
-        logger.error("DataFrame is missing 'c' or 'close' columns.")
-        return []
+    if df.empty:
+        return pd.DataFrame()
 
-    # List-based bar data
-    if isinstance(bars, list) and len(bars) > 0:
-        first = bars[0]
+    COLUMN_MAP = {
+        "o": "open",
+        "h": "high",
+        "l": "low",
+        "c": "close",
+        "v": "volume",
+    }
 
-        if isinstance(first, dict):
-            if "c" in first:
-                return bars
-            if "close" in first:
-                return [{"c": float(x["close"])} for x in bars]
+    df = df.rename(columns=COLUMN_MAP)
 
-        if isinstance(first, (float, int, str)):
-            try:
-                return [{"c": float(x)} for x in bars]
-            except ValueError:
-                logger.error("Bar list includes non-numeric values.")
-                return []
+    REQUIRED = {"open", "high", "low", "close", "volume"}
+    if not REQUIRED.issubset(df.columns):
+        return pd.DataFrame()
 
-    logger.error("Unrecognized bar format.")
-    return []
+    if isinstance(df.index, pd.DatetimeIndex):
+        idx = df.index
+    else:
+        time_col = None
+        for candidate in ("timestamp", "time", "t", "date"):
+            if candidate in df.columns:
+                time_col = candidate
+                break
+
+        if time_col is None:
+            return pd.DataFrame()
+
+        idx = pd.to_datetime(df[time_col], utc=True, errors="coerce")
+        df = df.drop(columns=[time_col])
+
+    df.index = pd.DatetimeIndex(idx, tz="UTC")
+    df = df[~df.index.isna()]
+
+    return df

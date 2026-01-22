@@ -1,10 +1,10 @@
 import requests
 import asyncio
-from typing import Callable, List, Dict, Any
+from typing import Callable, List, Dict
 import inspect
 
-from .order import OrderData, SideSignal
-from config import make_logger, load_watchlist
+from live_trader.alpaca_trader.order import OrderData, SideSignal
+from live_trader.config import make_logger, load_watchlist
 
 
 logger = make_logger()
@@ -69,6 +69,46 @@ class AlpacaTrader:
         url = f"{self._APCA_API_BASE_URL}/v2/positions"
         response = await asyncio.to_thread(requests.get, url, headers = self._HEADERS)
         return response.json()
+    
+    
+    async def is_market_open(self) -> bool:
+        """
+        Checks whether the US equity market is currently open according to Alpaca.
+
+        This method queries Alpaca's `/v2/clock` endpoint, which provides the
+        current market timestamp and open/close status. The request is executed
+        asynchronously using a background thread to avoid blocking the event loop.
+
+        If the API request fails or returns an unexpected response, the method
+        logs the error and returns False by default to ensure trading safety.
+
+        Returns:
+            bool:
+                True if the market is currently open, False otherwise.
+        """
+
+        url = f"{self._APCA_API_BASE_URL}/v2/clock"
+
+        try:
+            response = await asyncio.to_thread(
+                requests.get, url, headers=self._HEADERS, timeout=10
+            )
+
+            if response.status_code != 200:
+                logger.error(
+                    f"Failed to fetch market clock: {response.status_code} - {response.text}"
+                )
+                return False
+
+            data: Dict[str, bool] = response.json()
+            is_open: bool = bool(data.get("is_open", False))
+
+            logger.debug(f"Market open status: {is_open}")
+            return is_open
+
+        except Exception:
+            logger.exception("Error while checking market open status")
+            return False
 
 
 
@@ -358,6 +398,10 @@ class AlpacaTrader:
             Exception: Catches and logs any exceptions that occur during update.
         """
 
+        if not await self.is_market_open():
+            logger.info("Market is closed — skipping trading cycle")
+            return
+
         try:
             positions = await self.get_positions()
             positions_to_update = (
@@ -457,3 +501,44 @@ class AlpacaTrader:
                 logger.exception(f"Failed to analyze {symbol} from watchlist")
         
         return tasks
+
+
+
+    async def live(self, strategy: Callable) -> None:
+        """
+        Runs the trader in continuous live-trading mode using a given strategy.
+
+        This method enters an infinite asynchronous loop that periodically
+        updates all current positions and analyzes the watchlist by invoking
+        the provided strategy. On each iteration, it calls `update()` with
+        the strategy applied to all positions ("ALL") and then sleeps for
+        a fixed interval (60 seconds) before repeating.
+
+        The loop continues indefinitely until interrupted by the user
+        (KeyboardInterrupt) or cancelled by the event loop
+        (asyncio.CancelledError), at which point the trader shuts down
+        gracefully.
+
+        Args:
+            strategy (Callable):
+                A trading strategy function used for both position updates
+                and watchlist analysis. The function may be synchronous or
+                asynchronous and must return a tuple of
+                (SideSignal, quantity).
+
+        Raises:
+            KeyboardInterrupt:
+                Raised when the user manually stops the live trading loop.
+            asyncio.CancelledError:
+                Raised when the task running this method is cancelled.
+        """
+        try:
+            while True:
+                await self.update(strategy, strategy, "ALL")
+                await asyncio.sleep(60) # sleep for a minute
+
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            print("\nShutting down... ")
+
+        finally:
+            pass

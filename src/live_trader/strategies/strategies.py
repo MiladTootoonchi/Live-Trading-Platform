@@ -1,15 +1,20 @@
 from typing import Callable, Dict, Any
 
 from live_trader.alpaca_trader.order import SideSignal
-from config import make_logger, load_strategy_name
+from live_trader.config import make_logger, load_strategy_name
 
-from .bollinger_bands_strategy import bollinger_bands_strategy
-from .macd import macd_strategy
-from .mean_reversion import mean_reversion_strategy
-from .momentum import momentum_strategy
-from .moving_average_strategy import moving_average_strategy
-from .rsi import rsi_strategy
-from live_trader.ml_model.ml_strategy import AI_strategy
+from live_trader.strategies.bollinger_bands_strategy import bollinger_bands_strategy
+from live_trader.strategies.macd import macd_strategy
+from live_trader.strategies.mean_reversion import mean_reversion_strategy
+from live_trader.strategies.momentum import momentum_strategy
+from live_trader.strategies.moving_average_strategy import moving_average_strategy
+from live_trader.strategies.rsi import rsi_strategy
+
+from live_trader.ml_model.ml_strategies import (basic_lstm, attention_bilstm, 
+                                                tcn_lite, patchtst_lite, gnn_lite,
+                                                nad_lite, cnn_gru_lite)
+
+from live_trader.tree_based_models.tree_based_strategies import (xgboost, catboost, random_forest, lightgbm)
 
 logger = make_logger()
 
@@ -66,7 +71,17 @@ strategies = {
     "momentum_strategy": momentum_strategy,
     "moving_average_strategy": moving_average_strategy,
     "rsi_strategy": rsi_strategy,
-    "ai": AI_strategy,
+    "lstm": basic_lstm,
+    "bilstm": attention_bilstm,
+    "tcn": tcn_lite,
+    "patchtst": patchtst_lite,
+    "gnn": gnn_lite,
+    "nad": nad_lite,
+    "cnn_gru": cnn_gru_lite,
+    "random_forest": random_forest,
+    "lightgbm": lightgbm,
+    "xgboost": xgboost,
+    "catboost": catboost,
 }
 
 

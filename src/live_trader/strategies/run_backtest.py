@@ -1,36 +1,42 @@
-from .backtest import compare_strategies
-from .bollinger_bands_strategy import bollinger_bands_strategy
-from .macd import macd_strategy
-from .mean_reversion import mean_reversion_strategy
-from .momentum import momentum_strategy
-from .moving_average_strategy import moving_average_strategy
-from .rsi import rsi_strategy
+from live_trader.strategies.backtest import run_multi_symbol_backtest
+from live_trader.config import load_watchlist
+
+from live_trader.strategies.strategies import strategies as old_strategies
+
+import asyncio
 
 TEST_MODE = True  
 
-strategies = {
-    'Bollinger Bands': bollinger_bands_strategy,
-    'MACD': macd_strategy,
-    'Mean Reversion': mean_reversion_strategy,
-    'Momentum': momentum_strategy,
-    'MA': moving_average_strategy,
-    'RSI': rsi_strategy,
+all_strategies = dict(old_strategies)
+all_strategies.pop("rule_based_strategy", None)
+
+financial_strategies = dict(all_strategies)
+ml_strategies_list = ["lstm", "bilstm", "tcn", "patchtst", "gnn", "nad", "cnn_gru", "random_forest", "lightgbm", "xgboost", "catboost"]
+
+for strat in ml_strategies_list:
+    financial_strategies.pop(strat, None)
+
+ml_strategies = {
+    k: v for k, v in all_strategies.items()
+    if k in ml_strategies_list
 }
 
-def main():
+symbols = load_watchlist()
+
+async def main(strategies, symbols):
     print("Starting Backtest")
     print("───────────────────────────────────────────────")
-    print(f"Symbol: TSLA")
-    print(f"Strategies: {len(strategies)}")
+    print(f"Symbol: {symbols}")
+    print(f"Strategies: {len(financial_strategies)}")
     print(f"Mode: {'TEST' if TEST_MODE else 'LIVE'}\n")
     
     try:
-        results = compare_strategies(
-            symbol='TSLA',
+        results = await run_multi_symbol_backtest(
+            symbols = symbols,
             strategies=strategies,
-            days=30,
             initial_cash=10000,
-            test_mode=TEST_MODE
+            test_mode=TEST_MODE,
+            days = 60
         )
     except Exception as e:
         print(f"Error during backtest: {e}")
@@ -61,4 +67,4 @@ def main():
         print("\n No results returned from compare_strategies()")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main(ml_strategies, symbols))

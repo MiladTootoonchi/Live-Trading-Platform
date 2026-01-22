@@ -1,7 +1,7 @@
 from live_trader.alpaca_trader.order import SideSignal
 from typing import Dict, Any, Tuple
-from config import make_logger
-from .utils import fetch_data, normalize_bars
+from live_trader.config import make_logger
+from live_trader.strategies.utils import fetch_data, normalize_bars
 import pandas as pd
 
 logger = make_logger()
@@ -29,29 +29,18 @@ def momentum_strategy(symbol: str, position_data: Dict[str, Any]) -> Tuple[SideS
             quantity returned here is set to one for valid buy or sell signals.
     """
 
-    bars = position_data.get("history")
+    bars = normalize_bars(position_data.get("history"))
 
-    if bars is None or (isinstance(bars, pd.DataFrame) and bars.empty) or (isinstance(bars, list) and len(bars) == 0):
-        logger.warning(f"Momentum strategy found no history. Fetching fresh data for {symbol}.")
-        bars = fetch_data(symbol)
+    if bars.empty:
+        bars = normalize_bars(fetch_data(symbol))
 
-    if bars is None:
-        logger.warning(f"Momentum strategy received no data after fetching for {symbol}.")
+    if bars.empty:
         return SideSignal.HOLD, 0
 
-    bars = normalize_bars(bars)
 
-    if len(bars) == 0:
-        logger.warning(f"Momentum strategy could not normalize data for {symbol}.")
-        return SideSignal.HOLD, 0
+    current_price = float(bars["close"].iloc[-1])
 
-    current_price = float(bars[-1]["c"])
-
-    if "o" in bars[-1]:
-        open_price_today = float(bars[-1]["o"])
-    else:
-        logger.warning(f"Momentum strategy missing open price. Using close price as fallback for {symbol}.")
-        open_price_today = current_price
+    open_price_today = float(bars["open"].iloc[-1])
 
     if open_price_today == 0:
         logger.error(f"Momentum strategy detected invalid open price for {symbol}.")

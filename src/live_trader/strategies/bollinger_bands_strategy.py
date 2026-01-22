@@ -1,7 +1,7 @@
 from live_trader.alpaca_trader.order import SideSignal
 from typing import Tuple, Dict, Any
-from config import make_logger
-from .utils import fetch_data, normalize_bars
+from live_trader.config import make_logger
+from live_trader.strategies.utils import fetch_data, normalize_bars
 
 logger = make_logger()
 
@@ -25,21 +25,20 @@ def bollinger_bands_strategy(symbol: str, position: Dict[str, Any]) -> Tuple[Sid
             The trade signal and quantity (always zero for safety).
     """
 
-    bars = position.get("history")
+    bars = normalize_bars(position.get("history"))
 
-    # Fetch remote data if nothing was provided
-    if bars is None or (isinstance(bars, list) and len(bars) == 0):
-        logger.warning(f"No history for {symbol}. Fetching price data.")
-        bars = fetch_data(symbol)
+    if bars.empty:
+        bars = normalize_bars(fetch_data(symbol))
 
-    # Format cleanup so nothing crashes
-    bars = normalize_bars(bars)
+    if bars.empty:
+        return SideSignal.HOLD, 0
+
 
     if len(bars) < 20:
         logger.warning(f"Not enough data for {symbol}. Need twenty bars minimum.")
         return SideSignal.HOLD, 0
 
-    closes = [float(bar["c"]) for bar in bars]
+    closes = bars["close"].astype(float).tolist()
 
     # Compute simple moving average
     sma20 = sum(closes[-20:]) / 20
