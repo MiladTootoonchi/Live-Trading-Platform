@@ -3,17 +3,19 @@ from alpaca.data.requests import StockLatestTradeRequest
 from alpaca.trading.client import TradingClient
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 from typing import Tuple, List
 
 from live_trader.config import load_api_keys, make_logger
 
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning, module="keras")
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+
+from sklearn.preprocessing import StandardScaler
 
 # Settings
 logger = make_logger()
 KEY, SECRET = load_api_keys()
-
-client = StockHistoricalDataClient(api_key = KEY, secret_key = SECRET)
 
 BASE_URL = "https://paper-api.alpaca.markets"
 
@@ -33,6 +35,10 @@ MACD_STABILIZATION = MACD_SLOW * 3
 
 ZSCORE_WINDOW = 100
 
+TIME_STEPS = 50
+
+SAFETY_MARGIN = max(10, TIME_STEPS // 2)
+
 MIN_LOOKBACK = max(
     max(SMA_WINDOWS),
     RSI_WINDOW,
@@ -49,7 +55,7 @@ async def get_one_realtime_bar(symbol: str, last_close: float) -> pd.DataFrame:
 
     This function replaces the slower WebSocket streaming approach by using
     the 'LatestTrade' REST endpoint, enabling near-instant response times
-    (~30–120 ms). Because real-time data is based on a single trade snapshot,
+    (~30 - 120 ms). Because real-time data is based on a single trade snapshot,
     the bar is constructed using the previous historical close to avoid
     zero-range candles and feature distribution shifts.
 

@@ -16,7 +16,13 @@ from live_trader.ml_model.utils import (
 from live_trader.ml_model.layers import (Patchify, GraphMessagePassing, ExpandDims, AutoencoderClassifierLite)
 from live_trader.ml_model.evaluations import evaluate_model
 from live_trader.ml_model.data import (prepare_training_data, prepare_prediction_data, ensure_clean_timestamp,
-                                       get_one_realtime_bar, compute_trade_qty, create_sequences, MIN_LOOKBACK)
+                                       get_one_realtime_bar, compute_trade_qty, create_sequences, 
+                                       MIN_LOOKBACK, TIME_STEPS, SAFETY_MARGIN)
+
+
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning, module="keras")
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
 
 from sklearn.isotonic import IsotonicRegression
 
@@ -29,6 +35,7 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"   # Reduces backend logs
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping
 import tensorflow as tf
+tf.get_logger().setLevel("ERROR")
 
 # ------------------------------------------------------------------------
 
@@ -284,7 +291,7 @@ def _check_model_existence(
         logger.info(f"No existing model found for {symbol}, training...")
 
         X, y, scaler = prepare_training_data(df)
-        X_train, X_val, X_test, y_train, y_val, y_test = sequence_split(X, y, 200)
+        X_train, X_val, X_test, y_train, y_val, y_test = sequence_split(X, y, TIME_STEPS)
 
         # Build (architecture only)
         model = model_builder(X_train)
@@ -321,7 +328,7 @@ def _check_model_existence(
 
 async def _build_prediction_dataframe(
     symbol: str,
-    pred_start_date: dt.datetime,
+    hist_df: pd.DataFrame,
 ) -> pd.DataFrame:
     """
     Fetches and prepares historical and realtime market data for prediction.
@@ -332,8 +339,8 @@ async def _build_prediction_dataframe(
     Args:
         symbol (str):
             Trading symbol (e.g. "AAPL").
-        pred_start_date (dt.datetime):
-            Earliest timestamp used for prediction history.
+        hist_df (pd.DataFrame):
+            The data you want to change to a prediction dataframe
 
     Returns:
         pd.DataFrame:
@@ -343,14 +350,6 @@ async def _build_prediction_dataframe(
         RuntimeError:
             If no valid historical data is available after cleanup.
     """
-    # Fetching pred_start_date data till today (realtime data)
-    today = dt.datetime.now(dt.UTC)
-
-    hist_df = fetch_data(
-        symbol=symbol,
-        start_date=(pred_start_date.year, pred_start_date.month, pred_start_date.day),
-        end_date=(today.year, today.month, today.day)
-    )
 
     hist_df = _sanitize_time_index(hist_df, "PREDICTION DATA")
     hist_df = hist_df.reset_index()     # ensure no double index
@@ -368,10 +367,12 @@ async def _build_prediction_dataframe(
     realtime_bar = realtime_bar.dropna(how="all")
     realtime_bar = realtime_bar.dropna(axis=1, how="all")
 
-    PRED_HISTORY = 51  # must exceed max indicator window
+    INDICATOR_WARMUP = MIN_LOOKBACK
+
+    PRED_HISTORY = TIME_STEPS + INDICATOR_WARMUP
 
     pred_df = pd.concat(
-        [hist_df.tail(PRED_HISTORY), realtime_bar],
+        [hist_df.tail(PRED_HISTORY + 1), realtime_bar],
         ignore_index=True,
     ).copy()
 
@@ -501,9 +502,7 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassif
     ml_training_lookback = 750
 
     INDICATOR_WARMUP = MIN_LOOKBACK
-
-    TIME_STEPS = 50
-    PRED_HISTORY = TIME_STEPS + INDICATOR_WARMUP
+    PRED_HISTORY = TIME_STEPS + INDICATOR_WARMUP + SAFETY_MARGIN
 
     # pred_start_date must be more than 50 days in the past
     pred_start_date = current_ts - dt.timedelta(days = PRED_HISTORY)
@@ -548,14 +547,14 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassif
     else:
         pred_df = await _build_prediction_dataframe(
             symbol=symbol,
-            pred_start_date=pred_start_date,
+            hist_df = df,
         )
 
     X_last = _prepare_model_input(
         pred_df=pred_df,
         scaler=scaler,
         model=model,
-        time_steps=50,
+        time_steps=TIME_STEPS,
     )
 
 

@@ -10,7 +10,12 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"   # Completely disable GPU
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"   # Reduces backend logs
 
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning, module="keras")
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+
 import tensorflow as tf
+tf.get_logger().setLevel("ERROR")
 
 from tensorflow.keras import Model
 from tensorflow.keras.layers import (

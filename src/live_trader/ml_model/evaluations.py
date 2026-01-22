@@ -3,10 +3,14 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Tuple, Union
 
-from sklearn.metrics import classification_report, confusion_matrix, f1_score, roc_auc_score
-
 from live_trader.config import make_logger
 from live_trader.ml_model.utils import get_model_name, extract_positive_class_probability, adapt_X_for_model
+
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning, module="keras")
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+
+from sklearn.metrics import classification_report, confusion_matrix, f1_score, roc_auc_score
 
 # Ignoring info + warning + errors: the user do not need to see this
 import os
@@ -16,6 +20,7 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"   # Reduces backend logs
 
 from tensorflow.keras.models import Model
 import tensorflow as tf
+tf.get_logger().setLevel("ERROR")
 
 # --------------------------------------------------------------------------------------------
 

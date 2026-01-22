@@ -2,6 +2,16 @@ from typing import Protocol, Optional, Any
 from dataclasses import dataclass
 import numpy as np
 
+import warnings
+
+import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"   # Completely disable GPU
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"   # Reduces backend logs
+
+warnings.filterwarnings("ignore", category=FutureWarning, module="keras")
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+
 from tensorflow.keras import Model
 
 class ProbabilisticClassifier(Protocol):
