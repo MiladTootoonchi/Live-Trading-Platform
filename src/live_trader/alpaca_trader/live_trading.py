@@ -69,6 +69,46 @@ class AlpacaTrader:
         url = f"{self._APCA_API_BASE_URL}/v2/positions"
         response = await asyncio.to_thread(requests.get, url, headers = self._HEADERS)
         return response.json()
+    
+    
+    async def is_market_open(self) -> bool:
+        """
+        Checks whether the US equity market is currently open according to Alpaca.
+
+        This method queries Alpaca's `/v2/clock` endpoint, which provides the
+        current market timestamp and open/close status. The request is executed
+        asynchronously using a background thread to avoid blocking the event loop.
+
+        If the API request fails or returns an unexpected response, the method
+        logs the error and returns False by default to ensure trading safety.
+
+        Returns:
+            bool:
+                True if the market is currently open, False otherwise.
+        """
+
+        url = f"{self._APCA_API_BASE_URL}/v2/clock"
+
+        try:
+            response = await asyncio.to_thread(
+                requests.get, url, headers=self._HEADERS, timeout=10
+            )
+
+            if response.status_code != 200:
+                logger.error(
+                    f"Failed to fetch market clock: {response.status_code} - {response.text}"
+                )
+                return False
+
+            data: Dict[str, bool] = response.json()
+            is_open: bool = bool(data.get("is_open", False))
+
+            logger.debug(f"Market open status: {is_open}")
+            return is_open
+
+        except Exception:
+            logger.exception("Error while checking market open status")
+            return False
 
 
 
@@ -357,6 +397,10 @@ class AlpacaTrader:
         Raises:
             Exception: Catches and logs any exceptions that occur during update.
         """
+
+        if not await self.is_market_open():
+            logger.info("Market is closed — skipping trading cycle")
+            return
 
         try:
             positions = await self.get_positions()
