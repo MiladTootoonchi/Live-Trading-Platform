@@ -9,47 +9,55 @@ Makka Dulgaeva
 ***
 ## Table of Contents
 
-1. [Introduction](#introduction)
-   - [Usage of AI](#usage-of-ai)
-   - [Preface](#preface)
+1. [Preface](#preface)
+   - [AI-Decleration](#ai-declaration)
 
-2. [Background](#background)
+2. [Introduction](#introduction)
+
+3. [Background](#background)
    - [Problem Statement](#problem-statement)
 
-3. [Theory & Key Concepts](#theory--key-concepts)
+4. [Theory and Key Concepts](#theory--key-concepts)
    - [What is FinTech?](#what-is-fintech)
    - [Introduction to Alpaca](#introduction-to-alpaca)
-   - [Concepts for Strategies](#concepts-for-strategies)
+   - [Concepts for Trading Strategies](#concepts-for-strategies)
    - [What Is Backtesting?](#what-is-backtesting)
 
-4. [Backend Design](#backend-design)
+5. [System Design and Implementation](#backend-design)
    - [System Architecture](#system-architecture)
-   - [ML-Model Architectures](#ml-model-architectures)
-   - [Data & Data Collection](#data--data-collection)
+   - [Machine Learning Architectures](#machine-learning-architectures)
+   - [Data and Data Collection](#data--data-collection)
 
-5. [Manual (How to use the program)](#manual-how-to-use-the-program)
+6. [User Manual](#user-manual-how-to-use-the-program)
 
-6. [Results](#results)
+7. [Results](#results)
    - [Backtesting Results](#backtesting-results)
-   - [Machine Learning Results](#machine-learning-results)
-   - [Live-Testing](#live-testing)
+   - [ML-Model Evaluations](#ml-model-evaluations)
+   - [Live Testing](#live-testing)
 
-7. [Discussion](#discussion)
+8. [Discussion](#discussion)
+   - [Limitations](#limitations)
    - [Future Work](#future-work)
 
-8. [References](#references)
+9. [Conclusion](#conclusion)
+
+10. [References](#references)
 
 <br>
 
 ***
 
-## Introduction
+## Preface
 
-### Usage of AI 
+### AI Declaration
 
 According to NMBU guidelines on the use of artificial intelligence (AI) we confirm the usage of the AI tool ChatGPT as a writing assistant. The tool was applied to improve grammar, sentence clarity, and academic phrasing, but it did not generate content, arguments, or analysis for us. All ideas, data interpretations, and theoretical explanations in the report are our own and based on the sources listed in the reference section. The use of ChatGPT is limited to language refinement and does not influence the academic content of the work.
 
-### Preface 
+<br>
+
+***
+
+## Introduction 
 
 The financial markets operate as a vast and intricate system, where millions of traders make decisions in real time, striving to outperform one another. Historically, human intuition and experience dominated this space. Stock exchanges were filled with traders engaging in open outcry, making rapid decisions based on their expertise and instincts. 
 
@@ -63,6 +71,8 @@ Financial Technology (FinTech) has revolutionized the management of financial tr
 
 Modern trading success is no longer solely reliant on human intuition; rather, it is increasingly determined by data analysis, strategic modeling, and automation. This project presents an opportunity to engage with algorithmic trading by designing and testing a Python-based trading model, one that makes objective, data-driven decisions, free from emotional bias. 
 
+<br>
+
 ***
 
 ## Background
@@ -72,6 +82,8 @@ A useful analogy for algorithmic trading is that of a predator in its natural ha
 These systems operate around the clock, analyzing stocks, cryptocurrencies, and other financial instruments, identifying price discrepancies that may yield profit. However, despite their efficiency, success in algorithmic trading is not guaranteed. Financial markets are inherently unpredictable, requiring continuous adaptation. A strategy that proves effective today may become obsolete in the future. 
 
 Thus, algorithmic trading systems must undergo regular refinement and optimization, evolving in response to shifting market conditions, much like any adaptive system seeking longterm viability in a competitive environment. This project will allow us to step into this world, to create a trading algorithm and test its survival in a simulated market, where only the most effective strategies endure. 
+
+<br>
 
 ### Problem Statement 
 
@@ -134,11 +146,15 @@ In order to achieve this the following objectives and activities has been set:
     - Risk management is limited by predefined parameters and lacks exposure to real capital. 
     - The project refrain from utilizing the shorter strategy in our approach. 
 
+<br>
+
 ***
 
 ## Theory & Key Concepts
 
 This chapter provides an overview of the key concepts essential for developing an automated trading system. It covers topics such as FinTech, algorithmic trading, trading strategies, and backtesting. Additionally, it introduces Python’s role in implementing trading strategies and interacting with platforms like Alpaca. Understanding these concepts will lay the foundation for creating and evaluating a successful trading strategy. 
+
+<br>
 
 ### What is FinTech? 
 
@@ -177,6 +193,8 @@ Figure 3: How Alpaca API works
 <br>
 
 By lowering the barriers to entry, Alpaca represents a shift toward democratizing financial markets, offering accessible, scalable, and customizable trading infrastructure. This project explores the fundamentals of market access and highlights how Alpaca Markets enables seamless integration of trading algorithms, portfolio management, and data driven investment strategies. 
+
+<br>
 
 ### Concepts for Strategies 
 
@@ -251,7 +269,10 @@ These methods help identify weaknesses, optimize parameters, and build confidenc
 
 Creating a profitable trading algorithm comes with several challenges, including overfitting and market risks. Overfitting occurs when an algorithm is too closely tailored to past data, making it ineffective in future market conditions. Additionally, market risks such as volatility, slippage, and unexpected economic events can negatively impact a strategy’s performance. Developing a robust algorithm requires careful optimization, risk management techniques, and continuous adaptation to changing market dynamics. Without addressing these challenges, even a well designed algorithm may fail to generate consistent profits. 
 
+<br>
+
 ***
+
 ## Backend Design
 
 **Tools Used:** 
@@ -293,6 +314,8 @@ tenacity = "^9.1.2"
 **Target Audience:** New students learning about FinTech and algorithmic trading 
 
 **Success Criteria:** A functional trading bot that executes simulated trades with basic performance metrics 
+
+<br>
 
 ### System Architecture 
 
@@ -505,7 +528,7 @@ Test-evaluation metrics = AUC-ROC, Brier and f1-score
 
 <br>
 
-#### Data & Data Collection 
+### Data & Data Collection 
 The dataset contains historical stock price information retrieved from the Alpaca API. Each entry includes a timestamp along with standard market fields such as open, high, low, close, volume, trade count, and VWAP. The data is structured as a time series, making it suitable for predictive modeling. All market data are obtained directly from the Alpaca Market Data API, which provides exchange reported price and volume information. The dataset reflects real trading activity and is used both for machine-learning-based prediction and does not include preprocessing for rule-based or financial strategy testing.
 
 Typical issues found in financial time-series data may appear:
@@ -579,7 +602,7 @@ This projects pipeline applies structured and repeatable transformations:
 
 <br>
 
-## Manual (How to use the program)
+## User Manual (How to use the program)
 
 ### **Prerequisites**
 
@@ -890,9 +913,11 @@ Backtesting was performed on several different strategies using historical data 
 
 </details>
 
+<br>
 
-*The strategies down below was backtested on the last 30 days before 01.01.2025*
 #### Tree-Based Models
+
+*These strategies was backtested on the last 30 days before 01.01.2025*
 
 <details>
 <summary><strong>XGBoost Strategy</strong></summary>
@@ -907,7 +932,6 @@ Backtesting was performed on several different strategies using historical data 
 | SPY | -0.65 | 9,934.63 | -0.42 | -3.38 | 2 | 0.00 |
 | AMD | -1.28 | 9,872.34 | -2.23 | -1.71 | 15 | 33.33 |
 | INTC | -16.32 | 8,367.64 | -3.87 | -20.45 | 4 | 0.00 |
-
 | **MEAN** | **2.17** | **10,291.49** | **0.33** | **-5.50** | **9.1** | **29.17** |
 | **STD** | **13.47** | **1,454.92** | **3.18** | **7.29** | **5.3** | **36.72** |
 | **MEDIAN** | **0.96** | **10,096.80** | **0.18** | **-3.05** | **10.5** | **16.67** |
@@ -930,7 +954,6 @@ Backtesting was performed on several different strategies using historical data 
 | NVDA | -7.86 | 9,214.20 | -2.13 | -11.36 | 2 | 0.00 |
 | INTC | -6.73 | 9,326.73 | -1.92 | -11.42 | 18 | 50.00 |
 | PLTR | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
-
 | **MEAN** | **4.03** | **10,469.21** | **0.98** | **-5.16** | **6.0** | **34.79** |
 | **STD** | **13.26** | **1,325.88** | **3.08** | **6.04** | **6.4** | **42.19** |
 | **MEDIAN** | **0.07** | **10,007.39** | **1.85** | **-0.80** | **4.0** | **0.00** |
@@ -953,7 +976,6 @@ Backtesting was performed on several different strategies using historical data 
 | INTC  | -16.79 | 8,320.99 | -3.81 | -22.91 | 4 | 0.00 |
 | TSLA  | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
 | PLTR  | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
-
 | **MEAN** | **-3.49** | **9,662.39** | **-0.42** | **-5.48** | **4.0** | **29.63** |
 | **STD** | **7.45** | **740.18** | **2.86** | **8.32** | **4.0** | **46.71** |
 | **MEDIAN** | **0.00** | **10,000.00** | **0.00** | **-0.31** | **3.0** | **0.00** |
@@ -975,7 +997,6 @@ Backtesting was performed on several different strategies using historical data 
 | NVDA | -6.99 | 9,300.64 | -1.79 | -11.14 | 5 | 0.00 |
 | TSLA | -10.05 | 8,995.08 | -2.89 | -12.51 | 16 | 20.00 |
 | INTC | -17.11 | 8,288.97 | -3.82 | -23.34 | 4 | 0.00 |
-
 | **MEAN** | **1.15** | **10,439.38** | **-0.37** | **-8.83** | **7.0** | **13.96** |
 | **STD** | **18.77** | **1,917.40** | **2.67** | **7.71** | **5.2** | **23.68** |
 | **MEDIAN** | **-0.33** | **9,850.42** | **-1.11** | **-7.36** | **4.5** | **0.00** |
@@ -998,7 +1019,6 @@ Backtesting was performed on several different strategies using historical data 
 | GOOGL | -0.08 | 9,992.20 | -1.66 | -0.15 | 8 | 25.00 |
 | AMD | -0.15 | 9,984.78 | -3.19 | -0.24 | 9 | 50.00 |
 | INTC | -11.23 | 8,876.97 | -4.72 | -13.54 | 2 | 0.00 |
-
 | **MEAN** | **0.84** | **10,072.02** | **0.63** | **-4.21** | **4.4** | **53.57** |
 | **STD** | **7.42** | **842.79** | **3.47** | **6.65** | **2.8** | **46.19** |
 | **MEDIAN** | **0.11** | **10,010.89** | **2.50** | **-0.15** | **3.0** | **50.00** |
@@ -1020,7 +1040,6 @@ Backtesting was performed on several different strategies using historical data 
 | TSLA | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
 | PLTR | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
 | AMD | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
-
 | **MEAN** | **5.34** | **10,534.47** | **0.96** | **-1.87** | **2.0** | **10.00** |
 | **STD** | **13.77** | **1,376.72** | **1.69** | **4.19** | **3.7** | **26.46** |
 | **MEDIAN** | **0.07** | **10,007.00** | **0.92** | **-0.17** | **1.0** | **0.00** |
@@ -1043,7 +1062,6 @@ Backtesting was performed on several different strategies using historical data 
 | SPY | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
 | PLTR | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
 | INTC | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
-
 | **MEAN** | **1.11** | **10,111.36** | **0.85** | **-0.45** | **0.4** | **0.00** |
 | **STD** | **3.05** | **305.12** | **1.98** | **1.05** | **1.0** | **0.00** |
 | **MEDIAN** | **0.00** | **10,000.00** | **0.00** | **0.00** | **0.0** | **0.00** |
@@ -1066,7 +1084,6 @@ Backtesting was performed on several different strategies using historical data 
 | NVDA | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
 | PLTR | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
 | INTC | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
-
 | **MEAN** | **0.09** | **10,008.45** | **0.94** | **-0.06** | **0.7** | **11.11** |
 | **STD** | **0.23** | **22.58** | **3.30** | **0.10** | **0.8** | **33.33** |
 | **MEDIAN** | **0.00** | **10,000.00** | **0.00** | **0.00** | **0.0** | **0.00** |
@@ -1089,7 +1106,6 @@ Backtesting was performed on several different strategies using historical data 
 | SPY | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
 | PLTR | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
 | AVGO | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
-
 | **MEAN** | **-0.46** | **9,953.77** | **-0.15** | **-1.46** | **1.6** | **11.11** |
 | **STD** | **1.34** | **134.41** | **2.45** | **2.92** | **2.6** | **33.33** |
 | **MEDIAN** | **0.00** | **10,000.00** | **0.00** | **0.00** | **0.0** | **0.00** |
@@ -1111,7 +1127,6 @@ Backtesting was performed on several different strategies using historical data 
 | TSLA | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
 | NVDA | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
 | PLTR | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
-
 | **MEAN** | **-0.42** | **9,983.70** | **-0.25** | **-5.58** | **2.0** | **25.00** |
 | **STD** | **14.80** | **1,506.94** | **2.83** | **9.50** | **2.7** | **46.29** |
 | **MEDIAN** | **0.00** | **10,000.00** | **0.00** | **0.00** | **0.0** | **0.00** |
@@ -1134,7 +1149,6 @@ Backtesting was performed on several different strategies using historical data 
 | AAPL | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
 | PLTR | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
 | TSLA | 0.00 | 10,000.00 | 0.00 | 0.00 | 0 | 0.00 |
-
 | **MEAN** | **4.42** | **10,442.37** | **-0.19** | **-1.78** | **2.0** | **12.50** |
 | **STD** | **13.59** | **1,365.51** | **2.70** | **3.97** | **3.5** | **35.36** |
 | **MEDIAN** | **0.00** | **10,000.00** | **0.00** | **0.00** | **0.0** | **0.00** |
@@ -1151,7 +1165,7 @@ Overall, the results suggest that strategies with consistent performance across 
 
 <br>
 
-### Machine Learning Results 
+### ML-Model Evaluations 
 
 Multiple machine learning and deep learning models were evaluated on the TSLA classification task.  
 Given the relatively small test set (53 observations) and class imbalance, the evaluation focuses primarily on **F1-score (class 1)**, **AUC-ROC**, and **Brier score**, rather than accuracy alone.
@@ -1200,11 +1214,17 @@ Despite modest overall performance, the best-performing models demonstrate **pro
 
 During the first few days of live-testing, the platform ran on the RSI strategy, which turned out to be very slow and careful. The system waited for the RSI value to move clearly above or below the chosen thresholds before sending any trading signals, which resulted in fewer trades and slower reactions. After three to four days, the strategy was switched over to the LSTM model instead, since it was expected to take on more risk by using predictions from a simple LSTM-50 model. For the test week, the program started with two shares each in AMD, PLTR, INTC, AVGO, NVDA, GOOGL, and SPY. By the end of the week, the realized PnL reached 751,894.59, matching the total PnL, while both account equity and portfolio value ended at 1,010,352.08. This gave a return of around 290.9%. Even though the results look unusually high, the test clearly shows that the AI strategy behaved much more aggressively and caught more short-term market movements compared to the original RSI or other rule based approaches.
 
-<br>
-
 realized_pnl        | total_pnl           | equity            | cash                  | portfolio_value      | roi_equity_percent
 |-------------------|---------------------|-------------------|-----------------------|----------------------|------------------|
 751894.5900000003   | 751894.5900000003   | 1010352.08        | 1010352.08            | 1010352.08           | 290.9161541420221
+
+<br>
+
+![Portfolio equity during the live-testing period (Nov 25 – Dec 04, 2025).](figures/portfolio_equity_2025.png) \
+Figure 7: This figure shows the daily evolution of total portfolio equity as reported by Alpaca. Equity remains relatively stable during the early part of the period, followed by a sharp increase on December 4, 2025, reflecting the realization of significant trading profits. Minor fluctuations prior to this date are attributable to mark-to-market valuation of open positions.
+
+![Cumulative realized profit and loss during the live-testing period.](figures/realized_pnl_2025.png) \
+Figure 8: The figure illustrates cumulative realized P&L reconstructed from Alpaca trade execution cash flows. The pronounced upward movement on December 4, 2025 corresponds to the closing of profitable positions, aligning with the abrupt increase in portfolio equity observed in Figure 7. Temporary drawdowns earlier in the period reflect realized losses from intermediate trade exits.
 
 <br>
 
@@ -1222,10 +1242,19 @@ A key observation across several machine learning models is the mismatch between
 
 Live testing further illustrates the behavioral differences between rule-based and machine learning driven strategies. The RSI strategy demonstrated conservative behavior, producing fewer trades and slower reactions to market changes. In contrast, the Simple LSTM strategy was more aggressive and responsive, capturing more short term price movements and generating a substantially higher realized profit during the test period. While the reported returns are unusually high and should not be interpreted as realistic, the live test provides qualitative evidence that machine learning models can produce more dynamic trading behavior than traditional indicator based approaches.
 
+<br>
+
+### Limitations
+
 Despite these encouraging observations, several limitations remain. The models rely exclusively on price derived technical indicators, which restricts their ability to respond to broader market information. In addition, the relatively small dataset and short evaluation period increase the risk of overfitting and reduce statistical reliability. The absence of realistic market frictions, such as slippage and liquidity constraints, further limits the validity of the results in real world trading environments.
 
-In summary, the platform demonstrates that machine learning can complement traditional trading strategies by introducing adaptability and increased responsiveness. However, the results also emphasize that model complexity alone does not guarantee superior performance. Robust data pipelines, careful validation, and trading aware evaluation metrics are essential for developing reliable algorithmic trading systems. The findings of this project therefore support a cautious and incremental approach to applying machine learning in financial trading.
+In addition to these limitations, the evaluation highlights a clear distinction between technical feasibility and financial realism. While the platform successfully meets its primary objective of developing an automated trading system capable of data ingestion, strategy execution, and performance evaluation, this does not necessarily imply that the resulting strategies are suitable for real capital deployment. The system demonstrates that it is possible to automate trading decisions end-to-end, but the reliability of those decisions remains highly dependent on data quality, evaluation methodology, and market assumptions.
 
+The unusually high returns observed during live-testing further emphasize the importance of cautious interpretation. These results are likely influenced by a combination of factors, including a short evaluation horizon, aggressive position sizing driven by probabilistic model outputs, and the absence of transaction costs, slippage, and liquidity constraints. In real markets, such frictions would significantly reduce realized profits and may even reverse the apparent advantage of more aggressive machine learning–based strategies. Consequently, the live-testing phase should be understood as a behavioral demonstration of strategy dynamics rather than a realistic estimate of achievable performance.
+
+Another important lesson is that increased model complexity does not automatically translate into superior trading outcomes. Several advanced architectures achieved reasonable classification metrics but failed to generate consistent trading activity, resulting in weak or flat backtesting performance. This highlights the necessity of trading-aware evaluation, where predictive performance must be assessed together with execution frequency, risk exposure, and capital utilization. Without this holistic perspective, models may appear successful in isolation while offering little practical value in a trading context.
+
+<br>
 
 ### Future Work 
 
@@ -1253,6 +1282,16 @@ There are several clear directions for future improvement. It is advised that an
 
 
 Overall, while the platform already demonstrates the core functionality of an algorithmic trading system, there is significant potential for refinement. With improvements in model design, program structure, and risk management, the system could evolve into a more reliable and realistic trading environment capable of supporting more advanced strategies and tools in the future.
+
+<br>
+
+***
+
+## Conclusion
+
+In summary, the platform demonstrates that machine learning can complement traditional trading strategies by introducing adaptability and increased responsiveness to short-term market movements. At the same time, the results clearly show that model complexity alone does not guarantee superior or more stable performance. Rule-based strategies, particularly RSI, proved to be more consistent and interpretable across symbols, while machine learning models exhibited higher variability and sensitivity to data and execution constraints.
+
+More broadly, the project illustrates the challenges of applying predictive models to financial markets, where small statistical edges must overcome noise, transaction costs, and changing market regimes. The findings emphasize that robust data pipelines, careful validation procedures, and trading-aware evaluation metrics are essential prerequisites for reliable algorithmic trading systems. Rather than viewing machine learning as a replacement for traditional strategies, the results support a cautious and incremental approach in which ML models are treated as complementary signal generators within a broader risk-managed framework. This perspective aligns well with real-world quantitative trading practice, where simplicity, robustness, and disciplined evaluation often outperform excessive model complexity.
 
 <br>
 

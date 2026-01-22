@@ -4,6 +4,7 @@
 build/
 live_trader.egg-info/
 catboost_info/
+node_modules/
 
 # ─────────────────────────────────────────────
 # Python cache
@@ -53,3 +54,8 @@ test_*.py
 # Trained Models
 # ─────────────────────────────────────────────
 models/
+
+# ─────────────────────────────────────────────
+# json files
+# ─────────────────────────────────────────────
+package*.json
