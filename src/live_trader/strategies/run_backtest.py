@@ -1,3 +1,4 @@
+from typing import Callable
 from live_trader.strategies.backtest import run_multi_symbol_backtest
 from live_trader.config import load_watchlist
 
@@ -5,8 +6,7 @@ from live_trader.strategies.strategies import strategies as old_strategies
 
 import asyncio
 
-TEST_MODE = True  
-
+# Finding list of strategies
 all_strategies = dict(old_strategies)
 all_strategies.pop("rule_based_strategy", None)
 
@@ -21,22 +21,24 @@ ml_strategies = {
     if k in ml_strategies_list
 }
 
-symbols = load_watchlist()
+async def run_backtest(strategies: list[Callable], days: int = 30, initial_cash: int = 10000):
+    # !!! MOVE TO "Alpaca_Trader" CLASS IN FUTURE !!!
+    # in alpaca trader it will have three under methods, run_ml_backtest(self, days), run_fin_backtest(self, days)
+    #  and run_all_backtest(self, days)
 
-async def main(strategies, symbols):
+    symbols = load_watchlist()
+
     print("Starting Backtest")
     print("───────────────────────────────────────────────")
     print(f"Symbol: {symbols}")
     print(f"Strategies: {len(financial_strategies)}")
-    print(f"Mode: {'TEST' if TEST_MODE else 'LIVE'}\n")
     
     try:
         results = await run_multi_symbol_backtest(
             symbols = symbols,
-            strategies=strategies,
-            initial_cash=10000,
-            test_mode=TEST_MODE,
-            days = 60
+            strategies = strategies,
+            initial_cash = initial_cash,
+            days = days
         )
     except Exception as e:
         print(f"Error during backtest: {e}")
@@ -67,4 +69,4 @@ async def main(strategies, symbols):
         print("\n No results returned from compare_strategies()")
 
 if __name__ == "__main__":
-    asyncio.run(main(ml_strategies, symbols))
+    asyncio.run(run_backtest(ml_strategies, days = 365, initial_cash = 10000))

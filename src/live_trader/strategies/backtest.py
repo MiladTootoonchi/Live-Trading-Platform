@@ -41,7 +41,6 @@ class Backtester:
         symbol: ticker to backtest
         initial_cash: starting cash
         position_size_pct: fraction of available cash to use when buying
-        test_mode: currently unused, included for compatibility
     """
 
     def __init__(
@@ -49,12 +48,10 @@ class Backtester:
         symbol: str,
         initial_cash: float = 10000,
         position_size_pct: float = 0.95,
-        test_mode: bool = False,
     ):
         self.symbol = symbol
         self.initial_cash = initial_cash
         self.position_size_pct = position_size_pct
-        self.test_mode = test_mode
         self._strategy_state = {}
 
         self.df = fetch_data(symbol)
@@ -356,7 +353,6 @@ async def _compare_strategies(
     strategies: Dict[str, Callable],
     days: int = 80,
     initial_cash: float = 10000,
-    test_mode: bool = False
 ) -> pd.DataFrame:
     """
     Run multiple strategies against the same symbol and return a comparison DataFrame.
@@ -366,7 +362,6 @@ async def _compare_strategies(
         strategies: mapping of strategy name -> callable function
         days: approximate days to fetch (unused with current fetch_data signature)
         initial_cash: starting cash for each run
-        test_mode: placeholder for future options
 
     Returns:
         pandas.DataFrame with columns including strategy, symbol and performance metrics
@@ -384,7 +379,6 @@ async def _compare_strategies(
             backtester = Backtester(
                 symbol,
                 initial_cash=initial_cash,
-                test_mode=test_mode,
             )
 
             total_bars = len(backtester.bars)
@@ -432,7 +426,6 @@ async def run_multi_symbol_backtest(
     strategies: Dict[str, Callable],
     days: int = 30,
     initial_cash: float = 10000,
-    test_mode: bool = False
 ) -> pd.DataFrame:
     """
     Convenience wrapper to run compare_strategies across multiple symbols.
@@ -440,7 +433,7 @@ async def run_multi_symbol_backtest(
     all_results = []
     for s in symbols:
         try:
-            res = await _compare_strategies(s, strategies, initial_cash=initial_cash, test_mode=test_mode, days = days)
+            res = await _compare_strategies(s, strategies, initial_cash=initial_cash, days = days)
             all_results.append(res)
         except Exception as e:
             logger.exception(f"Failed backtest for {s}: {e}")
