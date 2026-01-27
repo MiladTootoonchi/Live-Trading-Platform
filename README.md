@@ -24,7 +24,7 @@ Makka Dulgaeva
    - [What Is Backtesting?](#what-is-backtesting)
 
 5. [System Design and Implementation](#backend-design)
-   - [System Architecture](#system-architecture)
+   - [Software Design](#software-design)
    - [Machine Learning Architectures](#machine-learning-architectures)
    - [Data and Data Collection](#data--data-collection)
 
@@ -317,7 +317,7 @@ tenacity = "^9.1.2"
 
 <br>
 
-### System Architecture 
+### Software Design 
 
 ![Directory Architecture](figures/directory_architecture.png) \
 Figure 5: The program architecture shows how the different packages communicate with each other. This figure is slightly outdated, however new features will still follow the same rules from the system architecture. The tree-based-models introduced in 0.2.2 will work in the same way as the neural-network-models.
@@ -453,31 +453,6 @@ Encoder (Dense → Latent Space)
 Latent Representation
    ├── Reconstruction Head
    └── Classification Head (sigmoid)
-```
-
-<br>
-
-**CNN-GRU**
-```
-Input (T × F)
-   ↓
-Conv1D (32 filters)
-   ↓
-Layer Normalization
-   ↓
-Dropout (0.3)
-   ↓
-Conv1D (16 filters)
-   ↓
-Layer Normalization
-   ↓
-GRU (32 units)
-   ↓
-Dense (16, ReLU)
-   ↓
-Dropout (0.3)
-   ↓
-Dense (1, sigmoid)
 ```
 
 <br>
@@ -697,7 +672,7 @@ These are the AI strategies (tree-based machine learning models) you can choose 
 
 <br>
 
-*Warning: the name of the strategy should be exactly similar to one of the strategy names bellow.*
+*Warning: the name of the strategy should be exactly similar to one of the strategy names above.*
 
 <br>
 
@@ -714,7 +689,7 @@ Important:
 
 <br>
 
-### **Usage Guide:**
+### **User Guide:**
 
 The steps below explain how to use its different command-line options.
 
@@ -760,7 +735,7 @@ The steps below explain how to use its different command-line options.
     ```
 
 * Run the Live Trading Loop
-    - This will run an update every 60 seconds on ALL positions.
+    - This will run an update every 60 seconds on ALL positions, in addition to the stocks in the watchlist.
     - *--live* or *-l*
     ```bash
     poetry run trade --live
