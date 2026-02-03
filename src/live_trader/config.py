@@ -5,178 +5,202 @@ import logging
 
 load_dotenv()
 
-def make_logger():
-    """
-    Creates and configures a logger that writes INFO-level messages to a file.
 
-    The logger writes to 'logfiles/live_trading.log', creating the directory if it 
-    doesn't exist. Log messages are formatted with a timestamp, log level, and message.
+class Config:
+
+    def __init__(self, config_file_path: str = "settings.toml"):
+        self._config_file = config_file_path
+        self._logger = self._make_logger()
+        self._alpaca_key, self._alpaca_secret = self._load_api_keys()
+
+        self.watchlist = self._load_watchlist()
+        self.strategy_name = self._load_strategy_name()
     
-    Returns:
-        logging.Logger: Configured logger instance ready for use.
-    """
+
+    # ----- logging -----
+
+    def log_info(self, info: str):
+        self._logger.info(info)
+
+    def log_error(self, error: str):
+        self._logger.error(error)
+
+    def log_warning(self, warning: str):
+        self._logger.warning(warning)
+
+    def log_critical(self, message: str):
+        self._logger.critical(message)
+
+    def _make_logger(self):
+        """
+        Creates and configures a logger that writes INFO-level messages to a file.
+
+        The logger writes to 'logfiles/live_trading.log', creating the directory if it 
+        doesn't exist. Log messages are formatted with a timestamp, log level, and message.
+        
+        Returns:
+            logging.Logger: Configured logger instance ready for use.
+        """
+        
+        log_dir = "logfiles"
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+
+        file_name = os.path.join(log_dir, "live_trading")
+
+        logger = logging.getLogger(file_name)
+
+        if not any(isinstance(h, logging.FileHandler) for h in logger.handlers):
+            handler = logging.FileHandler(f"{file_name}.log", mode = "a")
+            formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+            logger.setLevel(logging.INFO)
+        
+        return logger
+
+
+
+    def _load_strategy_name(self) -> str:
+        """
+        Load the name of the strategy the user want to use for the live trading.
+        If the strategy is not given, the program will ask for an input.
+
+        Returns:
+            str: The name of the strategy:
+        """
+
+        try:
+            with open(self._config_file, "r") as file:
+                conf = toml.load(file)
+                live = conf.get("live", {})
+                strategy = live.get("strategy")
+
+        except FileNotFoundError:
+            self.log_info(f"Config file not found: {self._config_file}, falling back to environment variables.")
+            strategy = None
+
+        except Exception:
+            self.log_info(f"Could not find strategy from {self._config_file}, falling back to environment variables.")
+            strategy = None
+
+        if not strategy:
+            strategy = os.getenv("strategy")
+
+        if not strategy:
+            self.log_critical("Strategy name missing from both config and environment variables.")
+            raise RuntimeError("Missing strategy name")
     
-    log_dir = "logfiles"
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-
-    file_name = os.path.join(log_dir, "live_trading")
-
-    logger = logging.getLogger(file_name)
-
-    if not any(isinstance(h, logging.FileHandler) for h in logger.handlers):
-        handler = logging.FileHandler(f"{file_name}.log", mode = "a")
-        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
-    
-    return logger
-
-logger = make_logger()
+        return strategy
 
 
 
-def load_strategy_name(config_file: str = "settings.toml") -> str:
-    """
-    Load the name of the strategy the user want to use for the live trading.
-    If the strategy is not given, the program will ask for an input.
+    # ----- watchlist -----
+    @staticmethod
+    def _normalize_watchlist(value) -> list[str]:
+        if not value:
+            return []
 
-    Args:
-        config_file (str): Path to the TOML config file.
+        # Already a list (correct TOML)
+        if isinstance(value, list):
+            return [
+                str(symbol).strip().upper()
+                for symbol in value
+                if str(symbol).strip()
+            ]
 
-    Returns:
-        str: The name of the strategy:
-    """
+        # Env var or misconfigured TOML → comma-separated string
+        if isinstance(value, str):
+            return [
+                symbol.strip().upper()
+                for symbol in value.split(",")
+                if symbol.strip()
+            ]
 
-    try:
-        with open(config_file, "r") as file:
-            conf = toml.load(file)
-            live = conf.get("live", {})
-            strategy = live.get("strategy")
+        raise TypeError("Watchlist must be a list or a comma-separated string")
 
-    except FileNotFoundError:
-        logger.info(f"Config file not found: {config_file}, falling back to environment variables.")
-        strategy = None
+    def _load_watchlist(self):
+        """
+        Load the list of stocks the program is going to watch over whenever it updates posistions.
+        """
 
-    except Exception:
-        logger.info(f"Could not find strategy from {config_file}, falling back to environment variables.")
-        strategy = None
+        try:
+            with open(self._config_file, "r") as file:
+                conf = toml.load(file)
+                live = conf.get("live", {})
+                watchlist = live.get("watchlist")
 
-    if not strategy:
-        strategy = os.getenv("strategy")
+                normalized = self._normalize_watchlist(watchlist)
+                if normalized:
+                    return normalized
 
-    if not strategy:
-        logger.critical("Strategy name missing from both config and environment variables.")
-        raise RuntimeError("Missing strategy name")
- 
-    return strategy
+        except Exception:
+            self.log_info(
+                f"Could not find watchlist in {self._config_file}, falling back to environment variables.\n"
+            )
 
+        # Fallback to env var
+        env_watchlist = os.getenv("watchlist")
+        normalized = self._normalize_watchlist(env_watchlist)
+        if normalized:
+            return normalized
 
-def _normalize_watchlist(value) -> list[str]:
-    if not value:
+        self.log_warning("Watchlist not found; defaulting to empty list.\n")
         return []
 
-    # Already a list (correct TOML)
-    if isinstance(value, list):
-        return [
-            str(symbol).strip().upper()
-            for symbol in value
-            if str(symbol).strip()
-        ]
-
-    # Env var or misconfigured TOML → comma-separated string
-    if isinstance(value, str):
-        return [
-            symbol.strip().upper()
-            for symbol in value.split(",")
-            if symbol.strip()
-        ]
-
-    raise TypeError("Watchlist must be a list or a comma-separated string")
-
-def load_watchlist(config_file: str = "settings.toml") -> list[str]:
-    """
-    Load the list of stocks the program is going to watch over whenever it updates posistions.
-
-    Args:
-        config_file (str): Path to the TOML config file.
-
-    Returns:
-        list[str]: The watchlist with the symbols of the stocks as strings:
-    """
-
-    try:
-        with open(config_file, "r") as file:
-            conf = toml.load(file)
-            live = conf.get("live", {})
-            watchlist = live.get("watchlist")
-
-            normalized = _normalize_watchlist(watchlist)
-            if normalized:
-                return normalized
-
-    except Exception:
-        logger.info(
-            f"Could not find watchlist in {config_file}, falling back to environment variables.\n"
-        )
-
-    # Fallback to env var
-    env_watchlist = os.getenv("watchlist")
-    normalized = _normalize_watchlist(env_watchlist)
-    if normalized:
-        return normalized
-
-    logger.warning("Watchlist not found; defaulting to empty list.\n")
-    return []
 
 
-def load_api_keys(config_file: str = "settings.toml") -> tuple:
-    """
-    Load API keys from a TOML config file, with fallback to environment variables.
+    # ----- api_keys -----
 
-    Args:
-        config_file (str): Path to the TOML config file.
+    def _load_api_keys(self) -> tuple:
+        """
+        Load API keys from a TOML config file, with fallback to environment variables.
 
-    Returns:
-        tuple: (ALPACA_KEY, ALPACA_SECRET_KEY)
-    """
+        Returns:
+            tuple: (ALPACA_KEY, ALPACA_SECRET_KEY)
+        """
 
-    alpaca_key = None
-    alpaca_secret = None
+        alpaca_key = None
+        alpaca_secret = None
 
-    try:
-        with open(config_file, "r") as file:
-            conf = toml.load(file)
-            keys = conf.get("keys", {})
-            alpaca_key = keys.get("alpaca_key", alpaca_key)
-            alpaca_secret = keys.get("alpaca_secret_key", alpaca_secret)
+        try:
+            with open(self._config_file, "r") as file:
+                conf = toml.load(file)
+                keys = conf.get("keys", {})
+                alpaca_key = keys.get("alpaca_key", alpaca_key)
+                alpaca_secret = keys.get("alpaca_secret_key", alpaca_secret)
 
-    except FileNotFoundError:
-        logger.info(f"Config file not found: {config_file}, falling back to environment variables.")
+        except FileNotFoundError:
+            self.log_info(f"Config file not found: {self._config_file}, falling back to environment variables.")
 
-    except Exception:
-        logger.info(f"Could not find Alpaca API credentials in {config_file}, falling back to environment variables.")
+        except Exception:
+            self.log_info(f"Could not find Alpaca API credentials in {self._config_file}, falling back to environment variables.")
 
-    if not alpaca_key:
-        alpaca_key = os.getenv("alpaca_key")
+        if not alpaca_key:
+            alpaca_key = os.getenv("alpaca_key")
 
-    if not alpaca_secret:
-        alpaca_secret = os.getenv("alpaca_secret_key")
+        if not alpaca_secret:
+            alpaca_secret = os.getenv("alpaca_secret_key")
 
-    if not alpaca_key or not alpaca_secret:
-        logger.critical("Missing Alpaca API credentials. Provide them in the config file or as environment variables.")
-        raise RuntimeError("Missing Alpaca API credentials")
-        
-    return alpaca_key, alpaca_secret
+        if not alpaca_key or not alpaca_secret:
+            self.log_critical("Missing Alpaca API credentials. Provide them in the config file or as environment variables.")
+            raise RuntimeError("Missing Alpaca API credentials")
+            
+        return alpaca_key, alpaca_secret
+    
+    def load_keys(self):
+        return (self._alpaca_key, self._alpaca_secret)
 
-        
+
+
 if __name__ == "__main__":
+    conf = Config()
+
     info = f"""
 ---INFO---
-keys:        {load_api_keys()}, 
-strategy:    {load_strategy_name()}, 
-watchlist:   {load_watchlist()}
+keys:        {conf.load_keys()}, 
+strategy:    {conf.strategy_name}, 
+watchlist:   {conf.watchlist}
 ----------
 """
     
