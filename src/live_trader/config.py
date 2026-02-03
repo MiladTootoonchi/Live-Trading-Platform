@@ -15,7 +15,7 @@ class Config:
 
         self.watchlist = self._load_watchlist()
         self.strategy_name = self._load_strategy_name()
-    
+        self.apca_url = "https://paper-api.alpaca.markets"
 
     # ----- logging -----
 
@@ -30,6 +30,12 @@ class Config:
 
     def log_critical(self, message: str):
         self._logger.critical(message)
+
+    def log_debug(self, message: str):
+        self._logger.debug(message)
+
+    def log_expectation(self, message: str):
+        self._logger.exception(message)
 
     def _make_logger(self):
         """

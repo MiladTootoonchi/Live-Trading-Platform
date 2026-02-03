@@ -1,7 +1,7 @@
 from .strategies import find_strategy, strategies
-from .utils import fetch_data
+from .data import MarketDataPipeline
 
-__all__ = ["find_strategy", "fetch_data", "strategies"]
+__all__ = ["find_strategy", "MarketDataPipeline", "strategies"]
 __author__ = [
     "Makke Dulgaeva",
     "Milad Tootoonchi"

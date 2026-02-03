@@ -1,13 +1,12 @@
 import numpy as np
 from typing import Callable, Optional, Any
 import pandas as pd
-import datetime as dt
 from pathlib import Path
 import joblib
+from alpaca.trading.client import TradingClient
 
 from live_trader.alpaca_trader.order import SideSignal
-from live_trader.strategies.utils import fetch_data
-from live_trader.config import make_logger
+from live_trader.config import Config
 from live_trader.ml_model.utils import (
     ProbabilisticClassifier, ModelArtifact, extract_positive_class_probability,
     is_sequence_model, get_expected_feature_dim
@@ -15,9 +14,7 @@ from live_trader.ml_model.utils import (
 
 from live_trader.ml_model.layers import (Patchify, GraphMessagePassing, ExpandDims, AutoencoderClassifierLite)
 from live_trader.ml_model.evaluations import evaluate_model
-from live_trader.ml_model.data import (prepare_training_data, prepare_prediction_data, ensure_clean_timestamp,
-                                       get_one_realtime_bar, compute_trade_qty, create_sequences, 
-                                       MIN_LOOKBACK, TIME_STEPS, SAFETY_MARGIN)
+from live_trader.ml_model.data import MLDataPipeline
 
 
 import warnings
@@ -38,46 +35,6 @@ import tensorflow as tf
 tf.get_logger().setLevel("ERROR")
 
 # ------------------------------------------------------------------------
-
-def sequence_split(
-    X: np.ndarray,
-    y: np.ndarray,
-    time_steps: int = 50,
-    train_ratio: float = 0.7,
-    val_ratio: float = 0.15,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Convert features into time sequences and split chronologically.
-
-    Args:
-        X (np.ndarray): Feature matrix.
-        y (np.ndarray): Target vector.
-        time_steps (int): Sequence length.
-        train_ratio (float): Fraction used for training.
-        val_ratio (float): Fraction used for validation.
-
-    Returns:
-        tuple: X_train, X_val, X_test, y_train, y_val, y_test
-    """
-
-    X_seq, y_seq = create_sequences(X, y, time_steps)
-
-    n = len(X_seq)
-    train_end = int(train_ratio * n)
-    val_end = int((train_ratio + val_ratio) * n)
-
-    X_train = X_seq[:train_end]
-    y_train = y_seq[:train_end]
-
-    X_val = X_seq[train_end:val_end]
-    y_val = y_seq[train_end:val_end]
-
-    X_test = X_seq[val_end:]
-    y_test = y_seq[val_end:]
-
-    return X_train, X_val, X_test, y_train, y_val, y_test
-
-
 
 def _calibrate_probabilities(
     model: ProbabilisticClassifier,
@@ -206,54 +163,72 @@ logger = make_logger()
 
 # -----------------------------------------------------------------------------------------------------
 
-def _sanitize_time_index(df: pd.DataFrame, context: str) -> pd.DataFrame:
+
+def _compute_trade_qty(self, position_data: dict, prob: float) -> int:
     """
-    Validates and normalizes a DataFrame's DatetimeIndex.
+    Calculates an intelligent stock quantity to trade based on model confidence and risk management.
 
-    This function ensures that the DataFrame index is a valid
-    'pandas.DatetimeIndex', localizes naive timestamps to UTC,
-    removes rows with invalid (NaT) timestamps, and sorts the
-    DataFrame by time.
-
-    If the index is not a DatetimeIndex or if the DataFrame becomes
-    empty after cleanup, a RuntimeError is raised. Any dropped
-    timestamps are logged with contextual information to aid debugging.
+    The function automatically retrieves your Alpaca account equity, then uses a hybrid 
+    risk model that combines confidence scaling and fixed risk-per-trade rules. This ensures 
+    trades are dynamically sized while respecting account-level risk limits.
 
     Args:
-        df (pd.DataFrame):
-            The input DataFrame whose index is expected to represent time.
-        context (str):
-            A descriptive label used in log messages and exception text
-            to identify the caller or data source.
+        position_data (dict): Alpaca position data containing 'symbol' and price info.
+        prob (float): Model probability (0.0 - 1.0) that the trade prediction is correct.
 
     Returns:
-        pd.DataFrame:
-            A cleaned DataFrame with a timezone-aware UTC DatetimeIndex
-            and sorted in ascending time order.
+        int: Recommended quantity of shares to buy or sell.
     """
 
-    if not isinstance(df.index, pd.DatetimeIndex):
-        raise RuntimeError(f"{context}: index is not DatetimeIndex")
+    try:
+        client = TradingClient(self._key, self._secret, paper=True)
+        account = client.get_account()
+        equity = float(account.equity)
+    except Exception as e:
+        self._config.log_info(f"Failed to fetch account equity: {e}")
+        equity = 10000.0  # fallback default for safety
 
-    if df.index.tz is None:
-        df.index = df.index.tz_localize("UTC")
+    # Risk parameters
+    confidence_threshold = 0.55
+    max_position_frac = 0.10        # Max 10% of total equity
+    risk_per_trade = 0.01           # Risk 1% of equity per trade
+    stop_pct = 0.02                 # 2% stop loss assumption
 
-    bad = df.index.isna()
-    if bad.any():
-        logger.error(f"{context}: dropping {bad.sum()} invalid timestamps")
-        df = df.loc[~bad]
+    try:
+        price = float(position_data.get("avg_entry_price") or position_data.get("market_price"))
+    except Exception:
+        self._config.log_info("Invalid price data in position_data.")
+        return 0
 
-    if df.empty:
-        raise RuntimeError(f"{context}: dataframe empty after timestamp cleanup")
+    # Confidence-based scaling
+    confidence_scale = max(0.0, (prob - confidence_threshold) / (1 - confidence_threshold))
 
-    return df.sort_index()
+    # Hybrid risk model
+    max_position_value = equity * max_position_frac
+    risk_dollars = equity * risk_per_trade
 
+    hybrid_qty = (max_position_value * confidence_scale) / price
+    risk_qty = risk_dollars / (price * stop_pct)
+
+    qty = int(min(hybrid_qty, risk_qty))
+
+    # If model wants to SELL (negative qty), cap by position size
+    try:
+        position_qty = int(float(position_data.get("qty", 0)))
+
+        if qty < 0:
+            qty = max(qty, -position_qty)
+    except Exception:
+        self._config.log_info("Invalid position quantity data.\n")
+        return 0
+
+    return qty
 
 
 def _check_model_existence(
     model_builder: Callable[[np.ndarray], ProbabilisticClassifier],
     symbol: str,
-    df: pd.DataFrame,
+    data_pipeline: MLDataPipeline,
 ) -> ModelArtifact:
     """
     Loads a persisted model artifact or trains and saves a new one.
@@ -283,15 +258,12 @@ def _check_model_existence(
 
     if model_path.exists():
         artifact = joblib.load(model_path)
-        model = artifact.model
-        scaler = artifact.scaler
-        calibrator = artifact.calibrator
 
     else:
         logger.info(f"No existing model found for {symbol}, training...")
 
-        X, y, scaler = prepare_training_data(df)
-        X_train, X_val, X_test, y_train, y_val, y_test = sequence_split(X, y, TIME_STEPS)
+        X, y, scaler = data_pipeline.prepare_training_data(data_pipeline.df)
+        X_train, X_val, X_test, y_train, y_val, y_test = data_pipeline.sequence_split(X, y, data_pipeline.time_steps)
 
         # Build (architecture only)
         model = model_builder(X_train)
@@ -326,71 +298,10 @@ def _check_model_existence(
 
 
 
-async def _build_prediction_dataframe(
-    symbol: str,
-    hist_df: pd.DataFrame,
-) -> pd.DataFrame:
-    """
-    Fetches and prepares historical and realtime market data for prediction.
-
-    Combines historical bars from `pred_start_date` to now with the latest
-    realtime bar, normalizes timestamps, and ensures required raw columns exist.
-
-    Args:
-        symbol (str):
-            Trading symbol (e.g. "AAPL").
-        hist_df (pd.DataFrame):
-            The data you want to change to a prediction dataframe
-
-    Returns:
-        pd.DataFrame:
-            Cleaned, time-ordered DataFrame ready for feature preprocessing.
-
-    Raises:
-        RuntimeError:
-            If no valid historical data is available after cleanup.
-    """
-
-    hist_df = _sanitize_time_index(hist_df, "PREDICTION DATA")
-    hist_df = hist_df.reset_index()     # ensure no double index
-
-    if hist_df.empty:
-        raise RuntimeError("Prediction history empty after timestamp normalization")
-
-    last_close = hist_df.iloc[-1]["close"]
-    realtime_bar = await get_one_realtime_bar(
-        symbol=symbol,
-        last_close=last_close,
-    )
-
-    # Drop fully-NA rows/columns
-    realtime_bar = realtime_bar.dropna(how="all")
-    realtime_bar = realtime_bar.dropna(axis=1, how="all")
-
-    INDICATOR_WARMUP = MIN_LOOKBACK
-
-    PRED_HISTORY = TIME_STEPS + INDICATOR_WARMUP
-
-    pred_df = pd.concat(
-        [hist_df.tail(PRED_HISTORY + 1), realtime_bar],
-        ignore_index=True,
-    ).copy()
-
-    pred_df = ensure_clean_timestamp(pred_df)
-
-    for col in ["vwap", "trade_count"]:
-        if col not in pred_df.columns:
-            pred_df.loc[:, col] = 0.0
-
-    return pred_df
-
-
-
 def _prepare_model_input(
-    pred_df: pd.DataFrame,
+    data_pipeline,
     scaler: Any,
     model: ProbabilisticClassifier,
-    time_steps: int = 50,
 ) -> np.ndarray:
     """
     Converts prediction data into a model-ready input tensor.
@@ -399,8 +310,6 @@ def _prepare_model_input(
     dimensions, and adapts the shape for sequence or non-sequence models.
 
     Args:
-        pred_df (pd.DataFrame):
-            Cleaned prediction DataFrame containing raw features.
         scaler (Any):
             Fitted feature scaler used during training.
         model (ProbabilisticClassifier):
@@ -421,11 +330,11 @@ def _prepare_model_input(
     "volume", "trade_count", "vwap",
     ]
 
-    missing = [c for c in EXPECTED_COLS if c not in pred_df.columns]
+    missing = [c for c in EXPECTED_COLS if c not in data_pipeline.pred_df.columns]
     if missing:
         raise RuntimeError(f"Missing prediction features: {missing}")
 
-    X_flat = prepare_prediction_data(pred_df, scaler)
+    X_flat = data_pipeline.prepare_prediction_data(data_pipeline.pred_df, scaler)
 
     if X_flat.shape[0] == 0:
         raise RuntimeError(
@@ -440,22 +349,22 @@ def _prepare_model_input(
         )
 
     if is_sequence_model(model):
-        if len(X_flat) < time_steps:
+        if len(X_flat) < data_pipeline.time_steps:
             raise RuntimeError(
                 f"Not enough data for sequence prediction: "
-                f"need {time_steps}, got {len(X_flat)}"
+                f"need {data_pipeline.time_steps}, got {len(X_flat)}"
             )
 
-        X_seq, _ = create_sequences(
+        X_seq, _ = data_pipeline.create_sequences(
             X_flat,
             np.zeros(len(X_flat)),
-            time_steps,
+            data_pipeline.time_steps,
         )
 
         if len(X_seq) == 0:
             raise RuntimeError(
                 f"create_sequences returned empty array "
-                f"(X_flat = {X_flat.shape}, time_steps = {time_steps})"
+                f"(X_flat = {X_flat.shape}, time_steps = {data_pipeline.time_steps})"
             )
 
 
@@ -490,71 +399,19 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassif
             (SideSignal.BUY or SideSignal.SELL, qty: int)
     """
 
-    is_backtest = position_data.get("backtest", False)
-    if is_backtest:
-        # last available bar timestamp
-        current_ts = pd.to_datetime(position_data["history"][-1]["t"], utc=True)
-    else:
-        current_ts = dt.datetime.now(dt.UTC)
-
-
-    # ml_training_lookback >= PRED_HISTORY
-    ml_training_lookback = 750
-
-    INDICATOR_WARMUP = MIN_LOOKBACK
-    PRED_HISTORY = TIME_STEPS + INDICATOR_WARMUP + SAFETY_MARGIN
-
-    # pred_start_date must be more than 50 days in the past
-    pred_start_date = current_ts - dt.timedelta(days = PRED_HISTORY)
-
-    start_dt = pred_start_date - dt.timedelta(days = ml_training_lookback)
-    start_date = (start_dt.year, start_dt.month, start_dt.day)
-
-    end_dt = pred_start_date - dt.timedelta(days = 1)
-    end_date = (end_dt.year, end_dt.month, end_dt.day)
-
-    # fetching data from as early as possible till pred_start_date (pred_start_date till today will be used for prediction)
-    df = fetch_data(symbol = symbol, 
-                    start_date = start_date, 
-                    end_date = end_date)
-    df = ensure_clean_timestamp(df)
+    conf = Config()
+    data_pipeline = MLDataPipeline(conf, position_data)
+    data_pipeline.run()
     
-    df = _sanitize_time_index(df, "TRAINING DATA")
-    
-    artifact = _check_model_existence(model_builder, symbol, df)
+    artifact = _check_model_existence(model_builder, symbol, data_pipeline)
     scaler = artifact.scaler
     model = artifact.model
     calibrator = artifact.calibrator
 
-    if is_backtest:
-        hist = pd.DataFrame(position_data["history"])
-        hist["timestamp"] = pd.to_datetime(hist["t"], utc=True)
-        hist = hist.rename(columns={
-            "o": "open",
-            "h": "high",
-            "l": "low",
-            "c": "close",
-            "v": "volume",
-        }).set_index("timestamp")
-
-        pred_df = hist.tail(PRED_HISTORY).copy()
-
-        for col in ["vwap", "trade_count"]:
-            if col not in pred_df.columns:
-                pred_df[col] = 0.0
-
-
-    else:
-        pred_df = await _build_prediction_dataframe(
-            symbol=symbol,
-            hist_df = df,
-        )
-
     X_last = _prepare_model_input(
-        pred_df=pred_df,
+        data_pipeline=data_pipeline,
         scaler=scaler,
         model=model,
-        time_steps=TIME_STEPS,
     )
 
 
@@ -586,7 +443,7 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassif
     )
 
     if has_position:
-        qty = compute_trade_qty(position_data, float(prob))
+        qty = _compute_trade_qty(position_data, float(prob))
 
     elif signal == 1 and prob > 0.5:
         qty = 1
