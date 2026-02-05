@@ -32,8 +32,12 @@ class MarketDataPipeline():
     @property
     def df(self):
         return self._df
+    
+    @property
+    def position_data(self):
+        return self._position_data
 
-    @final
+
     @retry(
         wait=wait_exponential(multiplier=1, min=2, max=30),
         stop=stop_after_attempt(5),
