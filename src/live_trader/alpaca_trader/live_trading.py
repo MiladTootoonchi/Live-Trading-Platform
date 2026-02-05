@@ -15,11 +15,9 @@ from live_trader.strategies.momentum import MomentumStrategy
 from live_trader.strategies.moving_average_strategy import MovingAverageStrategy
 from live_trader.strategies.rsi import RSIStrategy
 
-from live_trader.ml_model.ml_strategies import (basic_lstm, attention_bilstm, 
-                                                tcn_lite, patchtst_lite, gnn_lite,
-                                                nad_lite, cnn_gru_lite)
+from live_trader.ml_model.ml_strategies import (LSTM, BiLSTM, TCN, PatchTST, GNN, NAD, CNNGRU)
 
-from live_trader.tree_based_models.tree_based_strategies import (xgboost, catboost, random_forest, lightgbm)
+from live_trader.tree_based_models.tree_strategies import (XGB, CatBoost, RandomForest, LGBM)
 
 STRATEGIES = {
         "rule_based_strategy": RuleBasedStrategy,
@@ -29,17 +27,17 @@ STRATEGIES = {
         "momentum_strategy": MomentumStrategy,
         "moving_average_strategy": MovingAverageStrategy,
         "rsi_strategy": RSIStrategy,
-        "lstm": basic_lstm,
-        "bilstm": attention_bilstm,
-        "tcn": tcn_lite,
-        "patchtst": patchtst_lite,
-        "gnn": gnn_lite,
-        "nad": nad_lite,
-        "cnn_gru": cnn_gru_lite,
-        "random_forest": random_forest,
-        "lightgbm": lightgbm,
-        "xgboost": xgboost,
-        "catboost": catboost,
+        "lstm": LSTM,
+        "bilstm": BiLSTM,
+        "tcn": TCN,
+        "patchtst": PatchTST,
+        "gnn": GNN,
+        "nad": NAD,
+        "cnn_gru": CNNGRU,
+        "random_forest": RandomForest,
+        "lightgbm": LGBM,
+        "xgboost": XGB,
+        "catboost": CatBoost,
     }
 
 class AlpacaTrader:
@@ -71,6 +69,8 @@ class AlpacaTrader:
         }
 
         self._APCA_API_BASE_URL =  config.apca_url
+
+        self._strategy = self._find_strategy()
 
 
 
@@ -416,7 +416,7 @@ class AlpacaTrader:
 
 
 
-    async def update(self, strategy: Callable, analyzer_strategy: Callable, symbol: str) -> None:
+    async def update(self, symbol: str) -> None:
         """
         Updates one or all positions based on the provided trading strategy.
 
@@ -424,10 +424,6 @@ class AlpacaTrader:
         return (signal, quantity). The function may be sync or async.
 
         Args:
-            strategy (Callable): 
-                A function that takes the position dict and returns a (signal, quantity) tuple.
-            analyzer_strategy(Callable):
-                Same as strategy, however used for watchlist analyzer.
             symbol (str): 
                 The stock symbol to update. Use "ALL" to update all positions.
 
@@ -455,7 +451,8 @@ class AlpacaTrader:
             for position in positions_to_update:
                 symbol_i = position.get("symbol")
 
-                result = strategy(symbol_i, position)
+                self._strategy.prepare_data(symbol_i, position)
+                result = self._strategy.run()
                 if inspect.isawaitable(result):
                     signal, qty = await result
                 else:
@@ -472,14 +469,14 @@ class AlpacaTrader:
                     )
                     tasks.append(self.place_order(order))
 
-            watchlist_tasks = await self._analyze_watchlist(analyzer_strategy)
+            watchlist_tasks = await self._analyze_watchlist()
             tasks.extend(watchlist_tasks)
             await asyncio.gather(*tasks)
 
         except Exception:
             self._config.log_expectation(f"Failed to update position(s) for {symbol}")
 
-    async def _analyze_watchlist(self, analyzer_strategy: Callable) -> list:
+    async def _analyze_watchlist(self) -> list:
         """
         Analyzes symbols in the watchlist and prepares order placement tasks.
 
@@ -490,10 +487,6 @@ class AlpacaTrader:
 
         Any exceptions raised while analyzing individual symbols are caught and
         logged, allowing analysis of remaining symbols to continue.
-
-        analyzer_strategy(Callable):
-                A function that takes the position dict and returns a (signal, quantity) tuple.
-                however used for analyzing watchlist.
 
         Returns:
             list:
@@ -521,7 +514,8 @@ class AlpacaTrader:
                 continue
 
             try:
-                signal, qty = await analyzer_strategy(symbol)    # The ML strategy need awaiting
+                self._strategy.prepare_data(symbol, {})
+                signal, qty = await self._strategy.run()    # The ML strategy need awaiting
 
                 self._config.log_info(f"{symbol}: {signal.value}")
 
@@ -541,7 +535,7 @@ class AlpacaTrader:
 
 
 
-    async def live(self, strategy: Callable) -> None:
+    async def live(self) -> None:
         """
         Runs the trader in continuous live-trading mode using a given strategy.
 
@@ -556,13 +550,6 @@ class AlpacaTrader:
         (asyncio.CancelledError), at which point the trader shuts down
         gracefully.
 
-        Args:
-            strategy (Callable):
-                A trading strategy function used for both position updates
-                and watchlist analysis. The function may be synchronous or
-                asynchronous and must return a tuple of
-                (SideSignal, quantity).
-
         Raises:
             KeyboardInterrupt:
                 Raised when the user manually stops the live trading loop.
@@ -571,7 +558,7 @@ class AlpacaTrader:
         """
         try:
             while True:
-                await self.update(strategy, strategy, "ALL")
+                await self.update("ALL")
                 await asyncio.sleep(60) # sleep for a minute
 
         except (KeyboardInterrupt, asyncio.CancelledError):
@@ -581,19 +568,13 @@ class AlpacaTrader:
             pass
 
 
-    def find_strategy(self, name: str | None = None) -> Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
+    def _find_strategy(self) -> Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
         """
         Resolve and return a trading strategy function by name.
 
         If no strategy name is provided, the user is prompted to select one.
         The function repeatedly asks for input until a valid strategy name
         matching a key in the internal ``strategies`` dictionary is supplied.
-
-        Args:
-            name (str | None):
-                The name of the strategy to use. If ``None``, the strategy name
-                is loaded from configuration or requested interactively from
-                the user.
 
         Returns:
             Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
