@@ -401,7 +401,6 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassif
 
     conf = Config()
     data_pipeline = MLDataPipeline(conf, position_data)
-    data_pipeline.run()
     
     artifact = _check_model_existence(model_builder, symbol, data_pipeline)
     scaler = artifact.scaler
@@ -414,8 +413,8 @@ async def ML_Pipeline(model_builder: Callable[[np.ndarray], ProbabilisticClassif
         model=model,
     )
 
-
     raw_prob = extract_positive_class_probability(model, X_last)[0]
+
 
     if calibrator is not None:
         prob = calibrator.predict([raw_prob])[0]

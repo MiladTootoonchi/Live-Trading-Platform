@@ -4,10 +4,7 @@ from typing import Callable, List, Dict
 import inspect
 
 from live_trader.alpaca_trader.order import OrderData, SideSignal
-from live_trader.config import make_logger, load_watchlist
-
-
-logger = make_logger()
+from live_trader.config import Config
 
 class AlpacaTrader:
     """
@@ -19,7 +16,7 @@ class AlpacaTrader:
     Get orders from a strategy and send it.
     """
 
-    def __init__(self, key: str, secret_key: str) -> None:
+    def __init__(self, config: Config) -> None:
         """
         Initialize the trader.
         
@@ -28,12 +25,16 @@ class AlpacaTrader:
             secret_key: The secret key alpaca key
         """
 
+        self._config = config
+
+        key, secret = config.load_keys()
+
         self._HEADERS = {
             "APCA-API-KEY-ID" : key,
-            "APCA-API-SECRET-KEY": secret_key,
+            "APCA-API-SECRET-KEY": secret,
         }
 
-        self._APCA_API_BASE_URL =  "https://paper-api.alpaca.markets"
+        self._APCA_API_BASE_URL =  config.apca_url
 
 
 
@@ -95,7 +96,7 @@ class AlpacaTrader:
             )
 
             if response.status_code != 200:
-                logger.error(
+                self._config.log_error(
                     f"Failed to fetch market clock: {response.status_code} - {response.text}"
                 )
                 return False
@@ -103,11 +104,11 @@ class AlpacaTrader:
             data: Dict[str, bool] = response.json()
             is_open: bool = bool(data.get("is_open", False))
 
-            logger.debug(f"Market open status: {is_open}")
+            self._config.log_debug(f"Market open status: {is_open}")
             return is_open
 
         except Exception:
-            logger.exception("Error while checking market open status")
+            self._config.log_expectation("Error while checking market open status")
             return False
 
 
@@ -130,12 +131,12 @@ class AlpacaTrader:
         ORDERS_URL = f"{self._APCA_API_BASE_URL}/v2/orders"
         response = await asyncio.to_thread(requests.post, ORDERS_URL, json = data, headers = self._HEADERS)
 
-        logger.info(f"Sending Order Data:\n {data} \n Headers: {self._HEADERS}\n")
+        self._config.log_info(f"Sending Order Data:\n {data} \n Headers: {self._HEADERS}\n")
 
         response_json = response.json()
 
         if "id" not in response_json:
-            logger.error(f"Order rejected: {response_json} \n")
+            self._config.log_error(f"Order rejected: {response_json} \n")
             return
 
         order_id = response_json["id"]
@@ -165,9 +166,9 @@ class AlpacaTrader:
         )
 
         if response.status_code == 200:
-            logger.info(f"Successfully closed entire position for {symbol}.")
+            self._config.log_info(f"Successfully closed entire position for {symbol}.")
         else:
-            logger.error(f"Failed to close position for {symbol}: {response.text}")
+            self._config.log_error(f"Failed to close position for {symbol}: {response.text}")
     
     async def cancel_all_orders(self) -> None:
         """
@@ -179,7 +180,7 @@ class AlpacaTrader:
 
         url = f"{self._APCA_API_BASE_URL}/v2/orders"
         response = await asyncio.to_thread(requests.delete, url, headers = self._HEADERS)
-        logger.info(f"Cancel response: {response.content}\n")
+        self._config.log_info(f"Cancel response: {response.content}\n")
 
     async def cancel_last_order(self) -> None:
         """
@@ -196,7 +197,7 @@ class AlpacaTrader:
         response = await asyncio.to_thread(requests.get, url, headers=self._HEADERS)
 
         if response.status_code != 200:
-            logger.error(f"Failed to fetch orders: {response.text}\n")
+            self._config.log_error(f"Failed to fetch orders: {response.text}\n")
             return
 
         orders = response.json()
@@ -214,16 +215,16 @@ class AlpacaTrader:
                 )
 
                 if cancel_response.status_code in (200, 204):
-                    logger.info(
+                    self._config.log_info(
                         f"Canceled last open order {order_id} for {symbol}.\n"
                     )
                 else:
-                    logger.error(
+                    self._config.log_error(
                         f"Failed to cancel order {order_id}: {cancel_response.text}\n"
                     )
                 return
 
-        logger.info("No open orders found to cancel.\n")
+        self._config.log_info("No open orders found to cancel.\n")
     
 
 
@@ -372,7 +373,7 @@ class AlpacaTrader:
             order = response.json()
 
             if order.get("status") == "filled":
-                logger.info(f"Order {order_id} filled for {order['symbol']}. \n")
+                self._config.log_info(f"Order {order_id} filled for {order['symbol']}. \n")
                 return
             print(f"Waiting for order {order_id} to fill...")   # this is just temporary info, does not need to log this
             await asyncio.sleep(60) # Sleep for a minute
@@ -399,7 +400,7 @@ class AlpacaTrader:
         """
 
         if not await self.is_market_open():
-            logger.info("Market is closed — skipping trading cycle")
+            self._config.log_info("Market is closed — skipping trading cycle")
             return
 
         try:
@@ -411,8 +412,8 @@ class AlpacaTrader:
             if len(positions_to_update) == 0:
                 print("Did not find any positions, try --order or -o to place an order... ")
 
-            if symbol == "ALL": logger.info("Updating all positions")
-            else: logger.info(f"Updating: {symbol}")
+            if symbol == "ALL": self._config.log_info("Updating all positions")
+            else: self._config.log_info(f"Updating: {symbol}")
 
             tasks = []
             for position in positions_to_update:
@@ -424,7 +425,7 @@ class AlpacaTrader:
                 else:
                     signal, qty = result
 
-                logger.info(f"{symbol_i}: {signal.value}")
+                self._config.log_info(f"{symbol_i}: {signal.value}")
 
                 if signal != SideSignal.HOLD:
                     order = OrderData(
@@ -440,7 +441,7 @@ class AlpacaTrader:
             await asyncio.gather(*tasks)
 
         except Exception:
-            logger.exception(f"Failed to update position(s) for {symbol}")
+            self._config.log_expectation(f"Failed to update position(s) for {symbol}")
 
     async def _analyze_watchlist(self, analyzer_strategy: Callable) -> list:
         """
@@ -474,7 +475,7 @@ class AlpacaTrader:
                 'Example: ["AAPL", "GOOG", "SPY"]'
             )
 
-        logger.info(f"Checking watchlist: {watchlist}")
+        self._config.log_info(f"Checking watchlist: {watchlist}")
 
         tasks = []
         for symbol in watchlist:
@@ -486,7 +487,7 @@ class AlpacaTrader:
             try:
                 signal, qty = await analyzer_strategy(symbol)    # The ML strategy need awaiting
 
-                logger.info(f"{symbol}: {signal.value}")
+                self._config.log_info(f"{symbol}: {signal.value}")
 
                 if signal != SideSignal.HOLD:
                     order = OrderData(
@@ -498,7 +499,7 @@ class AlpacaTrader:
                     tasks.append(self.place_order(order))
                     
             except Exception:
-                logger.exception(f"Failed to analyze {symbol} from watchlist")
+                self._config.log_expectation(f"Failed to analyze {symbol} from watchlist")
         
         return tasks
 

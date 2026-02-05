@@ -27,13 +27,13 @@ class MarketDataPipeline():
 
         self._client = StockHistoricalDataClient(api_key = self._key, secret_key = self._secret)
 
-        self._df = None
+        self._df = self._create_bars()
 
     @property
     def df(self):
         return self._df
 
-
+    @final
     @retry(
         wait=wait_exponential(multiplier=1, min=2, max=30),
         stop=stop_after_attempt(5),
@@ -168,7 +168,7 @@ class MarketDataPipeline():
 
         return df
     
-    def run(self):
+    def _create_bars(self):
         bars = self._normalize_bars(self._position_data.get("history"))
 
         if bars.empty:

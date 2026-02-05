@@ -64,7 +64,7 @@ class MLDataPipeline(MarketDataPipeline):
         self._pred_history = self._time_steps + self._min_lookback + self._safety_margin
         self._ml_training_lookback = ml_training_lookback
         self._is_backtest = self._position_data.get("backtest", False)
-        self._df = None
+        self._df = self._create_df()
         self._pred_df = self._build_prediction_dataframe()
 
     @property
@@ -336,7 +336,8 @@ class MLDataPipeline(MarketDataPipeline):
 
         return df
     
-    def _sanitize_time_index(self, df: pd.DataFrame, context: str) -> pd.DataFrame:
+    @staticmethod
+    def _sanitize_time_index(df: pd.DataFrame, context: str) -> pd.DataFrame:
         """
         Validates and normalizes a DataFrame's DatetimeIndex.
 
@@ -370,7 +371,6 @@ class MLDataPipeline(MarketDataPipeline):
 
         bad = df.index.isna()
         if bad.any():
-            self._config.log_error(f"{context}: dropping {bad.sum()} invalid timestamps")
             df = df.loc[~bad]
 
         if df.empty:
@@ -497,7 +497,7 @@ class MLDataPipeline(MarketDataPipeline):
     
 
 
-    def run(self):
+    def _create_df(self):
         if self.is_backtest:
             # last available bar timestamp
             current_ts = pd.to_datetime(self._position_data["history"][-1]["t"], utc=True)
