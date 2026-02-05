@@ -64,7 +64,7 @@ class MLDataPipeline(MarketDataPipeline):
         self._pred_history = self._time_steps + self._min_lookback + self._safety_margin
         self._ml_training_lookback = ml_training_lookback
         self._is_backtest = self._position_data.get("backtest", False)
-        self._df = self._create_df()
+        self._data = self._create_df()
         self._pred_df = self._build_prediction_dataframe()
 
     @property
@@ -80,8 +80,8 @@ class MLDataPipeline(MarketDataPipeline):
         return self._is_backtest
     
     @property
-    def df(self):
-        return self._df
+    def data(self):
+        return self._data
     
     @property
     def pred_df(self):
@@ -463,10 +463,10 @@ class MLDataPipeline(MarketDataPipeline):
                 if col not in pred_df.columns:
                     pred_df[col] = 0.0
 
-            self._df = pred_df
+            self._data = pred_df
             return
 
-        hist_df = self._sanitize_time_index(self._df, "PREDICTION DATA")
+        hist_df = self._sanitize_time_index(self._data, "PREDICTION DATA")
         hist_df = hist_df.reset_index()     # ensure no double index
 
         if hist_df.empty:
@@ -519,4 +519,4 @@ class MLDataPipeline(MarketDataPipeline):
                         end_date = end_date)
         df = self._ensure_clean_timestamp(df)
         
-        self._df = self._sanitize_time_index(df, "TRAINING DATA")
+        self._data = self._sanitize_time_index(df, "TRAINING DATA")

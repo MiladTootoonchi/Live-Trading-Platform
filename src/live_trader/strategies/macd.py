@@ -1,115 +1,109 @@
 from live_trader.alpaca_trader.order import SideSignal
-from typing import Tuple, Dict, Any, List
-from live_trader.config import make_logger
-from live_trader.strategies.utils import fetch_data, normalize_bars
+from live_trader.strategies.strategy import BaseStrategy
+from typing import Tuple, List
 
-logger = make_logger()
+class MACDStrategy(BaseStrategy):
+    @staticmethod
+    def exponential_moving_average(data: List[float], period: int) -> List[float]:
+        """
+        Computes an exponential moving average.
 
+        Args:
+            data (list of float):
+                Closing prices used for EMA.
+            period (int):
+                EMA period length.
 
-def exponential_moving_average(data: List[float], period: int) -> List[float]:
-    """
-    Computes an exponential moving average.
+        Returns:
+            list of float:
+                EMA values.
+        """
+        if not data or period <= 0:
+            return []
 
-    Args:
-        data (list of float):
-            Closing prices used for EMA.
-        period (int):
-            EMA period length.
+        ema = []
+        k = 2 / (period + 1)
 
-    Returns:
-        list of float:
-            EMA values.
-    """
-    if not data or period <= 0:
-        return []
+        for i, price in enumerate(data):
+            if i == 0:
+                ema.append(price)
+            else:
+                ema.append(price * k + ema[i - 1] * (1 - k))
 
-    ema = []
-    k = 2 / (period + 1)
+        return ema
 
-    for i, price in enumerate(data):
-        if i == 0:
-            ema.append(price)
-        else:
-            ema.append(price * k + ema[i - 1] * (1 - k))
+    def calculate_macd(self, closes: List[float]) -> Tuple[List[float], List[float]]:
+        """
+        Calculates MACD and signal lines.
 
-    return ema
+        Args:
+            closes (list of float):
+                Close prices in chronological order.
 
+        Returns:
+            tuple(list, list):
+                MACD line and signal line.
+        """
+        ema12 = self._exponential_moving_average(closes, 12)
+        ema26 = self._exponential_moving_average(closes, 26)
 
-def calculate_macd(closes: List[float]) -> Tuple[List[float], List[float]]:
-    """
-    Calculates MACD and signal lines.
+        min_len = min(len(ema12), len(ema26))
+        ema12, ema26 = ema12[-min_len:], ema26[-min_len:]
 
-    Args:
-        closes (list of float):
-            Close prices in chronological order.
+        macd_line = [a - b for a, b in zip(ema12, ema26)]
+        signal_line = self._exponential_moving_average(macd_line, 9)
 
-    Returns:
-        tuple(list, list):
-            MACD line and signal line.
-    """
-    ema12 = exponential_moving_average(closes, 12)
-    ema26 = exponential_moving_average(closes, 26)
-
-    min_len = min(len(ema12), len(ema26))
-    ema12, ema26 = ema12[-min_len:], ema26[-min_len:]
-
-    macd_line = [a - b for a, b in zip(ema12, ema26)]
-    signal_line = exponential_moving_average(macd_line, 9)
-
-    return macd_line, signal_line
+        return macd_line, signal_line
 
 
-def macd_strategy(symbol: str, position_data: Dict[str, Any]) -> Tuple[SideSignal, int]:
-    """
-    MACD crossover strategy.
-    Generates buy or sell signals when MACD crosses the signal line.
+    def _run(self) -> Tuple[SideSignal, int]:
+        """
+        MACD crossover strategy.
+        Generates buy or sell signals when MACD crosses the signal line.
 
-    Args:
-        symbol (str): The symbol of the stock we want to calculate for.
-        position_data (dict):
-            Contains:
-                symbol (str): ticker symbol
-                history (list/DF): optional bar data
-                current_price (float): fallback price
+        Args:
+            symbol (str): The symbol of the stock we want to calculate for.
+            position_data (dict):
+                Contains:
+                    symbol (str): ticker symbol
+                    history (list/DF): optional bar data
+                    current_price (float): fallback price
 
-    Returns:
-        tuple(SideSignal, int):
-            Signal and quantity (always 0 for risk management).
-    """
-    
-    bars = normalize_bars(position_data.get("history"))
+        Returns:
+            tuple(SideSignal, int):
+                Signal and quantity (always 0 for risk management).
+        """
+        bars = self._datapipeline.data
+        symbol = self._datapipeline.symbol
 
-    if bars.empty:
-        bars = normalize_bars(fetch_data(symbol))
+        if bars.empty:
+            return SideSignal.HOLD, 0
 
-    if bars.empty:
+
+        if len(bars) < 35:
+            self._config.log_info(f"Not enough data to compute MACD for {symbol}. Need 35 bars.")
+            return SideSignal.HOLD, 0
+
+        closes = bars["close"].astype(float).tolist() # this can go inside normalize_bars
+
+        macd_line, signal_line = self._calculate_macd(closes)
+
+        if len(macd_line) < 2 or len(signal_line) < 2:
+            self._config.log_info(f"Insufficient MACD data for {symbol}.")
+            return SideSignal.HOLD, 0
+
+        prev_macd, curr_macd = macd_line[-2], macd_line[-1]
+        prev_signal, curr_signal = signal_line[-2], signal_line[-1]
+
+        # Bullish crossover
+        if prev_macd <= prev_signal and curr_macd > curr_signal:
+            self._config.log_info(f"[{symbol}] BUY signal — MACD bullish crossover.")
+            return SideSignal.BUY, 1
+
+        # Bearish crossover
+        if prev_macd >= prev_signal and curr_macd < curr_signal:
+            self._config.log_info(f"[{symbol}] SELL signal — MACD bearish crossover.")
+            return SideSignal.SELL, 1
+
+        self._config.log_info(f"[{symbol}] HOLD — no MACD crossover.")
         return SideSignal.HOLD, 0
-
-
-    if len(bars) < 35:
-        logger.info(f"Not enough data to compute MACD for {symbol}. Need 35 bars.")
-        return SideSignal.HOLD, 0
-
-    closes = bars["close"].astype(float).tolist()
-
-    macd_line, signal_line = calculate_macd(closes)
-
-    if len(macd_line) < 2 or len(signal_line) < 2:
-        logger.info(f"Insufficient MACD data for {symbol}.")
-        return SideSignal.HOLD, 0
-
-    prev_macd, curr_macd = macd_line[-2], macd_line[-1]
-    prev_signal, curr_signal = signal_line[-2], signal_line[-1]
-
-    # Bullish crossover
-    if prev_macd <= prev_signal and curr_macd > curr_signal:
-        logger.info(f"[{symbol}] BUY signal — MACD bullish crossover.")
-        return SideSignal.BUY, 1
-
-    # Bearish crossover
-    if prev_macd >= prev_signal and curr_macd < curr_signal:
-        logger.info(f"[{symbol}] SELL signal — MACD bearish crossover.")
-        return SideSignal.SELL, 1
-
-    logger.info(f"[{symbol}] HOLD — no MACD crossover.")
-    return SideSignal.HOLD, 0

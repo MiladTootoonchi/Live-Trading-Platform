@@ -27,11 +27,15 @@ class MarketDataPipeline():
 
         self._client = StockHistoricalDataClient(api_key = self._key, secret_key = self._secret)
 
-        self._df = self._create_bars()
+        self._data = self._create_bars()
 
     @property
-    def df(self):
-        return self._df
+    def symbol(self):
+        return self._symbol
+
+    @property
+    def data(self):
+        return self._data
     
     @property
     def position_data(self):
@@ -46,9 +50,11 @@ class MarketDataPipeline():
         return self._client.get_stock_bars(request_params)
 
 
-    def _fetch_data(self,
-                start_date: tuple[int, int, int] = (2020, 1, 1),
-                end_date: tuple[int, int, int] = (2026, 1, 1)) -> pd.DataFrame:
+    def _fetch_data(
+            self,
+            start_date: tuple[int, int, int] = (2020, 1, 1),
+            end_date: tuple[int, int, int] = (2026, 1, 1)
+    ) -> pd.DataFrame:
 
         if self._client is None:
             self._config.log_error("Alpaca client not initialized")
@@ -178,4 +184,4 @@ class MarketDataPipeline():
         if bars.empty:
             bars = self._normalize_bars(self._fetch_data(self._symbol))
 
-        self._df = bars
+        self._data = bars

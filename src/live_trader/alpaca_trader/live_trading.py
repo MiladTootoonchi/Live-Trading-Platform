@@ -8,12 +8,12 @@ from live_trader.config import Config
 
 """ Strategies """
 from live_trader.strategies.strategy import RuleBasedStrategy
-from live_trader.strategies.bollinger_bands_strategy import bollinger_bands_strategy
-from live_trader.strategies.macd import macd_strategy
-from live_trader.strategies.mean_reversion import mean_reversion_strategy
-from live_trader.strategies.momentum import momentum_strategy
-from live_trader.strategies.moving_average_strategy import moving_average_strategy
-from live_trader.strategies.rsi import rsi_strategy
+from live_trader.strategies.bollinger_bands_strategy import BollingerBandsStrategy
+from live_trader.strategies.macd import MACDStrategy
+from live_trader.strategies.mean_reversion import MeanReversionStrategy
+from live_trader.strategies.momentum import MomentumStrategy
+from live_trader.strategies.moving_average_strategy import MovingAverageStrategy
+from live_trader.strategies.rsi import RSIStrategy
 
 from live_trader.ml_model.ml_strategies import (basic_lstm, attention_bilstm, 
                                                 tcn_lite, patchtst_lite, gnn_lite,
@@ -23,12 +23,12 @@ from live_trader.tree_based_models.tree_based_strategies import (xgboost, catboo
 
 STRATEGIES = {
         "rule_based_strategy": RuleBasedStrategy,
-        "bollinger_bands_strategy": bollinger_bands_strategy,
-        "macd_strategy": macd_strategy,
-        "mean_reversion_strategy": mean_reversion_strategy,
-        "momentum_strategy": momentum_strategy,
-        "moving_average_strategy": moving_average_strategy,
-        "rsi_strategy": rsi_strategy,
+        "bollinger_bands_strategy": BollingerBandsStrategy,
+        "macd_strategy": MACDStrategy,
+        "mean_reversion_strategy": MeanReversionStrategy,
+        "momentum_strategy": MomentumStrategy,
+        "moving_average_strategy": MovingAverageStrategy,
+        "rsi_strategy": RSIStrategy,
         "lstm": basic_lstm,
         "bilstm": attention_bilstm,
         "tcn": tcn_lite,
