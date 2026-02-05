@@ -1,10 +1,46 @@
 import requests
 import asyncio
-from typing import Callable, List, Dict
+from typing import Callable, List, Dict, Any
 import inspect
 
 from live_trader.alpaca_trader.order import OrderData, SideSignal
 from live_trader.config import Config
+
+""" Strategies """
+from live_trader.strategies.strategy import RuleBasedStrategy
+from live_trader.strategies.bollinger_bands_strategy import bollinger_bands_strategy
+from live_trader.strategies.macd import macd_strategy
+from live_trader.strategies.mean_reversion import mean_reversion_strategy
+from live_trader.strategies.momentum import momentum_strategy
+from live_trader.strategies.moving_average_strategy import moving_average_strategy
+from live_trader.strategies.rsi import rsi_strategy
+
+from live_trader.ml_model.ml_strategies import (basic_lstm, attention_bilstm, 
+                                                tcn_lite, patchtst_lite, gnn_lite,
+                                                nad_lite, cnn_gru_lite)
+
+from live_trader.tree_based_models.tree_based_strategies import (xgboost, catboost, random_forest, lightgbm)
+
+STRATEGIES = {
+        "rule_based_strategy": RuleBasedStrategy,
+        "bollinger_bands_strategy": bollinger_bands_strategy,
+        "macd_strategy": macd_strategy,
+        "mean_reversion_strategy": mean_reversion_strategy,
+        "momentum_strategy": momentum_strategy,
+        "moving_average_strategy": moving_average_strategy,
+        "rsi_strategy": rsi_strategy,
+        "lstm": basic_lstm,
+        "bilstm": attention_bilstm,
+        "tcn": tcn_lite,
+        "patchtst": patchtst_lite,
+        "gnn": gnn_lite,
+        "nad": nad_lite,
+        "cnn_gru": cnn_gru_lite,
+        "random_forest": random_forest,
+        "lightgbm": lightgbm,
+        "xgboost": xgboost,
+        "catboost": catboost,
+    }
 
 class AlpacaTrader:
     """
@@ -467,7 +503,7 @@ class AlpacaTrader:
         """
 
 
-        watchlist = load_watchlist()
+        watchlist = self._config.watchlist
 
         if isinstance(watchlist, str):
             raise ValueError(
@@ -481,7 +517,7 @@ class AlpacaTrader:
         for symbol in watchlist:
             symbol = symbol.strip().upper()
             if not symbol or len(symbol) < 1:
-                logger.warning("Skipping invalid symbol in watchlist")
+                self._config.log_warning("Skipping invalid symbol in watchlist")
                 continue
 
             try:
@@ -543,3 +579,40 @@ class AlpacaTrader:
 
         finally:
             pass
+
+
+    def find_strategy(self, name: str | None = None) -> Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
+        """
+        Resolve and return a trading strategy function by name.
+
+        If no strategy name is provided, the user is prompted to select one.
+        The function repeatedly asks for input until a valid strategy name
+        matching a key in the internal ``strategies`` dictionary is supplied.
+
+        Args:
+            name (str | None):
+                The name of the strategy to use. If ``None``, the strategy name
+                is loaded from configuration or requested interactively from
+                the user.
+
+        Returns:
+            Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
+                The strategy function associated with the chosen name.
+
+        Raises:
+            KeyboardInterrupt:
+                If the user aborts the selection process.
+        """
+        
+        while True:
+            if name == None:
+                name = self._config.strategy_name
+
+            if name not in STRATEGIES:
+                name = input("Which strategy do you want to use? ")
+
+            try:
+                return STRATEGIES[name]
+            
+            except KeyError:
+                print(f"\nStrategy {name!r} was not found in the strategies dictionary. Try again...")
