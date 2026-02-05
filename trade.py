@@ -1,7 +1,7 @@
 import argparse
 import asyncio
 
-from live_trader import AlpacaTrader, find_strategy, load_api_keys
+from live_trader import AlpacaTrader, find_strategy, Config
 
 
 def parseInput():
@@ -54,7 +54,8 @@ def parseInput():
 
 async def main():
     args = parseInput()
-    key, secret_key = load_api_keys()
+    conf = Config("settings.toml")
+    key, secret_key = conf.load_keys()
     trader = AlpacaTrader(key, secret_key)
 
     
@@ -70,12 +71,10 @@ async def main():
 
     if args.update:
         symbol = args.update
-        strategy = find_strategy()
-        await trader.update(strategy, strategy, symbol)
+        await trader.update(symbol)
     
     if args.live:
-        strategy = find_strategy()
-        await trader.live(strategy)
+        await trader.live()
 
 def cli():
     asyncio.run(main())

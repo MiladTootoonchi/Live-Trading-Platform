@@ -325,7 +325,7 @@ Figure 5: The program architecture shows how the different packages communicate 
 <br>
 
 ![Class Diagram](figures/classdiagram.png) \
-Figure 6: The diagram shows how the *AlpacaTrader* object communicates with strategies, configuration and the main function.
+Figure 6: The diagram shows how the *AlpacaTraders* dependencies on strategy objects, strategies data-pipelines, configurations and other objects.
 
 <br>
 
