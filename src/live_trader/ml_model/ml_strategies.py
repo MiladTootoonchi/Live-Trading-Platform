@@ -3,7 +3,7 @@ from typing import Union
 
 from live_trader.ml_model.evaluations import brier
 from live_trader.ml_model.layers import *
-from live_trader.ml_model.training import MLStrategyBase
+from live_trader.ml_model.ml_pipeline import MLStrategyBase
 
 # Ignoring info + warning + errors: the user do not need to see this
 import os

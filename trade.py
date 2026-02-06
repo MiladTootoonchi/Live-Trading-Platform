@@ -1,7 +1,7 @@
 import argparse
 import asyncio
 
-from live_trader import AlpacaTrader, find_strategy, Config
+from live_trader import AlpacaTrader, Config
 
 
 def parseInput():
@@ -46,7 +46,16 @@ def parseInput():
                         "or sell based on strategy prompt given by the user. " \
                         "Automatically places an order based on the result. " \
                         "Type 'ALL' (all uppercase) to update all positions. " \
-                        "Only one position can be specified at a time.")
+                        "Only one stock can be specified at a time.")
+    
+    parser.add_argument("--backtest",
+                        "-bt",
+                        action = "store_true", 
+                        help = "Analyzes the specified position(s) for historical data to determine whether to buy "
+                        "or sell based on strategy prompt given by the user. " \
+                        "Automatically places an order based on the result. " \
+                        "Type 'ALL' (all uppercase) to update all positions. " \
+                        "The metrics of the test will be printet to a csv.")
     
     args = parser.parse_args()
     return args
@@ -55,8 +64,7 @@ def parseInput():
 async def main():
     args = parseInput()
     conf = Config("settings.toml")
-    key, secret_key = conf.load_keys()
-    trader = AlpacaTrader(key, secret_key)
+    trader = AlpacaTrader(conf)
 
     
     if args.cancel_last:
@@ -75,6 +83,9 @@ async def main():
     
     if args.live:
         await trader.live()
+
+    if args.backtest:
+        await trader._run_backtest()
 
 def cli():
     asyncio.run(main())

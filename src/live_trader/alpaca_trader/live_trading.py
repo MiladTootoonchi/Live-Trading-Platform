@@ -2,22 +2,22 @@ import requests
 import asyncio
 from typing import Callable, List, Dict, Any
 import inspect
+import pandas as pd
 
 from live_trader.alpaca_trader.order import OrderData, SideSignal
 from live_trader.config import Config
 
 """ Strategies """
-from live_trader.strategies.strategy import RuleBasedStrategy
+from live_trader.strategies.strategy import RuleBasedStrategy, BaseStrategy
 from live_trader.strategies.bollinger_bands_strategy import BollingerBandsStrategy
 from live_trader.strategies.macd import MACDStrategy
 from live_trader.strategies.mean_reversion import MeanReversionStrategy
 from live_trader.strategies.momentum import MomentumStrategy
 from live_trader.strategies.moving_average_strategy import MovingAverageStrategy
 from live_trader.strategies.rsi import RSIStrategy
-
 from live_trader.ml_model.ml_strategies import (LSTM, BiLSTM, TCN, PatchTST, GNN, NAD, CNNGRU)
-
 from live_trader.tree_based_models.tree_strategies import (XGB, CatBoost, RandomForest, LGBM)
+
 
 STRATEGIES = {
         "rule_based_strategy": RuleBasedStrategy,
@@ -584,7 +584,8 @@ class AlpacaTrader:
             KeyboardInterrupt:
                 If the user aborts the selection process.
         """
-        
+        name = None
+
         while True:
             if name == None:
                 name = self._config.strategy_name
@@ -597,3 +598,137 @@ class AlpacaTrader:
             
             except KeyError:
                 print(f"\nStrategy {name!r} was not found in the strategies dictionary. Try again...")
+
+    def _calculate_metrics(initial_cash, trades, results: pd.DataFrame) -> Dict[str, float]:
+        """
+        Calculate performance metrics from the portfolio time series.
+
+        Returns a dictionary with:
+            total_return_pct, final_value, sharpe_ratio, max_drawdown_pct, num_trades, win_rate_pct
+        """
+        if results.empty or len(results) < 2:
+            return {}
+
+        final_value = results['portfolio_value'].iloc[-1]
+        total_return = ((final_value - initial_cash) / initial_cash) * 100
+
+        # daily returns based on the value series
+        results = results.copy()
+        results['daily_return'] = results['portfolio_value'].pct_change().fillna(0.0)
+
+        mean = results['daily_return'].mean()
+        std = results['daily_return'].std()
+        sharpe_ratio = (mean / std * (252 ** 0.5)) if std > 0 else 0.0
+
+        cumulative_max = results['portfolio_value'].expanding().max()
+        max_drawdown = ((results['portfolio_value'] - cumulative_max) / cumulative_max).min() * 100
+
+        win_rate = 0.0
+        if not trades.empty and 'SELL' in trades['action'].values:
+            buy_trades = trades[trades['action'] == 'BUY']
+            sell_trades = trades[trades['action'] == 'SELL']
+            winning_trades = 0
+            total_closed_trades = 0
+
+            # pair sells with latest prior buy and judge P&L
+            for _, sell in sell_trades.iterrows():
+                prior_buys = buy_trades[buy_trades['date'] < sell['date']]
+                if not prior_buys.empty:
+                    last_buy_price = prior_buys.iloc[-1]['price']
+                    if sell['price'] > last_buy_price:
+                        winning_trades += 1
+                    total_closed_trades += 1
+
+            if total_closed_trades > 0:
+                win_rate = (winning_trades / total_closed_trades) * 100
+
+        return {
+            'total_return_pct': round(total_return, 2),
+            'final_value': round(final_value, 2),
+            'sharpe_ratio': round(sharpe_ratio, 2),
+            'max_drawdown_pct': round(max_drawdown, 2),
+            'num_trades': int(len(trades)),
+            'win_rate_pct': round(win_rate, 2)
+        }
+
+    async def _run_backtest_for_watchlist(
+        self,
+        symbols: list[str],
+        strategies: dict[str, type[BaseStrategy]],
+        initial_cash: float = 10_000,
+    ) -> pd.DataFrame:
+
+        results = []
+
+        for symbol in symbols:
+            for name, strategy_cls in strategies.items():
+                strategy = strategy_cls(self._config)
+
+                history = await strategy.run_backtest(
+                    symbol=symbol,
+                    initial_cash=initial_cash,
+                )
+
+                metrics = self._calculate_metrics(
+                    history,
+                    strategy.trades
+                )
+
+                metrics.update({
+                    "symbol": symbol,
+                    "strategy": name,
+                })
+
+                results.append(metrics)
+
+        return pd.DataFrame(results)
+
+
+    async def _run_backtest(self):
+
+        symbols = self._config.watchlist
+        days, initial_cash, strategies_list = self._config.load_backtesting_variables()
+
+        test_strategies = dict(STRATEGIES)
+        test_strategies.pop("rule_based_strategy", None)
+        for strategy in strategies_list:
+            test_strategies.pop(strategy, None)
+
+        print("Starting Backtest")
+        print("───────────────────────────────────────────────")
+        print(f"Symbol: {symbols}")
+        print(f"Strategies: {len(test_strategies)}")
+        
+        try:
+            results = await self._run_backtest_for_watchlist(
+                symbols = symbols,
+                strategies = test_strategies,
+                initial_cash = initial_cash
+            )
+        except Exception as e:
+            print(f"Error during backtest: {e}")
+            import traceback
+            traceback.print_exc()
+            return
+        
+        print(f"\n Results type: {type(results)}")
+        print(f"Results columns: {results.columns.tolist()}")
+        print(f"Results shape: {results.shape}")
+        
+        if results is not None and not results.empty:
+            print("\n Backtest Results:")
+            print(results.to_string(index=False))
+            
+            if 'total_return_pct' in results.columns:
+                results = results.sort_values("total_return_pct", ascending=False)
+                results.to_csv("backtest_results.csv", index=False)
+                
+                best = results.iloc[0]
+                print("\n Best strategy:")
+                print(f"   → {best['strategy']} with {best['total_return_pct']:.2f}% return")
+                print("\n Results saved to backtest_results.csv")
+            else:
+                print("\n No 'total_return_pct' column found!")
+                print(f"Available columns: {results.columns.tolist()}")
+        else:
+            print("\n No results returned from compare_strategies()")

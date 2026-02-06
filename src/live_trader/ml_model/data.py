@@ -88,6 +88,11 @@ class MLDataPipeline(MarketDataPipeline):
         return self._pred_df
 
 
+    def load_slice(self, end_idx: int):
+        super().load_slice(end_idx)
+        self._pred_df = self._build_prediction_dataframe()
+
+
 
     def _get_one_realtime_bar(self, last_close: float) -> pd.DataFrame:
         """
@@ -463,8 +468,9 @@ class MLDataPipeline(MarketDataPipeline):
                 if col not in pred_df.columns:
                     pred_df[col] = 0.0
 
-            self._data = pred_df
-            return
+            self._pred_df = pred_df
+            return pred_df
+
 
         hist_df = self._sanitize_time_index(self._data, "PREDICTION DATA")
         hist_df = hist_df.reset_index()     # ensure no double index
@@ -474,7 +480,6 @@ class MLDataPipeline(MarketDataPipeline):
 
         last_close = hist_df.iloc[-1]["close"]
         realtime_bar = self._get_one_realtime_bar(
-            symbol=self._symbol,
             last_close=last_close,
         )
 
@@ -493,9 +498,9 @@ class MLDataPipeline(MarketDataPipeline):
             if col not in pred_df.columns:
                 pred_df.loc[:, col] = 0.0
 
+        self._pred_df = pred_df
         return pred_df
     
-
 
     def _create_df(self):
         if self.is_backtest:
@@ -520,3 +525,5 @@ class MLDataPipeline(MarketDataPipeline):
         df = self._ensure_clean_timestamp(df)
         
         self._data = self._sanitize_time_index(df, "TRAINING DATA")
+
+        return self._data

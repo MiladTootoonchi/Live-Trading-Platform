@@ -17,7 +17,7 @@ BarLike = Union[
     ]
 
 class MarketDataPipeline():
-    def __init__(self, config: Config, symbol: str, position_data: Mapping | None = None):
+    def __init__(self, config: Config, symbol: str, position_data: Mapping | None = None, min_lookback = 750):
         
         self._config = config
         self._symbol = symbol
@@ -29,6 +29,10 @@ class MarketDataPipeline():
 
         self._data = self._create_bars()
 
+        self._min_lookback = min_lookback
+
+        self.df = self._data.copy()
+
     @property
     def symbol(self):
         return self._symbol
@@ -37,9 +41,26 @@ class MarketDataPipeline():
     def data(self):
         return self._data
     
+    def update_position_data(self, position_data: dict | None):
+        self._position_data = position_data or {}
+
+    
+    @property
+    def lookback(self) -> int:
+        return self._min_lookback
+    
     @property
     def position_data(self):
         return self._position_data
+
+
+
+    
+    def load_slice(self, end_idx: int):
+        """
+        Restrict internal dataframe to data[:end_idx+1]
+        """
+        self.df = self.data.iloc[: end_idx + 1].copy()
 
 
     @retry(
@@ -176,7 +197,7 @@ class MarketDataPipeline():
         df.index = pd.DatetimeIndex(idx, tz="UTC")
         df = df[~df.index.isna()]
 
-        return df
+        return df.sort_index()
     
     def _create_bars(self):
         bars = self._normalize_bars(self._position_data.get("history"))
@@ -184,4 +205,4 @@ class MarketDataPipeline():
         if bars.empty:
             bars = self._normalize_bars(self._fetch_data(self._symbol))
 
-        self._data = bars
+        return bars

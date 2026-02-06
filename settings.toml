@@ -5,3 +5,8 @@ alpaca_secret_key = ""
 [live]
 strategy = ""
 watchlist = ""
+
+[backtesting]
+backtesting_days = ""
+initial_cash = ""
+strategy_list = ""

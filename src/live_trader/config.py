@@ -196,7 +196,105 @@ class Config:
     
     def load_keys(self):
         return (self._alpaca_key, self._alpaca_secret)
+    
 
+    def _load_strategy_list(self):
+        """
+        Load the list of strategies the program is going to use for backtesting.
+        """
+
+        try:
+            with open(self._config_file, "r") as file:
+                conf = toml.load(file)
+                backtesting = conf.get("backtesting", {})
+                list = backtesting.get("strategy_list")
+
+                normalized = self._normalize_watchlist(list)
+                if normalized:
+                    return normalized
+
+        except Exception:
+            self.log_info(
+                f"Could not find strategy_list in {self._config_file}, falling back to environment variables.\n"
+            )
+
+        # Fallback to env var
+        env_list = os.getenv("strategy_list")
+        normalized = self._normalize_watchlist(env_list)
+        if normalized:
+            return normalized
+
+        self.log_warning("strategy_list not found; defaulting to empty list.\n")
+        return []
+    
+
+    def _load_initial_cash(self) -> int:
+        """
+        Load the name of the strategy the user want to use for the live trading.
+        If the strategy is not given, the program will ask for an input.
+
+        Returns:
+            int: The initial_cash:
+        """
+
+        try:
+            with open(self._config_file, "r") as file:
+                conf = toml.load(file)
+                backtesting = conf.get("backtesting", {})
+                cash = backtesting.get("initial_cash")
+
+        except FileNotFoundError:
+            self.log_info(f"Config file not found: {self._config_file}, falling back to environment variables.")
+            cash = None
+
+        except Exception:
+            self.log_info(f"Could not find initial_cash from {self._config_file}, falling back to environment variables.")
+            cash = None
+
+        if not cash:
+            cash = os.getenv("initial_cash")
+
+        if not cash:
+            self.log_critical("initial_cash missing from both config and environment variables.")
+            raise RuntimeError("Missing initial cash")
+    
+        return int(cash)
+
+
+    def _load_days(self) -> str:
+        """
+        Total amount of days the user wants to use for backtesting
+
+        Returns:
+            int: days.
+        """
+
+        try:
+            with open(self._config_file, "r") as file:
+                conf = toml.load(file)
+                backtesting = conf.get("backtesting", {})
+                days = backtesting.get("backtesting_days")
+
+        except FileNotFoundError:
+            self.log_info(f"Config file not found: {self._config_file}, falling back to environment variables.")
+            days = None
+
+        except Exception:
+            self.log_info(f"Could not find backtesting_days from {self._config_file}, falling back to environment variables.")
+            days = None
+
+        if not days:
+            days = os.getenv("backtesting_days")
+
+        if not days:
+            self.log_critical("backtesting_days missing from both config and environment variables.")
+            raise RuntimeError("Missing backtesting days")
+    
+        return days
+    
+
+    def load_backtesting_variables(self):
+        return self._load_days(), self._load_initial_cash(), self._load_strategy_list()
 
 
 if __name__ == "__main__":

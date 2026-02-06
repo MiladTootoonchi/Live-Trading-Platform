@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Tuple, Union
 
-from live_trader.config import make_logger
 from live_trader.ml_model.utils import get_model_name, extract_positive_class_probability, adapt_X_for_model
 
 import warnings
@@ -24,15 +23,14 @@ tf.get_logger().setLevel("ERROR")
 
 # --------------------------------------------------------------------------------------------
 
-logger = make_logger()
-
-
-def evaluate_model(model: Model,
-                   symbol: str,
-                   X_test: np.ndarray,
-                   y_test: np.ndarray,
-                   save_dir: str = "logfiles/evaluations"
-                   ) -> Tuple[float, float]:
+def evaluate_model(
+                config,
+                model: Model,
+                symbol: str,
+                X_test: np.ndarray,
+                y_test: np.ndarray,
+                save_dir: str = "logfiles/evaluations"
+                ) -> Tuple[float, float]:
     """
     Evaluates the trained model on unseen test data and logs performance metrics.
 
@@ -74,7 +72,7 @@ def evaluate_model(model: Model,
         y_pred_prob = extract_positive_class_probability(model, X_test_)
         y_pred = (y_pred_prob > 0.5).astype(int)
     except Exception as e:
-        logger.error(f"Model prediction failed during evaluation: {e}")
+        config.log_error(f"Model prediction failed during evaluation: {e}")
         raise
 
     # Compute performance metrics
@@ -91,9 +89,9 @@ def evaluate_model(model: Model,
     brier-score     =   {brier:.4f}
         """
 
-        logger.info(evaluation_score_text)
+        config.log_info(evaluation_score_text)
     except Exception as e:
-        logger.error(f"Error while computing evaluation metrics: {e}")
+        config._error(f"Error while computing evaluation metrics: {e}")
         raise
 
     # Generate and save classification report
@@ -103,9 +101,9 @@ def evaluate_model(model: Model,
         with open(report_path, "w") as f:
             f.write(report)
             f.write(evaluation_score_text)
-        logger.info(f"Classification report saved to {report_path}")
+        config.log_info(f"Classification report saved to {report_path}")
     except Exception as e:
-        logger.error(f"Failed to save classification report: {e}")
+        config.log_error(f"Failed to save classification report: {e}")
 
     # Generate and save confusion matrix
     try:
@@ -119,9 +117,9 @@ def evaluate_model(model: Model,
         cm_path = os.path.join(save_dir, f"confusion_matrix_{model_name}_{symbol}.png")
         plt.savefig(cm_path)
         plt.close()
-        logger.info(f"Confusion matrix saved to {cm_path}")
+        config.log_info(f"Confusion matrix saved to {cm_path}")
     except Exception as e:
-        logger.error(f"Failed to create or save confusion matrix: {e}")
+        config.log_error(f"Failed to create or save confusion matrix: {e}")
 
     return auc_roc, f1
 

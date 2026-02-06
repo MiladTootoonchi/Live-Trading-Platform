@@ -284,7 +284,7 @@ class MLStrategyBase(BaseStrategy):
             )
 
             # Evaluation
-            _, _ = evaluate_model(model, self._datapipeline.symbol, X_test, y_test)
+            _, _ = evaluate_model(self._config, model, self._datapipeline.symbol, X_test, y_test)
 
             artifact = ModelArtifact(
                 model=model,
