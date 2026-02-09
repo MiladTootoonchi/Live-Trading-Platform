@@ -184,7 +184,7 @@ class AlpacaTrader:
         """
         Closes (liquidates) the entire open position for a given stock symbol.
 
-        This method sends a request to Alpaca’s position liquidation endpoint to
+        This method sends a request to Alpaca's position liquidation endpoint to
         close all shares held for the specified symbol at market price. The
         operation is executed asynchronously using a background thread to avoid
         blocking the event loop.
@@ -329,7 +329,7 @@ class AlpacaTrader:
         asked to provide either a positive integer quantity to sell or the keyword
         'all' to liquidate the entire position for the selected symbol.
 
-        If 'all' is provided, the method closes the full position using Alpaca’s
+        If 'all' is provided, the method closes the full position using Alpaca's
         position liquidation endpoint, bypassing order creation and submitting
         a market close for all shares held. If a quantity is provided, the method
         continues by prompting for a valid order type, constructs an OrderData
