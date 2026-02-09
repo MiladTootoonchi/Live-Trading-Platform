@@ -116,10 +116,11 @@ class Backtester:
             }
 
 
-            state = self._strategy_state.setdefault(self.strategy, {})
+            state = self._strategy_state.setdefault(self.symbol, {})
             position_data["state"] = state
 
             try:
+                self.strategy.prepare_data(self.symbol, position_data)
                 result = self.strategy.run()
                 
                 if inspect.iscoroutine(result):
