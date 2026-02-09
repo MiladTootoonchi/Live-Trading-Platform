@@ -203,6 +203,6 @@ class MarketDataPipeline():
         bars = self._normalize_bars(self._position_data.get("history"))
 
         if bars.empty:
-            bars = self._normalize_bars(self._fetch_data(self._symbol))
+            bars = self._normalize_bars(self._fetch_data())
 
         return bars

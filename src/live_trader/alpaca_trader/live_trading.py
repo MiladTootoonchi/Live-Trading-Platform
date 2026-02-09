@@ -18,6 +18,8 @@ from live_trader.strategies.rsi import RSIStrategy
 from live_trader.ml_model.ml_strategies import (LSTM, BiLSTM, TCN, PatchTST, GNN, NAD, CNNGRU)
 from live_trader.tree_based_models.tree_strategies import (XGB, CatBoost, RandomForest, LGBM)
 
+from live_trader.strategies.backtest import Backtester
+
 
 STRATEGIES = {
         "rule_based_strategy": RuleBasedStrategy,
@@ -599,112 +601,132 @@ class AlpacaTrader:
             except KeyError:
                 print(f"\nStrategy {name!r} was not found in the strategies dictionary. Try again...")
 
-    def _calculate_metrics(initial_cash, trades, results: pd.DataFrame) -> Dict[str, float]:
-        """
-        Calculate performance metrics from the portfolio time series.
+# --------- backtesting ----------------
 
-        Returns a dictionary with:
-            total_return_pct, final_value, sharpe_ratio, max_drawdown_pct, num_trades, win_rate_pct
-        """
-        if results.empty or len(results) < 2:
-            return {}
-
-        final_value = results['portfolio_value'].iloc[-1]
-        total_return = ((final_value - initial_cash) / initial_cash) * 100
-
-        # daily returns based on the value series
-        results = results.copy()
-        results['daily_return'] = results['portfolio_value'].pct_change().fillna(0.0)
-
-        mean = results['daily_return'].mean()
-        std = results['daily_return'].std()
-        sharpe_ratio = (mean / std * (252 ** 0.5)) if std > 0 else 0.0
-
-        cumulative_max = results['portfolio_value'].expanding().max()
-        max_drawdown = ((results['portfolio_value'] - cumulative_max) / cumulative_max).min() * 100
-
-        win_rate = 0.0
-        if not trades.empty and 'SELL' in trades['action'].values:
-            buy_trades = trades[trades['action'] == 'BUY']
-            sell_trades = trades[trades['action'] == 'SELL']
-            winning_trades = 0
-            total_closed_trades = 0
-
-            # pair sells with latest prior buy and judge P&L
-            for _, sell in sell_trades.iterrows():
-                prior_buys = buy_trades[buy_trades['date'] < sell['date']]
-                if not prior_buys.empty:
-                    last_buy_price = prior_buys.iloc[-1]['price']
-                    if sell['price'] > last_buy_price:
-                        winning_trades += 1
-                    total_closed_trades += 1
-
-            if total_closed_trades > 0:
-                win_rate = (winning_trades / total_closed_trades) * 100
-
-        return {
-            'total_return_pct': round(total_return, 2),
-            'final_value': round(final_value, 2),
-            'sharpe_ratio': round(sharpe_ratio, 2),
-            'max_drawdown_pct': round(max_drawdown, 2),
-            'num_trades': int(len(trades)),
-            'win_rate_pct': round(win_rate, 2)
-        }
-
-    async def _run_backtest_for_watchlist(
+    async def _compare_strategies(
         self,
-        symbols: list[str],
-        strategies: dict[str, type[BaseStrategy]],
-        initial_cash: float = 10_000,
+        symbol: str,
+        strategies: Dict[str, Callable],
+        days: int = 80,
+        initial_cash: float = 10000,
     ) -> pd.DataFrame:
+        """
+        Run multiple strategies against the same symbol and return a comparison DataFrame.
 
+        Args:
+            symbol: ticker symbol to evaluate
+            strategies: mapping of strategy name -> callable function
+            days: approximate days to fetch (unused with current fetch_data signature)
+            initial_cash: starting cash for each run
+
+        Returns:
+            pandas.DataFrame with columns including strategy, symbol and performance metrics
+        """
         results = []
 
-        for symbol in symbols:
-            for name, strategy_cls in strategies.items():
-                strategy = strategy_cls(self._config)
+        self._config.log_info("\n" + "=" * 60)
+        self._config.log_info(f"Starting backtest for {symbol} with {len(strategies)} strategies")
+        self._config.log_info(f"Initial Cash: ${initial_cash}")
+        self._config.log_info("=" * 60 + "\n")
 
-                history = await strategy.run_backtest(
-                    symbol=symbol,
+        for name, strat in strategies.items():
+            self._config.log_info(f"Testing strategy: {name}")
+            strat = strat(self._config)
+            strat.prepare_data(symbol, {})
+            try:
+                backtester = Backtester(
+                    self._config,
+                    strat,
                     initial_cash=initial_cash,
                 )
 
-                metrics = self._calculate_metrics(
-                    history,
-                    strategy.trades
+                total_bars = len(backtester.strategy.data.data)
+                lookback = max(
+                    total_bars - days,
+                    self._config.load_min_lookback()
                 )
 
-                metrics.update({
-                    "symbol": symbol,
-                    "strategy": name,
-                })
+                history = await backtester.run_strategy(lookback = lookback)
+                metrics = backtester.calculate_metrics(history)
+
+                # attach metadata
+                if metrics:
+                    metrics['strategy'] = name
+                    metrics['symbol'] = symbol
+                else:
+                    metrics = {'strategy': name, 'symbol': symbol, 'error': 'no results or insufficient data'}
 
                 results.append(metrics)
 
-        return pd.DataFrame(results)
+                if 'total_return_pct' in metrics:
+                    self._config.log_info(f"  Total Return: {metrics['total_return_pct']:.2f}%")
+                    self._config.log_info(f"  Sharpe Ratio: {metrics['sharpe_ratio']:.2f}")
+                    self._config.log_info(f"  Max Drawdown: {metrics['max_drawdown_pct']:.2f}%\n")
+                else:
+                    self._config.log_info(f"  Strategy {name} produced no metrics.\n")
+
+            except Exception as e:
+                self._config.log_expectation(f"Failed to run strategy {name}: {e}")
+                results.append({'strategy': name, 'symbol': symbol, 'error': str(e)})
+
+        df = pd.DataFrame(results)
+        if 'total_return_pct' in df.columns:
+            df = df.sort_values('total_return_pct', ascending=False)
+
+        self._config.log_info("=" * 60)
+        self._config.log_info("Backtest complete!")
+        self._config.log_info("=" * 60 + "\n")
+
+        return df
 
 
-    async def _run_backtest(self):
+    async def _run_multi_symbol_backtest(
+        self,
+        symbols: List[str],
+        strategies: Dict[str, Callable],
+        days: int = 30,
+        initial_cash: float = 10000,
+    ) -> pd.DataFrame:
+        """
+        Convenience wrapper to run compare_strategies across multiple symbols.
+        """
+        all_results = []
+        for s in symbols:
+            try:
+                res = await self._compare_strategies(s, strategies, initial_cash=initial_cash, days = days)
+                all_results.append(res)
+            except Exception as e:
+                self._config.log_expectation(f"Failed backtest for {s}: {e}")
+
+        if all_results:
+            return pd.concat(all_results, ignore_index=True)
+        return pd.DataFrame()
+
+    async def run_backtest(self):
 
         symbols = self._config.watchlist
         days, initial_cash, strategies_list = self._config.load_backtesting_variables()
 
         test_strategies = dict(STRATEGIES)
         test_strategies.pop("rule_based_strategy", None)
-        for strategy in strategies_list:
-            test_strategies.pop(strategy, None)
+        test_strategies = {
+            name.lower(): STRATEGIES[name.lower()]
+            for name in strategies_list
+            if name.lower() in STRATEGIES
+        }
 
         print("Starting Backtest")
         print("───────────────────────────────────────────────")
         print(f"Symbol: {symbols}")
         print(f"Strategies: {len(test_strategies)}")
-        
+
         try:
-            results = await self._run_backtest_for_watchlist(
-                symbols = symbols,
-                strategies = test_strategies,
-                initial_cash = initial_cash
-            )
+            results = await self._run_multi_symbol_backtest(
+            symbols = symbols,
+            strategies = test_strategies,
+            initial_cash = initial_cash,
+            days = days
+        )
         except Exception as e:
             print(f"Error during backtest: {e}")
             import traceback

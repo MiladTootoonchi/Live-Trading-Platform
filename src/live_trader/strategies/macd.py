@@ -4,7 +4,7 @@ from typing import Tuple, List
 
 class MACDStrategy(BaseStrategy):
     @staticmethod
-    def exponential_moving_average(data: List[float], period: int) -> List[float]:
+    def _exponential_moving_average(data: List[float], period: int) -> List[float]:
         """
         Computes an exponential moving average.
 
@@ -32,7 +32,7 @@ class MACDStrategy(BaseStrategy):
 
         return ema
 
-    def calculate_macd(self, closes: List[float]) -> Tuple[List[float], List[float]]:
+    def _calculate_macd(self, closes: List[float]) -> Tuple[List[float], List[float]]:
         """
         Calculates MACD and signal lines.
 

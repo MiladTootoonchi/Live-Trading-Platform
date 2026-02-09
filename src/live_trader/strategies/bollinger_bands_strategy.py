@@ -3,7 +3,7 @@ from live_trader.strategies.strategy import BaseStrategy
 from typing import Tuple
 
 class BollingerBandsStrategy(BaseStrategy):
-    def bollinger_bands_strategy(self) -> Tuple[SideSignal, int]:
+    def _run(self) -> Tuple[SideSignal, int]:
         """
         Bollinger Bands mean reversion strategy.
         Generates a signal when price moves above or below

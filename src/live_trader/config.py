@@ -17,6 +17,8 @@ class Config:
         self.strategy_name = self._load_strategy_name()
         self.apca_url = "https://paper-api.alpaca.markets"
 
+        self._macd_stabilization = self.load_ml_var("macd_slow") * 3
+
     # ----- logging -----
 
     def log_info(self, info: str):
@@ -261,7 +263,7 @@ class Config:
         return int(cash)
 
 
-    def _load_days(self) -> str:
+    def _load_days(self) -> int:
         """
         Total amount of days the user wants to use for backtesting
 
@@ -290,11 +292,74 @@ class Config:
             self.log_critical("backtesting_days missing from both config and environment variables.")
             raise RuntimeError("Missing backtesting days")
     
-        return days
+        return int(days)
     
 
     def load_backtesting_variables(self):
         return self._load_days(), self._load_initial_cash(), self._load_strategy_list()
+
+
+    def load_sma_windows(self):
+        try:
+            with open(self._config_file, "r") as file:
+                conf = toml.load(file)
+                ml_variables = conf.get("ml-variables", {})
+                list = ml_variables.get("sma_windows")
+
+                normalized = self._normalize_watchlist(list)
+                if normalized:
+                    normalized = [int(x) for x in normalized]
+                    return normalized
+
+        except Exception:
+            self.log_info(
+                f"Could not find sma_windows in {self._config_file}, falling back to environment variables.\n"
+            )
+
+        # Fallback to env var
+        env_list = os.getenv("sma_windows")
+        normalized = self._normalize_watchlist(env_list)
+        if normalized:
+            normalized = [int(x) for x in normalized]
+            return normalized
+
+        self.log_warning("sma_windows not found; defaulting to empty list.\n")
+        return [0]
+    
+
+    def load_ml_var(self, variable_name):
+        try:
+            with open(self._config_file, "r") as file:
+                conf = toml.load(file)
+                ml_variables = conf.get("ml-variables", {})
+                variable = ml_variables.get(variable_name)
+
+        except FileNotFoundError:
+            self.log_info(f"Config file not found: {self._config_file}, falling back to environment variables.")
+            variable = None
+
+        except Exception:
+            self.log_info(f"Could not find {variable_name} from {self._config_file}, falling back to environment variables.")
+            variable = None
+
+        if not variable:
+            variable = os.getenv(variable_name)
+
+        if not variable:
+            self.log_critical(f"{variable_name} missing from both config and environment variables.")
+            raise RuntimeError(f"Missing {variable_name}")
+    
+        return int(variable)
+    
+    def load_min_lookback(self):
+        min_lookback = max(
+            *self.load_sma_windows(),
+            self.load_ml_var("rsi_window"),
+            self._macd_stabilization,
+            self.load_ml_var("zscore_window"),
+        )
+
+        return min_lookback
 
 
 if __name__ == "__main__":
@@ -302,10 +367,18 @@ if __name__ == "__main__":
 
     info = f"""
 ---INFO---
-keys:        {conf.load_keys()}, 
-strategy:    {conf.strategy_name}, 
-watchlist:   {conf.watchlist}
+keys:           {conf.load_keys()}, 
+strategy:       {conf.strategy_name}, 
+watchlist:      {conf.watchlist}
+---BACKTESTING---
+days:           {conf._load_days(), type(conf._load_days())}, 
+cash:           {conf._load_initial_cash(), type(conf._load_initial_cash)}, 
+strategy list:  {conf._load_strategy_list(), type(conf._load_strategy_list())}
+---INFO---
+min_lookback:   {conf.load_min_lookback()}
 ----------
+
+
 """
     
     print(info)

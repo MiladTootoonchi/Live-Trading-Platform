@@ -85,7 +85,7 @@ async def main():
         await trader.live()
 
     if args.backtest:
-        await trader._run_backtest()
+        await trader.run_backtest()
 
 def cli():
     asyncio.run(main())

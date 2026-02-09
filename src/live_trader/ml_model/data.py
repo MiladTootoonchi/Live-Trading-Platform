@@ -21,48 +21,34 @@ class MLDataPipeline(MarketDataPipeline):
                 symbol: str,
                 position_data: dict,
 
-                ml_training_lookback = 750,
                 feature_columns: List[str] = [
                     "open", "high", "low", "close_z", "volume_z", "trade_count",
                     "vwap", "SMA5", "SMA20", "SMA50",
                     "price_change", "RSI", "MACD", "MACD_Signal"],
-                sma_windows = [5, 20, 50],
-                rsi_window = 14,
-                macd_fast = 12,
-                macd_slow = 26,
-                macd_signal = 9,
-                time_steps = 50,
-                zscore_window = 100
                 ):
         
         super().__init__(config, symbol, position_data)
 
         self._feature_columns = feature_columns
 
-        self._sma_windows = sma_windows
-        self._rsi_window = rsi_window
+        self._sma_windows = config.load_sma_windows()
+        self._rsi_window = config.load_ml_var("rsi_window")
 
-        self._macd_fast = macd_fast
-        self._macd_slow = macd_slow
-        self._macd_signal = macd_signal
-        self._macd_stabilization = macd_slow * 3
+        self._macd_fast = config.load_ml_var("macd_fast")
+        self._macd_slow = config.load_ml_var("macd_slow")
+        self._macd_signal = config.load_ml_var("macd_signal")
+        self._macd_stabilization = config._macd_stabilization
 
-        self._zscore_window = zscore_window
+        self._zscore_window = config.load_ml_var("zscore_window")
 
-        self._time_steps = time_steps
+        self._time_steps = config.load_ml_var("time_steps")
 
-        self._safety_margin = max(10, time_steps // 2)
+        self._safety_margin = max(10, self._time_steps // 2)
 
-        self._min_lookback = max(
-            max(sma_windows),
-            rsi_window,
-            self._macd_stabilization,
-            zscore_window,
-        )
+        self._min_lookback = config.load_min_lookback()
 
-        
         self._pred_history = self._time_steps + self._min_lookback + self._safety_margin
-        self._ml_training_lookback = ml_training_lookback
+        self._ml_training_lookback = config.load_ml_var("ml_training_lookback")
         self._is_backtest = self._position_data.get("backtest", False)
         self._data = self._create_df()
         self._pred_df = self._build_prediction_dataframe()
