@@ -51,6 +51,14 @@
         <mxCell id="2tMiPs3WPfyxty3svVGY-14" parent="2tMiPs3WPfyxty3svVGY-11" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="- _get_one_realtime_bar&lt;div&gt;- _compute_features&lt;/div&gt;&lt;div&gt;- _create_target&lt;/div&gt;&lt;div&gt;- _create_sequences&lt;/div&gt;&lt;div&gt;- _rolling_zscore&lt;/div&gt;&lt;div&gt;- _sanitize_time_index&lt;/div&gt;&lt;div&gt;- _ensure_clean_timestamps&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- sequence_split&lt;/div&gt;&lt;div&gt;&lt;div&gt;- prepare_training_data&lt;/div&gt;&lt;div&gt;- prepare_prediction_data&lt;/div&gt;&lt;/div&gt;&lt;div&gt;- build_prediction_dataframe&lt;/div&gt;&lt;div&gt;+ run&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
           <mxGeometry height="200" width="170" y="208" as="geometry" />
         </mxCell>
+        <mxCell id="dz4Dv5q-LqmnT7BvKidj-2" edge="1" parent="1" source="2tMiPs3WPfyxty3svVGY-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=diamond;endFill=0;" target="2tMiPs3WPfyxty3svVGY-41">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="644" y="130" />
+              <mxPoint x="644" y="180" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
         <mxCell id="2tMiPs3WPfyxty3svVGY-15" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" value="StrategyPipeline" vertex="1">
           <mxGeometry height="134" width="180" x="440" y="120" as="geometry">
             <mxRectangle height="30" width="130" x="200" y="40" as="alternateBounds" />
