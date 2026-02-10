@@ -11,6 +11,9 @@ from catboost import CatBoostClassifier
 
 
 class RandomForest(MLStrategyBase):
+    def __init__(self, config):
+        super().__init__(config)
+        self.name = "Random_Forest"
     def _initialize_model(_: np.ndarray) -> ProbabilisticClassifier:
         """
         Build and return a Random Forest classifier configured for
@@ -44,6 +47,9 @@ class RandomForest(MLStrategyBase):
 
 
 class LGBM(MLStrategyBase):
+    def __init__(self, config):
+        super().__init__(config)
+        self.name = "LightGBM"
     def _initialize_model(_: np.ndarray) -> ProbabilisticClassifier:
         """
         Build and return a LightGBM classifier optimized for tabular
@@ -76,6 +82,9 @@ class LGBM(MLStrategyBase):
 
 
 class XGB(MLStrategyBase):
+    def __init__(self, config):
+        super().__init__(config)
+        self.name = "XGBoost"
     def _initialize_model(_: np.ndarray) -> ProbabilisticClassifier:
         """
         Build and return an XGBoost classifier for probabilistic
@@ -108,6 +117,9 @@ class XGB(MLStrategyBase):
 
 
 class CatBoost(MLStrategyBase):
+    def __init__(self, config):
+        super().__init__(config)
+        self.name = "CatBoost"
     def _initialize_model(_: np.ndarray) -> ProbabilisticClassifier:
         """
         Build and return a CatBoost classifier for probabilistic

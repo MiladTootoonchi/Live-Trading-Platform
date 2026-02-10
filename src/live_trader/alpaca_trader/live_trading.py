@@ -15,7 +15,7 @@ from live_trader.strategies.mean_reversion import MeanReversionStrategy
 from live_trader.strategies.momentum import MomentumStrategy
 from live_trader.strategies.moving_average_strategy import MovingAverageStrategy
 from live_trader.strategies.rsi import RSIStrategy
-from live_trader.ml_model.ml_strategies import (LSTM, BiLSTM, TCN, PatchTST, GNN, NAD, CNNGRU)
+from live_trader.ml_model.ml_strategies import (LSTMModel, BiLSTM, TCN, PatchTST, GNN, NAD, CNNGRU)
 from live_trader.tree_based_models.tree_strategies import (XGB, CatBoost, RandomForest, LGBM)
 
 from live_trader.strategies.backtest import Backtester
@@ -29,7 +29,7 @@ STRATEGIES = {
         "momentum_strategy": MomentumStrategy,
         "moving_average_strategy": MovingAverageStrategy,
         "rsi_strategy": RSIStrategy,
-        "lstm": LSTM,
+        "lstm": LSTMModel,
         "bilstm": BiLSTM,
         "tcn": TCN,
         "patchtst": PatchTST,

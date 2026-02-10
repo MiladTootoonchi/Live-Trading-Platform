@@ -4,6 +4,7 @@ from pathlib import Path
 import joblib
 from alpaca.trading.client import TradingClient
 from abc import abstractmethod
+from typing import Union
 
 from live_trader.alpaca_trader.order import SideSignal
 from live_trader.strategies.strategy import BaseStrategy
@@ -39,11 +40,12 @@ tf.get_logger().setLevel("ERROR")
 class MLStrategyBase(BaseStrategy):
     def __init__(self, config):
         super().__init__(config)
-        self._model_builder = self._initialize_model()
+        self.name = None
+        self._model_builder = self._initialize_model
         self._modelartifact = None
 
     @abstractmethod
-    def _initialize_model(self):
+    def _initialize_model(self, X_train_seq: Union[np.ndarray, list]):
         pass
 
     def prepare_data(self, symbol: str, position_data: dict):
@@ -252,14 +254,14 @@ class MLStrategyBase(BaseStrategy):
         model_dir = base_dir / "models"
         model_dir.mkdir(exist_ok=True)
 
-        model_id = f"{self._model_builder.__name__}_{self._config.symbol}"
+        model_id = f"{self.name}_{self._datapipeline.symbol}"
         model_path = model_dir / f"{model_id}.joblib"
 
         if model_path.exists():
             artifact = joblib.load(model_path)
 
         else:
-            self._config.log_info(f"No existing model found for {self._config.symbol}, training...")
+            self._config.log_info(f"No existing model found for {self._datapipeline.symbol}, training...")
 
             X, y, scaler = self._datapipeline.prepare_training_data(self._datapipeline.df)
             X_train, X_val, X_test, y_train, y_val, y_test = self._datapipeline.sequence_split(X, y, 

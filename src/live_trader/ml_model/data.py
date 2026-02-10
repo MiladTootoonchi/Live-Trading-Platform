@@ -505,9 +505,10 @@ class MLDataPipeline(MarketDataPipeline):
         end_date = (end_dt.year, end_dt.month, end_dt.day)
 
         # fetching data from as early as possible till pred_start_date (pred_start_date till today will be used for prediction)
-        df = self._fetch_data(symbol = self._symbol, 
+        df = self._fetch_data(
                         start_date = start_date, 
-                        end_date = end_date)
+                        end_date = end_date
+                        )
         df = self._ensure_clean_timestamp(df)
         
         self._data = self._sanitize_time_index(df, "TRAINING DATA")

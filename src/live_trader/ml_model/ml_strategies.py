@@ -29,8 +29,11 @@ from tensorflow.keras.metrics import AUC
 
 
 # --------------------  Basic LSTM  --------------------
-class LSTM(MLStrategyBase):
-    def _initialize_model(X_train_seq: Union[np.ndarray, list]) -> Model:
+class LSTMModel(MLStrategyBase):
+    def __init__(self, config):
+        super().__init__(config)
+        self.name = "Basic_LSTM"
+    def _initialize_model(self, X_train_seq: Union[np.ndarray, list]) -> Model:
         """
         Builds and compiles an LSTM model for sequence data.
 
@@ -70,7 +73,10 @@ class LSTM(MLStrategyBase):
 
 
 class BiLSTM(MLStrategyBase):
-    def _initialize_model(X_train_seq: Union[np.ndarray, list]) -> Model:
+    def __init__(self, config):
+        super().__init__(config)
+        self.name = "Attention_BiLSTM"
+    def _initialize_model(self, X_train_seq: Union[np.ndarray, list]) -> Model:
         """
         Builds and compiles an Attention-enhanced BiLSTM model for binary stock movement prediction.
 
@@ -123,7 +129,10 @@ class BiLSTM(MLStrategyBase):
 
 
 class TCN(MLStrategyBase):
-    def _initialize_model(X_train_seq: Union[np.ndarray, list]) -> Model:
+    def __init__(self, config):
+        super().__init__(config)
+        self.name = "TCN"
+    def _initialize_model(self, X_train_seq: Union[np.ndarray, list]) -> Model:
         """
         Builds a lightweight Temporal Convolutional Network (TCN-style)
         for noisy financial time series classification.
@@ -185,7 +194,10 @@ class TCN(MLStrategyBase):
 
 
 class PatchTST(MLStrategyBase):
-    def _initialize_model(X_train_seq: Union[np.ndarray, list]) -> Model:
+    def __init__(self, config):
+        super().__init__(config)
+        self.name = "PatchTST"
+    def _initialize_model(self, X_train_seq: Union[np.ndarray, list]) -> Model:
         """
         Builds a lightweight PatchTST-style Transformer model for
         noisy financial time series classification.
@@ -261,7 +273,10 @@ class PatchTST(MLStrategyBase):
 
 
 class GNN(MLStrategyBase):
-    def _initialize_model(X_train_seq: Union[np.ndarray, list]) -> Model:
+    def __init__(self, config):
+        super().__init__(config)
+        self.name = "GNN"
+    def _initialize_model(self, X_train_seq: Union[np.ndarray, list]) -> Model:
         """
         Builds a lightweight Graph Neural Network (GNN-style) model
         for noisy financial time series classification.
@@ -331,7 +346,10 @@ class GNN(MLStrategyBase):
 
 
 class NAD(MLStrategyBase):
-    def _initialize_model(X_train_seq: Union[np.ndarray, list]) -> Model:
+    def __init__(self, config):
+        super().__init__(config)
+        self.name = "NAD"
+    def _initialize_model(self, X_train_seq: Union[np.ndarray, list]) -> Model:
         """
         Builds an Autoencoder + Classifier model for
         neural anomaly detection in time series.
@@ -376,7 +394,10 @@ class NAD(MLStrategyBase):
 
 
 class CNNGRU(MLStrategyBase):
-    def _initialize_model(X_train_seq: Union[np.ndarray, list]) -> Model:
+    def __init__(self, config):
+        super().__init__(config)
+        self.name = "CNN_GRU"
+    def _initialize_model(self, X_train_seq: Union[np.ndarray, list]) -> Model:
         """
         Builds a lightweight CNN-GRU model for
         noisy financial time series classification.
