@@ -13,7 +13,9 @@ strategy_list = ""
 
 [ml-variables]
 ml_training_lookback = 750
-sma_windows = "5, 20, 50"
+sma_window1 = 5
+sma_window2 = 20 
+sma_window3 = 50
 rsi_window = 14
 macd_fast = 12
 macd_slow = 26
