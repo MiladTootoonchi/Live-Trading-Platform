@@ -68,13 +68,7 @@ class MLDataPipeline(MarketDataPipeline):
     @property
     def pred_df(self):
         return self._pred_df
-
-
-    def load_slice(self, end_idx: int):
-        super().load_slice(end_idx)
-        self._pred_df = self._build_prediction_dataframe()
-
-
+    
 
     def _get_one_realtime_bar(self, last_close: float) -> pd.DataFrame:
         """
@@ -150,8 +144,6 @@ class MLDataPipeline(MarketDataPipeline):
 
         return pd.DataFrame([bar])
 
-
-
     def _compute_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Compute all technical indicators consistently for both
@@ -193,7 +185,7 @@ class MLDataPipeline(MarketDataPipeline):
         df["volume_z"] = self._rolling_zscore(df["volume"], window = self._zscore_window)
 
         return df
-    
+
     @staticmethod
     def _rolling_zscore(series: pd.Series, window: int) -> pd.Series:
         """
@@ -210,8 +202,6 @@ class MLDataPipeline(MarketDataPipeline):
         std = series.rolling(window).std().shift(1)
         return (series - mean) / std
 
-
-
     @staticmethod
     def _create_target(df: pd.DataFrame) -> pd.Series:
         """
@@ -226,7 +216,6 @@ class MLDataPipeline(MarketDataPipeline):
             pd.Series: Binary target aligned with features.
         """
         return (df["close"].shift(-1) > df["close"]).astype(int)
-
 
     def create_sequences(
         self,
@@ -298,7 +287,6 @@ class MLDataPipeline(MarketDataPipeline):
         return X_train, X_val, X_test, y_train, y_val, y_test
     
 
-
     @staticmethod
     def _ensure_clean_timestamp(df: pd.DataFrame) -> pd.DataFrame:
         if "timestamp" in df.columns:
@@ -365,7 +353,6 @@ class MLDataPipeline(MarketDataPipeline):
 
         return df.sort_index()
     
-
     
     def prepare_training_data(
         self,
@@ -398,8 +385,6 @@ class MLDataPipeline(MarketDataPipeline):
 
         return X, y, scaler
 
-
-
     def prepare_prediction_data(
         self,
         df: pd.DataFrame,
@@ -423,7 +408,6 @@ class MLDataPipeline(MarketDataPipeline):
 
         return np.asarray(X)
 
-    
 
     def _build_prediction_dataframe(self) -> None:
         """
@@ -483,7 +467,6 @@ class MLDataPipeline(MarketDataPipeline):
         self._pred_df = pred_df
         return pred_df
     
-
     def _create_df(self):
         if self.is_backtest:
             # last available bar timestamp

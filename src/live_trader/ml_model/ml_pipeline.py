@@ -263,7 +263,7 @@ class MLStrategyBase(BaseStrategy):
         else:
             self._config.log_info(f"No existing model found for {self._datapipeline.symbol}, training...")
 
-            X, y, scaler = self._datapipeline.prepare_training_data(self._datapipeline.df)
+            X, y, scaler = self._datapipeline.prepare_training_data(self._datapipeline.data)
             X_train, X_val, X_test, y_train, y_val, y_test = self._datapipeline.sequence_split(X, y, 
                                                                                                 self._datapipeline.time_steps)
 
