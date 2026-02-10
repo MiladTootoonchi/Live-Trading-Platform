@@ -17,50 +17,33 @@ BarLike = Union[
     ]
 
 class MarketDataPipeline():
-    def __init__(self, config: Config, symbol: str, position_data: Mapping | None = None, min_lookback = 750):
+    def __init__(self, config: Config, symbol: str, position_data: Mapping | None = None, lookback = 750):
         
         self._config = config
-        self._symbol = symbol
-        self._position_data = position_data or {}
+        self.symbol = symbol
+        self.lookback = lookback
 
         self._key, self._secret = config.load_keys()
 
         self._client = StockHistoricalDataClient(api_key = self._key, secret_key = self._secret)
 
+        self._position_data = position_data or {}
         self._data = self._create_bars()
 
-        self._min_lookback = min_lookback
 
-        self.df = self._data.copy()
 
-    @property
-    def symbol(self):
-        return self._symbol
-
-    @property
-    def data(self):
-        return self._data
-    
-    def update_position_data(self, position_data: dict | None):
-        self._position_data = position_data or {}
-
-    
-    @property
-    def lookback(self) -> int:
-        return self._min_lookback
-    
     @property
     def position_data(self):
         return self._position_data
 
+    @position_data.setter
+    def position_data(self, new_position_data):
+        self._position_data = new_position_data or {}
 
+    @property
+    def data(self):
+        return self._data
 
-    
-    def load_slice(self, end_idx: int):
-        """
-        Restrict internal dataframe to data[:end_idx+1]
-        """
-        self.df = self.data.iloc[: end_idx + 1].copy()
 
 
     @retry(
@@ -69,8 +52,6 @@ class MarketDataPipeline():
     )
     def _get_bars(self, request_params):
         return self._client.get_stock_bars(request_params)
-
-
     def _fetch_data(
             self,
             start_date: tuple[int, int, int] = (2020, 1, 1),
@@ -96,7 +77,7 @@ class MarketDataPipeline():
             return pd.DataFrame()
 
         request_params = StockBarsRequest(
-            symbol_or_symbols = self._symbol,
+            symbol_or_symbols = self.symbol,
             timeframe = TimeFrame.Day,
             start = start,
             end = end
@@ -119,8 +100,6 @@ class MarketDataPipeline():
 
         return df
     
-
-
     def _normalize_bars(self, bars: BarLike) -> pd.DataFrame:
         """
         Normalize OHLCV bar data into a pandas DataFrame with full column names.

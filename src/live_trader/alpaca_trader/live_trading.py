@@ -640,13 +640,7 @@ class AlpacaTrader:
                     initial_cash=initial_cash,
                 )
 
-                total_bars = len(backtester.strategy.data.data)
-                lookback = max(
-                    total_bars - days,
-                    self._config.load_min_lookback()
-                )
-
-                history = await backtester.run_strategy(lookback = lookback)
+                history = await backtester.run_strategy(days)
                 metrics = backtester.calculate_metrics(history)
 
                 # attach metadata
@@ -710,9 +704,9 @@ class AlpacaTrader:
         test_strategies = dict(STRATEGIES)
         test_strategies.pop("rule_based_strategy", None)
         test_strategies = {
-            name.lower(): STRATEGIES[name.lower()]
+            name: STRATEGIES[name]
             for name in strategies_list
-            if name.lower() in STRATEGIES
+            if name in STRATEGIES
         }
 
         print("Starting Backtest")

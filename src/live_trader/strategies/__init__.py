@@ -6,11 +6,13 @@ from .mean_reversion import MeanReversionStrategy
 from .macd import MACDStrategy
 from .bollinger_bands_strategy import BollingerBandsStrategy
 from .data import MarketDataPipeline
+from .backtest import Backtester
 
 __all__ = ["MarketDataPipeline", "BaseStrategy", "RuleBasedStrategy", 
            "RSIStrategy", "MovingAverageStrategy", "MomentumStrategy", 
-           "MeanReversionStrategy", "MACDStrategy", "BollingerBandsStrategy"]
+           "MeanReversionStrategy", "MACDStrategy", "BollingerBandsStrategy",
+           "Backtester"]
 __author__ = [
-    "Makke Dulgaeva",
-    "Milad Tootoonchi"
+    "Milad Tootoonchi",
+    "Makke Dulgaeva"
 ]

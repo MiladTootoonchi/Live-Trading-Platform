@@ -9,7 +9,7 @@ load_dotenv()
 class Config:
 
     def __init__(self, config_file_path: str = "settings.toml"):
-        self._config_file = config_file_path
+        self._config_file_path = config_file_path
         self._logger = self._make_logger()
         self._alpaca_key, self._alpaca_secret = self._load_api_keys()
 
@@ -17,7 +17,16 @@ class Config:
         self.strategy_name = self._load_strategy_name()
         self.apca_url = "https://paper-api.alpaca.markets"
 
-        self._macd_stabilization = self.load_ml_var("macd_slow") * 3
+        # calculated ml-variables
+        self.macd_stabilization = self.load_ml_variable("macd_slow") * 3
+        self.number_of_sma_windows = 3
+        self.sma_windows = [self.load_ml_variable(f"sma_window{i}") for i in range(1, self.number_of_sma_windows+1)]
+        self.min_lookback = max(
+            *self.sma_windows,
+            self.load_ml_variable("rsi_window"),
+            self.macd_stabilization,
+            self.load_ml_variable("zscore_window"),
+        )
 
     # ----- logging -----
 
@@ -79,17 +88,17 @@ class Config:
         """
 
         try:
-            with open(self._config_file, "r") as file:
+            with open(self._config_file_path, "r") as file:
                 conf = toml.load(file)
                 live = conf.get("live", {})
                 strategy = live.get("strategy")
 
         except FileNotFoundError:
-            self.log_info(f"Config file not found: {self._config_file}, falling back to environment variables.")
+            self.log_info(f"Config file not found: {self._config_file_path}, falling back to environment variables.")
             strategy = None
 
         except Exception:
-            self.log_info(f"Could not find strategy from {self._config_file}, falling back to environment variables.")
+            self.log_info(f"Could not find strategy from {self._config_file_path}, falling back to environment variables.")
             strategy = None
 
         if not strategy:
@@ -112,7 +121,7 @@ class Config:
         # Already a list (correct TOML)
         if isinstance(value, list):
             return [
-                str(symbol).strip().upper()
+                str(symbol).strip()
                 for symbol in value
                 if str(symbol).strip()
             ]
@@ -120,7 +129,7 @@ class Config:
         # Env var or misconfigured TOML → comma-separated string
         if isinstance(value, str):
             return [
-                symbol.strip().upper()
+                symbol.strip()
                 for symbol in value.split(",")
                 if symbol.strip()
             ]
@@ -133,7 +142,7 @@ class Config:
         """
 
         try:
-            with open(self._config_file, "r") as file:
+            with open(self._config_file_path, "r") as file:
                 conf = toml.load(file)
                 live = conf.get("live", {})
                 watchlist = live.get("watchlist")
@@ -144,7 +153,7 @@ class Config:
 
         except Exception:
             self.log_info(
-                f"Could not find watchlist in {self._config_file}, falling back to environment variables.\n"
+                f"Could not find watchlist in {self._config_file_path}, falling back to environment variables.\n"
             )
 
         # Fallback to env var
@@ -158,7 +167,7 @@ class Config:
 
 
 
-    # ----- api_keys -----
+    # ----- settings -----
 
     def _load_api_keys(self) -> tuple:
         """
@@ -172,17 +181,17 @@ class Config:
         alpaca_secret = None
 
         try:
-            with open(self._config_file, "r") as file:
+            with open(self._config_file_path, "r") as file:
                 conf = toml.load(file)
                 keys = conf.get("keys", {})
                 alpaca_key = keys.get("alpaca_key", alpaca_key)
                 alpaca_secret = keys.get("alpaca_secret_key", alpaca_secret)
 
         except FileNotFoundError:
-            self.log_info(f"Config file not found: {self._config_file}, falling back to environment variables.")
+            self.log_info(f"Config file not found: {self._config_file_path}, falling back to environment variables.")
 
         except Exception:
-            self.log_info(f"Could not find Alpaca API credentials in {self._config_file}, falling back to environment variables.")
+            self.log_info(f"Could not find Alpaca API credentials in {self._config_file_path}, falling back to environment variables.")
 
         if not alpaca_key:
             alpaca_key = os.getenv("alpaca_key")
@@ -206,7 +215,7 @@ class Config:
         """
 
         try:
-            with open(self._config_file, "r") as file:
+            with open(self._config_file_path, "r") as file:
                 conf = toml.load(file)
                 backtesting = conf.get("backtesting", {})
                 list = backtesting.get("strategy_list")
@@ -217,7 +226,7 @@ class Config:
 
         except Exception:
             self.log_info(
-                f"Could not find strategy_list in {self._config_file}, falling back to environment variables.\n"
+                f"Could not find strategy_list in {self._config_file_path}, falling back to environment variables.\n"
             )
 
         # Fallback to env var
@@ -229,7 +238,6 @@ class Config:
         self.log_warning("strategy_list not found; defaulting to empty list.\n")
         return []
     
-
     def _load_initial_cash(self) -> int:
         """
         Load the name of the strategy the user want to use for the live trading.
@@ -240,17 +248,17 @@ class Config:
         """
 
         try:
-            with open(self._config_file, "r") as file:
+            with open(self._config_file_path, "r") as file:
                 conf = toml.load(file)
                 backtesting = conf.get("backtesting", {})
                 cash = backtesting.get("initial_cash")
 
         except FileNotFoundError:
-            self.log_info(f"Config file not found: {self._config_file}, falling back to environment variables.")
+            self.log_info(f"Config file not found: {self._config_file_path}, falling back to environment variables.")
             cash = None
 
         except Exception:
-            self.log_info(f"Could not find initial_cash from {self._config_file}, falling back to environment variables.")
+            self.log_info(f"Could not find initial_cash from {self._config_file_path}, falling back to environment variables.")
             cash = None
 
         if not cash:
@@ -262,7 +270,6 @@ class Config:
     
         return int(cash)
 
-
     def _load_days(self) -> int:
         """
         Total amount of days the user wants to use for backtesting
@@ -272,17 +279,17 @@ class Config:
         """
 
         try:
-            with open(self._config_file, "r") as file:
+            with open(self._config_file_path, "r") as file:
                 conf = toml.load(file)
                 backtesting = conf.get("backtesting", {})
                 days = backtesting.get("backtesting_days")
 
         except FileNotFoundError:
-            self.log_info(f"Config file not found: {self._config_file}, falling back to environment variables.")
+            self.log_info(f"Config file not found: {self._config_file_path}, falling back to environment variables.")
             days = None
 
         except Exception:
-            self.log_info(f"Could not find backtesting_days from {self._config_file}, falling back to environment variables.")
+            self.log_info(f"Could not find backtesting_days from {self._config_file_path}, falling back to environment variables.")
             days = None
 
         if not days:
@@ -294,52 +301,23 @@ class Config:
     
         return int(days)
     
-
     def load_backtesting_variables(self):
         return self._load_days(), self._load_initial_cash(), self._load_strategy_list()
 
 
-    def load_sma_windows(self):
+    def load_ml_variable(self, variable_name):
         try:
-            with open(self._config_file, "r") as file:
-                conf = toml.load(file)
-                ml_variables = conf.get("ml-variables", {})
-                list = ml_variables.get("sma_windows")
-
-                normalized = self._normalize_watchlist(list)
-                if normalized:
-                    normalized = [int(x) for x in normalized]
-                    return normalized
-
-        except Exception:
-            self.log_info(
-                f"Could not find sma_windows in {self._config_file}, falling back to environment variables.\n"
-            )
-
-        # Fallback to env var
-        env_list = os.getenv("sma_windows")
-        normalized = self._normalize_watchlist(env_list)
-        if normalized:
-            normalized = [int(x) for x in normalized]
-            return normalized
-
-        self.log_warning("sma_windows not found; defaulting to empty list.\n")
-        return [0]
-    
-
-    def load_ml_var(self, variable_name):
-        try:
-            with open(self._config_file, "r") as file:
+            with open(self._config_file_path, "r") as file:
                 conf = toml.load(file)
                 ml_variables = conf.get("ml-variables", {})
                 variable = ml_variables.get(variable_name)
 
         except FileNotFoundError:
-            self.log_info(f"Config file not found: {self._config_file}, falling back to environment variables.")
+            self.log_info(f"Config file not found: {self._config_file_path}, falling back to environment variables.")
             variable = None
 
         except Exception:
-            self.log_info(f"Could not find {variable_name} from {self._config_file}, falling back to environment variables.")
+            self.log_info(f"Could not find {variable_name} from {self._config_file_path}, falling back to environment variables.")
             variable = None
 
         if not variable:
@@ -350,16 +328,6 @@ class Config:
             raise RuntimeError(f"Missing {variable_name}")
     
         return int(variable)
-    
-    def load_min_lookback(self):
-        min_lookback = max(
-            *self.load_sma_windows(),
-            self.load_ml_var("rsi_window"),
-            self._macd_stabilization,
-            self.load_ml_var("zscore_window"),
-        )
-
-        return min_lookback
 
 
 if __name__ == "__main__":
@@ -367,17 +335,21 @@ if __name__ == "__main__":
 
     info = f"""
 ---INFO---
-keys:           {conf.load_keys()}, 
-strategy:       {conf.strategy_name}, 
-watchlist:      {conf.watchlist}
----BACKTESTING---
-days:           {conf._load_days(), type(conf._load_days())}, 
-cash:           {conf._load_initial_cash(), type(conf._load_initial_cash)}, 
-strategy list:  {conf._load_strategy_list(), type(conf._load_strategy_list())}
----INFO---
-min_lookback:   {conf.load_min_lookback()}
-----------
+keys:               {conf.load_keys()}, 
+strategy:           {conf.strategy_name}, 
+watchlist:          {conf.watchlist}
 
+---BACKTESTING---
+days:               {conf._load_days()}, 
+cash:               {conf._load_initial_cash()}, 
+strategy list:      {conf._load_strategy_list()}
+
+---ML-TRAINING---
+min_lookback:       {conf.min_lookback},
+sma_windows:        {conf.sma_windows}
+macd_stabilization: {conf.macd_stabilization}
+
+-----------------
 
 """
     

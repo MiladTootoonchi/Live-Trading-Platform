@@ -31,24 +31,24 @@ class MLDataPipeline(MarketDataPipeline):
 
         self._feature_columns = feature_columns
 
-        self._sma_windows = config.load_sma_windows()
-        self._rsi_window = config.load_ml_var("rsi_window")
+        self._sma_windows = config.sma_windows
+        self._rsi_window = config.load_ml_variable("rsi_window")
 
-        self._macd_fast = config.load_ml_var("macd_fast")
-        self._macd_slow = config.load_ml_var("macd_slow")
-        self._macd_signal = config.load_ml_var("macd_signal")
-        self._macd_stabilization = config._macd_stabilization
+        self._macd_fast = config.load_ml_variable("macd_fast")
+        self._macd_slow = config.load_ml_variable("macd_slow")
+        self._macd_signal = config.load_ml_variable("macd_signal")
+        self._macd_stabilization = config.macd_stabilization
 
-        self._zscore_window = config.load_ml_var("zscore_window")
+        self._zscore_window = config.load_ml_variable("zscore_window")
 
-        self._time_steps = config.load_ml_var("time_steps")
+        self._time_steps = config.load_ml_variable("time_steps")
 
         self._safety_margin = max(10, self._time_steps // 2)
 
-        self._min_lookback = config.load_min_lookback()
+        self._min_lookback = config.min_lookback
 
         self._pred_history = self._time_steps + self._min_lookback + self._safety_margin
-        self._ml_training_lookback = config.load_ml_var("ml_training_lookback")
+        self._ml_training_lookback = config.load_ml_variable("ml_training_lookback")
         self._is_backtest = self._position_data.get("backtest", False)
         self._data = self._create_df()
         self._pred_df = self._build_prediction_dataframe()
@@ -64,11 +64,7 @@ class MLDataPipeline(MarketDataPipeline):
     @property
     def is_backtest(self):
         return self._is_backtest
-    
-    @property
-    def data(self):
-        return self._data
-    
+   
     @property
     def pred_df(self):
         return self._pred_df
@@ -122,7 +118,7 @@ class MLDataPipeline(MarketDataPipeline):
                 using the provided `last_close` and zero volume.
         """
 
-        trade_req = StockLatestTradeRequest(symbol_or_symbols=self._symbol)
+        trade_req = StockLatestTradeRequest(symbol_or_symbols=self.symbol)
 
         try:
             latest_trade = self._client.get_latest_trade(trade_req)

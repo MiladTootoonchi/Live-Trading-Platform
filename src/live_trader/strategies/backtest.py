@@ -27,29 +27,59 @@ class Backtester:
         position_size_pct: float = 0.95,
     ):
         self._config = config
+        self._initial_cash = initial_cash
+        self._position_size_pct = position_size_pct
 
-        self.strategy = strategy
-
-        self.initial_cash = initial_cash
-        self.position_size_pct = position_size_pct
+        self._strategy = strategy
         self._strategy_state = {}
+        self._datapipeline = self._strategy.data
+        self._bars = self._df_to_full_bars(self._datapipeline.data)
 
-        self._min_lookback = config.load_min_lookback()
+    @staticmethod    
+    def _df_to_full_bars(df: pd.DataFrame) -> List[Dict[str, Any]]:
+        """
+        Convert a DataFrame returned by your fetch_data into the full-bar list.
 
-        self._key, self._secret = config.load_keys()
+        The function accepts a variety of column names and normalizes them into:
+        t (ISO timestamp string), o, h, l, c, v
 
-        self.bars = self._df_to_full_bars(self.strategy.data.data)
-        self.symbol = strategy.data.symbol
+        Args:
+            df: pandas.DataFrame with OHLCV data and a DatetimeIndex or timestamp column.
 
+        Returns:
+            List of dicts with full bar fields.
+        """
+        bars = []
 
-    def calculate_quantity(self, signal: SideSignal, cash: float, position_qty: int, current_price: float) -> int:
+        for idx, row in df.iterrows():
+            bar = {
+                "t": str(idx),
+                "o": row.get("open"),
+                "h": row.get("high"),
+                "l": row.get("low"),
+                "c": row.get("close"),
+                "v": row.get("volume"),
+            }
+
+            # PASS THROUGH — do not alter
+            if "trade_count" in row:
+                bar["trade_count"] = row["trade_count"]
+
+            if "vwap" in row:
+                bar["vwap"] = row["vwap"]
+
+            bars.append(bar)
+
+        return bars
+
+    def _calculate_quantity(self, signal: SideSignal, cash: float, position_qty: int, current_price: float) -> int:
         """
         Calculate trade quantity.
 
         For buy, use position_size_pct of cash; for sell, return current holding qty.
         """
         if signal == SideSignal.BUY:
-            max_value = cash * self.position_size_pct
+            max_value = cash * self._position_size_pct
             try:
                 qty = int(max_value / current_price)
             except Exception:
@@ -59,17 +89,25 @@ class Backtester:
             return position_qty
         return 0
 
-    async def run_strategy(self, lookback: int) -> pd.DataFrame:
-        total_days = len(self.bars)
+    async def run_strategy(self, backtesting_days: int) -> pd.DataFrame:
+        symbol = self._datapipeline.symbol
+        min_lookback = self._config.min_lookback
+
+        total_days = len(self._bars)
+        lookback = max(
+            total_days - backtesting_days,
+            min_lookback
+        )
+
         warmup_days = lookback
         test_days = total_days - lookback
 
-        start_date = pd.to_datetime(self.bars[lookback]["t"]).date()
-        end_date = pd.to_datetime(self.bars[-1]["t"]).date()
+        start_date = pd.to_datetime(self._bars[lookback]["t"]).date()
+        end_date = pd.to_datetime(self._bars[-1]["t"]).date()
 
         self._config.log_info(
             f"""
-            Backtest period for {self.symbol}
+            Backtest period for {symbol}
             --------------------------------
             Total trading days : {total_days}
             Warmup days        : {warmup_days}
@@ -79,18 +117,18 @@ class Backtester:
             """
         )
 
-        if lookback < self._min_lookback:
+        if lookback < min_lookback:
             raise ValueError(
                 f"[Backtester] lookback={lookback} too small for ML strategies "
-                f"(min {self._min_lookback})"
+                f"(min {min_lookback})"
             )
 
-        if len(self.bars) <= lookback:
+        if len(self._bars) <= lookback:
             raise ValueError(
-                f"[Backtester] Not enough data: self.bars={len(self.bars)}, lookback={lookback}"
+                f"[Backtester] Not enough data: self._bars={len(self._bars)}, lookback={lookback}"
             )
 
-        cash = self.initial_cash
+        cash = self._initial_cash
         position_qty = 0
         position_avg_price = 0.0
         portfolio_values: List[float] = []
@@ -98,16 +136,16 @@ class Backtester:
         trades: List[Dict[str, Any]] = []
 
         # iterate through time steps
-        for i in range(lookback, len(self.bars)):
-            bar = self.bars[i]
+        for i in range(lookback, len(self._bars)):
+            bar = self._bars[i]
             date = bar.get("t", "")[:19]
             current_price = float(bar.get("c", 0.0))
 
-            # history available to strategy: all self.bars up to and including this index
-            self._current_bars = self.bars[: i + 1]
+            # history available to strategy: all self._bars up to and including this index
+            self._current_bars = self._bars[: i + 1]
 
             position_data: Dict[str, Any] = {
-                "symbol": self.symbol,
+                "symbol": symbol,
                 "qty": position_qty,
                 "history": list(self._current_bars),
                 "avg_entry_price": position_avg_price,
@@ -116,19 +154,19 @@ class Backtester:
             }
 
 
-            state = self._strategy_state.setdefault(self.symbol, {})
+            state = self._strategy_state.setdefault(symbol, {})
             position_data["state"] = state
 
             try:
-                self.strategy.prepare_data(self.symbol, position_data)
-                result = self.strategy.run()
+                self._strategy.prepare_data(symbol, position_data)
+                result = self._strategy.run()
                 
                 if inspect.iscoroutine(result):
                     result = await result
 
                 if (not isinstance(result, tuple) or len(result) != 2):
                     raise ValueError(
-                        f"{self.strategy.__class__.__name__} must return (signal, qty), got {result}"
+                        f"{self._strategy.__class__.__name__} must return (signal, qty), got {result}"
                     )
 
                 signal, qty = result
@@ -137,14 +175,14 @@ class Backtester:
                 import traceback
                 traceback.print_exc()
                 self._config.log_error(
-                    f"Strategy {self.strategy.__class__.__name__} failed at {date}: {e}"
+                    f"Strategy {self._strategy.__class__.__name__} failed at {date}: {e}"
                 )
                 signal, qty = SideSignal.HOLD, 0
 
 
             # If strategy returned no quantity, calculate a sensible one
             if qty == 0 and signal != SideSignal.HOLD:
-                qty = self.calculate_quantity(signal, cash, position_qty, current_price)
+                qty = self._calculate_quantity(signal, cash, position_qty, current_price)
 
             # Execute buy
             if signal == SideSignal.BUY and qty > 0 and cash >= current_price * qty:
@@ -175,7 +213,6 @@ class Backtester:
 
         return pd.DataFrame({'date': dates, 'portfolio_value': portfolio_values})
 
-
     def calculate_metrics(self, results: pd.DataFrame) -> Dict[str, float]:
         """
         Calculate performance metrics from the portfolio time series.
@@ -187,7 +224,7 @@ class Backtester:
             return {}
 
         final_value = results['portfolio_value'].iloc[-1]
-        total_return = ((final_value - self.initial_cash) / self.initial_cash) * 100
+        total_return = ((final_value - self._initial_cash) / self._initial_cash) * 100
 
         # daily returns based on the value series
         results = results.copy()
@@ -227,40 +264,3 @@ class Backtester:
             'num_trades': int(len(self.trades)),
             'win_rate_pct': round(win_rate, 2)
         }
-
-    @staticmethod    
-    def _df_to_full_bars(df: pd.DataFrame) -> List[Dict[str, Any]]:
-        """
-        Convert a DataFrame returned by your fetch_data into the full-bar list.
-
-        The function accepts a variety of column names and normalizes them into:
-        t (ISO timestamp string), o, h, l, c, v
-
-        Args:
-            df: pandas.DataFrame with OHLCV data and a DatetimeIndex or timestamp column.
-
-        Returns:
-            List of dicts with full bar fields.
-        """
-        bars = []
-
-        for idx, row in df.iterrows():
-            bar = {
-                "t": str(idx),
-                "o": row.get("open"),
-                "h": row.get("high"),
-                "l": row.get("low"),
-                "c": row.get("close"),
-                "v": row.get("volume"),
-            }
-
-            # PASS THROUGH — do not alter
-            if "trade_count" in row:
-                bar["trade_count"] = row["trade_count"]
-
-            if "vwap" in row:
-                bar["vwap"] = row["vwap"]
-
-            bars.append(bar)
-
-        return bars
