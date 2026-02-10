@@ -19,22 +19,22 @@
         <mxCell id="oSAqVtpLd2lHS-Pg8Lrp-1" edge="1" parent="1" source="2tMiPs3WPfyxty3svVGY-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;endArrow=diamond;endFill=0;" target="2tMiPs3WPfyxty3svVGY-25">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="870" y="140" />
+              <mxPoint x="870" y="130" />
               <mxPoint x="870" y="388" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="2tMiPs3WPfyxty3svVGY-6" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" value="&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Config&lt;/span&gt;&lt;/div&gt;" vertex="1">
-          <mxGeometry height="380" width="180" x="900" y="100" as="geometry" />
+          <mxGeometry height="370" width="180" x="900" y="110" as="geometry" />
         </mxCell>
-        <mxCell id="2tMiPs3WPfyxty3svVGY-7" parent="2tMiPs3WPfyxty3svVGY-6" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="- _config_file_path&lt;div&gt;- _logger&lt;/div&gt;&lt;div&gt;- _alpaca_key&lt;/div&gt;&lt;div&gt;- _alpaca_secret (key)&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;+ watchlist&lt;/div&gt;&lt;div&gt;+ strategy_name&lt;/div&gt;&lt;div&gt;+ apca_url (alpaca)&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;+ macd_stabilization&lt;/div&gt;&lt;div&gt;+ sma_windows&lt;/div&gt;&lt;div&gt;+ min_lookback&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
-          <mxGeometry height="180" width="180" y="30" as="geometry" />
+        <mxCell id="2tMiPs3WPfyxty3svVGY-7" parent="2tMiPs3WPfyxty3svVGY-6" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="- _config_file_path&lt;div&gt;- _logger&lt;/div&gt;&lt;div&gt;- _alpaca_key&lt;/div&gt;&lt;div&gt;- _alpaca_secret (key)&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;+ watchlist&lt;/div&gt;&lt;div&gt;+ strategy_name&lt;/div&gt;&lt;div&gt;+ apca_url (alpaca)&lt;/div&gt;&lt;div&gt;+ macd_stabilization&lt;/div&gt;&lt;div&gt;+ sma_windows&lt;/div&gt;&lt;div&gt;+ min_lookback&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="170" width="180" y="30" as="geometry" />
         </mxCell>
         <mxCell id="2tMiPs3WPfyxty3svVGY-8" parent="2tMiPs3WPfyxty3svVGY-6" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" value="" vertex="1">
-          <mxGeometry height="8" width="180" y="210" as="geometry" />
+          <mxGeometry height="8" width="180" y="200" as="geometry" />
         </mxCell>
         <mxCell id="2tMiPs3WPfyxty3svVGY-9" parent="2tMiPs3WPfyxty3svVGY-6" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="&lt;div&gt;- _make_logger&lt;/div&gt;&lt;div&gt;- _ load_strategy_name&lt;/div&gt;&lt;div&gt;- _load_watchlist&lt;/div&gt;&lt;div&gt;- _normalize_watchlist&lt;/div&gt;&lt;div&gt;- _load_api_keys&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;+ log_{level}(message)&lt;/div&gt;&lt;div&gt;+ load_keys&lt;/div&gt;&lt;div&gt;+ load_backtesting_variables&lt;/div&gt;&lt;div&gt;+ load_ml_variable(name)&lt;/div&gt;" vertex="1">
-          <mxGeometry height="162" width="180" y="218" as="geometry" />
+          <mxGeometry height="162" width="180" y="208" as="geometry" />
         </mxCell>
         <mxCell id="2tMiPs3WPfyxty3svVGY-10" edge="1" parent="1" source="2tMiPs3WPfyxty3svVGY-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;endArrow=block;endFill=0;" target="2tMiPs3WPfyxty3svVGY-4">
           <mxGeometry relative="1" as="geometry" />
