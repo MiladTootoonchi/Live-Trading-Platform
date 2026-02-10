@@ -3,6 +3,15 @@ import numpy as np
 from live_trader.ml_model.utils import ProbabilisticClassifier
 from live_trader.ml_model.ml_pipeline import MLStrategyBase
 
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+
+# Ignoring info + warning + errors: the user do not need to see this
+import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"   # Completely disable GPU
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"   # Reduces backend logs
+
 # Models
 from sklearn.ensemble import RandomForestClassifier
 from lightgbm import LGBMClassifier
@@ -14,7 +23,7 @@ class RandomForest(MLStrategyBase):
     def __init__(self, config):
         super().__init__(config)
         self.name = "Random_Forest"
-    def _initialize_model(_: np.ndarray) -> ProbabilisticClassifier:
+    def _initialize_model(self, _: np.ndarray) -> ProbabilisticClassifier:
         """
         Build and return a Random Forest classifier configured for
         probabilistic binary classification on financial time series features.
@@ -50,7 +59,7 @@ class LGBM(MLStrategyBase):
     def __init__(self, config):
         super().__init__(config)
         self.name = "LightGBM"
-    def _initialize_model(_: np.ndarray) -> ProbabilisticClassifier:
+    def _initialize_model(self, _: np.ndarray) -> ProbabilisticClassifier:
         """
         Build and return a LightGBM classifier optimized for tabular
         financial features and probabilistic prediction.
@@ -85,7 +94,7 @@ class XGB(MLStrategyBase):
     def __init__(self, config):
         super().__init__(config)
         self.name = "XGBoost"
-    def _initialize_model(_: np.ndarray) -> ProbabilisticClassifier:
+    def _initialize_model(self, _: np.ndarray) -> ProbabilisticClassifier:
         """
         Build and return an XGBoost classifier for probabilistic
         binary classification.
@@ -120,7 +129,7 @@ class CatBoost(MLStrategyBase):
     def __init__(self, config):
         super().__init__(config)
         self.name = "CatBoost"
-    def _initialize_model(_: np.ndarray) -> ProbabilisticClassifier:
+    def _initialize_model(self, _: np.ndarray) -> ProbabilisticClassifier:
         """
         Build and return a CatBoost classifier for probabilistic
         binary classification with automatic class balancing.
