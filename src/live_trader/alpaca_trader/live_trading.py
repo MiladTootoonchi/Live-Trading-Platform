@@ -1,6 +1,6 @@
 import requests
 import asyncio
-from typing import Callable, List, Dict, Any
+from typing import Callable, List, Dict, Any, Type, Coroutine
 import inspect
 import pandas as pd
 
@@ -44,21 +44,22 @@ STRATEGIES = {
 
 class AlpacaTrader:
     """
-    A class to handle the Alpaca trading given API keys and the order data.
+    High-level trading interface for interacting with the Alpaca API.
 
-    This class will create market orders that will either buy or sell positions,
-    Get the order object from Alpaca and
-    Get all the posistions.
-    Get orders from a strategy and send it.
+    Handles order execution, position management, strategy integration,
+    live trading cycles, and backtesting utilities. Uses a Config
+    instance for credentials and runtime settings.
     """
 
     def __init__(self, config: Config) -> None:
         """
-        Initialize the trader.
-        
+        Initialize the trader with API credentials and strategy.
+
+        Loads API keys from the provided configuration object,
+        prepares request headers, and resolves the selected strategy.
+
         Args:
-            key: The key given by Alpaca
-            secret_key: The secret key alpaca key
+            config: Configuration object containing credentials and settings.
         """
 
         self._config = config
@@ -402,7 +403,6 @@ class AlpacaTrader:
 
         Args:
             order_id (str): The ID of the order to monitor.
-            seconds (int): How many 
         """
 
         url = f"{self._APCA_API_BASE_URL}/v2/orders/{order_id}"
@@ -478,7 +478,7 @@ class AlpacaTrader:
         except Exception:
             self._config.log_expectation(f"Failed to update position(s) for {symbol}")
 
-    async def _analyze_watchlist(self) -> list:
+    async def _analyze_watchlist(self) -> List[Coroutine[Any, Any, None]]:
         """
         Analyzes symbols in the watchlist and prepares order placement tasks.
 
@@ -570,21 +570,18 @@ class AlpacaTrader:
             pass
 
 
-    def _find_strategy(self) -> Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
+    def _find_strategy(self) -> Type[BaseStrategy]:
         """
-        Resolve and return a trading strategy function by name.
+        Resolve and return the configured strategy class.
 
-        If no strategy name is provided, the user is prompted to select one.
-        The function repeatedly asks for input until a valid strategy name
-        matching a key in the internal ``strategies`` dictionary is supplied.
+        Validates the strategy name against the STRATEGIES
+        registry and returns the corresponding strategy type.
 
         Returns:
-            Callable[[Dict[str, Any]], tuple[SideSignal, int]]:
-                The strategy function associated with the chosen name.
+            Type[BaseStrategy]: Strategy class to be instantiated.
 
         Raises:
-            KeyboardInterrupt:
-                If the user aborts the selection process.
+            KeyboardInterrupt: If user aborts input selection.
         """
         name = None
 
@@ -606,21 +603,24 @@ class AlpacaTrader:
     async def _compare_strategies(
         self,
         symbol: str,
-        strategies: Dict[str, Callable],
+        strategies: Dict[str, Type[BaseStrategy]],
         days: int = 80,
         initial_cash: float = 10000,
     ) -> pd.DataFrame:
         """
-        Run multiple strategies against the same symbol and return a comparison DataFrame.
+        Run multiple strategies on a single symbol.
+
+        Instantiates each strategy, executes the backtest,
+        and collects performance metrics for comparison.
 
         Args:
-            symbol: ticker symbol to evaluate
-            strategies: mapping of strategy name -> callable function
-            days: approximate days to fetch (unused with current fetch_data signature)
-            initial_cash: starting cash for each run
+            symbol: Ticker symbol to evaluate.
+            strategies: Mapping of strategy name to strategy class.
+            days: Number of historical days to test.
+            initial_cash: Starting capital.
 
         Returns:
-            pandas.DataFrame with columns including strategy, symbol and performance metrics
+            pd.DataFrame: Aggregated performance metrics.
         """
         results = []
 
@@ -673,7 +673,6 @@ class AlpacaTrader:
 
         return df
 
-
     async def _run_multi_symbol_backtest(
         self,
         symbols: List[str],
@@ -682,7 +681,19 @@ class AlpacaTrader:
         initial_cash: float = 10000,
     ) -> pd.DataFrame:
         """
-        Convenience wrapper to run compare_strategies across multiple symbols.
+        Run strategy comparisons across multiple symbols.
+
+        Iterates over each symbol and aggregates backtesting
+        results into a single combined DataFrame.
+
+        Args:
+            symbols: List of ticker symbols to evaluate.
+            strategies: Mapping of strategy name to strategy class.
+            days: Number of historical days to backtest.
+            initial_cash: Starting capital for each run.
+
+        Returns:
+            pd.DataFrame: Combined backtest results.
         """
         all_results = []
         for s in symbols:
@@ -696,7 +707,14 @@ class AlpacaTrader:
             return pd.concat(all_results, ignore_index=True)
         return pd.DataFrame()
 
-    async def run_backtest(self):
+    async def run_backtest(self) -> None:
+        """
+        Execute a full backtesting session.
+
+        Loads symbols and strategies from configuration,
+        runs multi-symbol comparisons, and prints results.
+        Saves results to CSV if performance metrics exist.
+        """
 
         symbols = self._config.watchlist
         days, initial_cash, strategies_list = self._config.load_backtesting_variables()

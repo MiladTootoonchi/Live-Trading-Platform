@@ -9,14 +9,6 @@ class BollingerBandsStrategy(BaseStrategy):
         Generates a signal when price moves above or below
         the standard deviation bands around a moving average.
 
-        Args:
-            symbol (str): The symbol of the stock we want to calculate for.
-            position (dict):
-                Contains:
-                    symbol (str): the ticker symbol
-                    history (list or DataFrame): optional price history
-                    current_price (float): fallback price
-
         Returns:
             tuple(SideSignal, int):
                 The trade signal and quantity (always zero for safety).

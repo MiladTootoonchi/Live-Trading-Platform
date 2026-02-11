@@ -11,14 +11,6 @@ class MomentumStrategy(BaseStrategy):
         compares current price performance to the position entry price. It issues
         buy or sell signals based on strong positive or negative movement.
 
-        Args:
-            symbol (str): The symbol of the stock we want to calculate for.
-            position_data (dict):
-                Should contain:
-                symbol: the ticker to evaluate
-                history: optional price history from the position or API
-                avg_entry_price: the price paid for the current position
-
         Returns:
             tuple:
                 A pair consisting of a SideSignal value and a quantity. The

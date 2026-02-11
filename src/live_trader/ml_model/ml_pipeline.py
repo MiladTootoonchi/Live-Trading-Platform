@@ -39,16 +39,40 @@ tf.get_logger().setLevel("ERROR")
 
 class MLStrategyBase(BaseStrategy):
     def __init__(self, config):
+        """
+        Base class for machine learning trading strategies.
+
+        Handles data preparation, model training, calibration,
+        persistence, and inference. Subclasses must implement
+        the model architecture via `_initialize_model`.
+        """
         super().__init__(config)
         self.name = None
         self._model_builder = self._initialize_model
         self._modelartifact = None
 
     @abstractmethod
-    def _initialize_model(self, X_train_seq: Union[np.ndarray, list]):
+    def _initialize_model(self, X_train_seq: Union[np.ndarray, list]) -> ProbabilisticClassifier:
+        """
+        Build and return a compiled ML model.
+
+        Args:
+            X_train_seq: Training feature data used to infer
+                input shape or architecture parameters.
+
+        Returns:
+            ProbabilisticClassifier: Initialized model instance.
+        """
         pass
 
-    def prepare_data(self, symbol: str, position_data: dict):
+    def prepare_data(self, symbol: str, position_data: dict) -> None:
+        """
+        Initialize ML data pipeline for a symbol.
+
+        Args:
+            symbol: Ticker symbol.
+            position_data: Current position or market metadata.
+        """
         self._datapipeline = MLDataPipeline(self._config, symbol, position_data)
 
     def _calibrate_probabilities(
@@ -111,7 +135,7 @@ class MLStrategyBase(BaseStrategy):
         y_train: np.ndarray,
         X_val: np.ndarray,
         y_val: np.ndarray,
-    ) -> Model:
+    ) -> ProbabilisticClassifier:
         """
         Train a time-series model using chronological validation.
 
@@ -123,7 +147,7 @@ class MLStrategyBase(BaseStrategy):
             y_val (np.ndarray): Validation targets.
 
         Returns:
-            Model:
+            ProbabilisticClassifier:
                 Trains a model using the appropriate strategy depending on framework.
 
                 - Keras models: uses epochs, callbacks, validation
@@ -240,14 +264,14 @@ class MLStrategyBase(BaseStrategy):
         self,
     ) -> ModelArtifact:
         """
-        Loads a persisted model artifact or trains and saves a new one.
+        Load or train a model artifact for the current symbol.
 
-        If a model artifact exists for the given model builder and symbol,
-        it is loaded from disk. Otherwise, a new model is trained using the
-        provided historical data, evaluated, calibrated, and persisted.
+        If a saved artifact exists, it is loaded from disk.
+        Otherwise, the model is trained, calibrated, evaluated,
+        and persisted for future reuse.
 
         Returns:
-            ModelArtifact
+            ModelArtifact: Trained model, scaler, and calibrator.
         """
 
         base_dir = Path(__file__).resolve().parent
@@ -372,12 +396,14 @@ class MLStrategyBase(BaseStrategy):
 
     async def _run(self) -> tuple[SideSignal, int]:
         """
-        Evaluates a trading position from an Alpaca JSON response and recommends an action.
-        This strategy will only buy or sell.
+        Execute full inference cycle for a trading decision.
+
+        Loads or trains model, prepares input data,
+        applies probability calibration, and determines
+        trade direction and quantity.
 
         Returns:
-            tuple:
-                (SideSignal.BUY or SideSignal.SELL, qty: int)
+            tuple[SideSignal, int]: Recommended side and quantity.
         """
         
         artifact = self._check_model_existence()

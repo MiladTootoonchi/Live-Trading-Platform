@@ -33,7 +33,6 @@ class RSIStrategy(BaseStrategy):
 
         return 100 - (100 / (1 + rs))
 
-
     def _run(self) -> Tuple[SideSignal, int]:
         """
         A simple RSI-based trading strategy.
@@ -42,13 +41,6 @@ class RSIStrategy(BaseStrategy):
         - Buy when RSI < 30
         - Sell when RSI > 70
         - Hold otherwise
-
-        Args:
-            symbol (str): The symbol of the stock we want to calculate for.
-            position_data (Dict[str, Any]):
-                A dictionary containing:
-                - "symbol": The ticker symbol.
-                - "history": Historical bar data (various formats supported).
 
         Returns:
             Tuple[SideSignal, int]:

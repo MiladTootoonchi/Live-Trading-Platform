@@ -9,12 +9,6 @@ class MeanReversionStrategy(BaseStrategy):
         to determine if the price has deviated significantly.
 
         Args:
-            symbol (str): The symbol of the stock we want to calculate for.
-            position_data (dict):
-                Contains:
-                    symbol: ticker of the asset
-                    history: optional list or DataFrame of price bars
-                    current_price: fallback current price
             window (int):
                 Number of bars used to calculate the moving average.
 

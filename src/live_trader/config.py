@@ -2,13 +2,30 @@ from dotenv import load_dotenv
 import os
 import toml
 import logging
+from typing import Tuple, List
 
 load_dotenv()
 
 
 class Config:
+    """
+    Central configuration manager for live trading and backtesting.
+
+    Loads settings from a TOML file with fallback to environment variables.
+    Provides access to API credentials, strategy configuration, and
+    ML-related parameters used across the system.
+    """
 
     def __init__(self, config_file_path: str = "settings.toml"):
+        """
+        Initialize configuration and compute derived values.
+
+        Loads credentials, strategy settings, watchlists, and ML variables.
+        Also calculates lookback requirements used in model training.
+
+        Args:
+            config_file_path: Path to the TOML configuration file.
+        """
         self._config_file_path = config_file_path
         self._logger = self._make_logger()
         self._alpaca_key, self._alpaca_secret = self._load_api_keys()
@@ -48,15 +65,16 @@ class Config:
     def log_expectation(self, message: str):
         self._logger.exception(message)
 
-    def _make_logger(self):
+    def _make_logger(self) -> logging.Logger:
         """
-        Creates and configures a logger that writes INFO-level messages to a file.
+        Create and configure a file-based logger.
 
-        The logger writes to 'logfiles/live_trading.log', creating the directory if it 
-        doesn't exist. Log messages are formatted with a timestamp, log level, and message.
-        
+        The logger writes formatted log messages to a file inside
+        the 'logfiles' directory and ensures no duplicate handlers
+        are attached.
+
         Returns:
-            logging.Logger: Configured logger instance ready for use.
+            logging.Logger: Configured logger instance.
         """
         
         log_dir = "logfiles"
@@ -80,11 +98,16 @@ class Config:
 
     def _load_strategy_name(self) -> str:
         """
-        Load the name of the strategy the user want to use for the live trading.
-        If the strategy is not given, the program will ask for an input.
+        Load the active trading strategy name.
+
+        Attempts to read the value from the config file and
+        falls back to environment variables if necessary.
 
         Returns:
-            str: The name of the strategy:
+            str: Name of the selected strategy.
+
+        Raises:
+            RuntimeError: If no strategy is defined.
         """
 
         try:
@@ -114,7 +137,22 @@ class Config:
 
     # ----- watchlist -----
     @staticmethod
-    def _normalize_watchlist(value) -> list[str]:
+    def _normalize_watchlist(value: object) -> List[str]:
+        """
+        Normalize watchlist input into a list of symbols.
+
+        Accepts either a list or a comma-separated string and
+        removes empty or whitespace-only entries.
+
+        Args:
+            value: Raw watchlist value from config or environment.
+
+        Returns:
+            List[str]: Cleaned list of ticker symbols.
+
+        Raises:
+            TypeError: If the value type is unsupported.
+        """
         if not value:
             return []
 
@@ -136,9 +174,16 @@ class Config:
 
         raise TypeError("Watchlist must be a list or a comma-separated string")
 
-    def _load_watchlist(self):
+    def _load_watchlist(self) -> List[str]:
         """
-        Load the list of stocks the program is going to watch over whenever it updates posistions.
+        Load the trading watchlist.
+
+        Attempts to read symbols from the config file and
+        falls back to environment variables if necessary.
+        Returns an empty list if no symbols are defined.
+
+        Returns:
+            List[str]: List of ticker symbols to monitor.
         """
 
         try:
@@ -169,12 +214,18 @@ class Config:
 
     # ----- settings -----
 
-    def _load_api_keys(self) -> tuple:
+    def _load_api_keys(self) -> Tuple[str, str]:
         """
-        Load API keys from a TOML config file, with fallback to environment variables.
+        Load Alpaca API credentials.
+
+        Reads credentials from the configuration file with
+        fallback to environment variables if missing.
 
         Returns:
-            tuple: (ALPACA_KEY, ALPACA_SECRET_KEY)
+            Tuple[str, str]: Alpaca API key and secret key.
+
+        Raises:
+            RuntimeError: If credentials are not provided.
         """
 
         alpaca_key = None
@@ -205,13 +256,28 @@ class Config:
             
         return alpaca_key, alpaca_secret
     
-    def load_keys(self):
+    def load_keys(self) -> Tuple[str, str]:
+        """
+        Return loaded Alpaca API credentials.
+
+        Provides access to the API key and secret
+        that were validated during initialization.
+
+        Returns:
+            Tuple[str, str]: Alpaca API key and secret key.
+        """
         return (self._alpaca_key, self._alpaca_secret)
     
 
-    def _load_strategy_list(self):
+    def _load_strategy_list(self) -> List[str]:
         """
-        Load the list of strategies the program is going to use for backtesting.
+        Load the list of strategies for backtesting.
+
+        Reads strategy names from the configuration file
+        with fallback to environment variables if missing.
+
+        Returns:
+            List[str]: List of strategy names.
         """
 
         try:
@@ -240,11 +306,16 @@ class Config:
     
     def _load_initial_cash(self) -> int:
         """
-        Load the name of the strategy the user want to use for the live trading.
-        If the strategy is not given, the program will ask for an input.
+        Load the initial capital for backtesting.
+
+        Attempts to read the value from the config file
+        and falls back to environment variables if needed.
 
         Returns:
-            int: The initial_cash:
+            int: Initial cash amount.
+
+        Raises:
+            RuntimeError: If the value is not defined.
         """
 
         try:
@@ -272,10 +343,16 @@ class Config:
 
     def _load_days(self) -> int:
         """
-        Total amount of days the user wants to use for backtesting
+        Load the number of backtesting days.
+
+        Reads the configured time horizon from file
+        or environment variables if necessary.
 
         Returns:
-            int: days.
+            int: Number of days for backtesting.
+
+        Raises:
+            RuntimeError: If the value is not defined.
         """
 
         try:
@@ -301,11 +378,35 @@ class Config:
     
         return int(days)
     
-    def load_backtesting_variables(self):
+    def load_backtesting_variables(self) -> Tuple[int, int, List[str]]:
+        """
+        Load core backtesting parameters.
+
+        Combines days, initial capital, and strategy list
+        into a single return for convenience.
+
+        Returns:
+            Tuple[int, int, List[str]]: Days, initial cash, and strategy list.
+        """
         return self._load_days(), self._load_initial_cash(), self._load_strategy_list()
 
 
-    def load_ml_variable(self, variable_name):
+    def load_ml_variable(self, variable_name) -> int:
+        """
+        Load a machine learning configuration variable.
+
+        Retrieves the value from the config file or
+        environment variables and converts it to int.
+
+        Args:
+            variable_name: Name of the ML variable to load.
+
+        Returns:
+            int: Parsed ML variable value.
+
+        Raises:
+            RuntimeError: If the variable is not defined.
+        """
         try:
             with open(self._config_file_path, "r") as file:
                 conf = toml.load(file)

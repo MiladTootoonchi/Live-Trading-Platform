@@ -17,8 +17,23 @@ BarLike = Union[
     ]
 
 class MarketDataPipeline():
-    def __init__(self, config: Config, symbol: str, position_data: Mapping | None = None, lookback = 750):
-        
+    """
+    Market data loader and normalizer for a single symbol.
+
+    Fetches historical OHLCV data from Alpaca and converts
+    multiple bar formats into a standardized DataFrame.
+    Ensures clean, UTC-indexed data for strategies and ML models.
+    """
+    def __init__(self, config: Config, symbol: str, position_data: Mapping[str, object] | None = None, lookback = 750):
+        """
+        Initialize market data pipeline.
+
+        Args:
+            config: Application configuration object.
+            symbol: Ticker symbol to fetch.
+            position_data: Optional runtime position metadata.
+            lookback: Number of historical bars to consider.
+        """
         self._config = config
         self.symbol = symbol
         self.lookback = lookback
@@ -27,8 +42,8 @@ class MarketDataPipeline():
 
         self._client = StockHistoricalDataClient(api_key = self._key, secret_key = self._secret)
 
-        self._position_data = position_data or {}
-        self._data = self._create_bars()
+        self._position_data: Mapping[str, object] = position_data or {}
+        self._data: pd.DataFrame = self._create_bars()
 
 
 
@@ -51,12 +66,38 @@ class MarketDataPipeline():
         stop=stop_after_attempt(5),
     )
     def _get_bars(self, request_params):
+        """
+        Retrieve historical bars from Alpaca with retry logic.
+
+        Automatically retries using exponential backoff
+        to handle transient API failures.
+
+        Args:
+            request_params: Configured StockBarsRequest object.
+
+        Returns:
+            Raw Alpaca bar response.
+        """
         return self._client.get_stock_bars(request_params)
     def _fetch_data(
             self,
             start_date: tuple[int, int, int] = (2020, 1, 1),
             end_date: tuple[int, int, int] = (2026, 1, 1)
     ) -> pd.DataFrame:
+        """
+        Fetch daily historical OHLCV data from Alpaca.
+
+        Validates date boundaries, enforces UTC index,
+        flattens multi-index responses, and filters
+        to relevant market columns.
+
+        Args:
+            start_date: (year, month, day) start tuple.
+            end_date: (year, month, day) end tuple.
+
+        Returns:
+            pd.DataFrame: Cleaned historical bar dataset.
+        """
 
         if self._client is None:
             self._config.log_error("Alpaca client not initialized")
@@ -178,7 +219,17 @@ class MarketDataPipeline():
 
         return df.sort_index()
     
-    def _create_bars(self):
+    def _create_bars(self) -> pd.DataFrame:
+        """
+        Build final bar dataset for the symbol.
+
+        Prefers runtime history from position_data when
+        available; otherwise fetches historical data
+        from the market data provider.
+
+        Returns:
+            pd.DataFrame: Normalized OHLCV dataset.
+        """
         bars = self._normalize_bars(self._position_data.get("history"))
 
         if bars.empty:

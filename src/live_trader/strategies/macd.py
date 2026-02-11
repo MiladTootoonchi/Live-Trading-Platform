@@ -55,19 +55,10 @@ class MACDStrategy(BaseStrategy):
 
         return macd_line, signal_line
 
-
     def _run(self) -> Tuple[SideSignal, int]:
         """
         MACD crossover strategy.
         Generates buy or sell signals when MACD crosses the signal line.
-
-        Args:
-            symbol (str): The symbol of the stock we want to calculate for.
-            position_data (dict):
-                Contains:
-                    symbol (str): ticker symbol
-                    history (list/DF): optional bar data
-                    current_price (float): fallback price
 
         Returns:
             tuple(SideSignal, int):

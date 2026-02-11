@@ -11,12 +11,11 @@ from live_trader.strategies.strategy import BaseStrategy
 
 class Backtester:
     """
-    Single-symbol backtester using full-bar format.
+    Single-symbol backtesting engine using full OHLCV bars.
 
-    Args:
-        symbol: ticker to backtest
-        initial_cash: starting cash
-        position_size_pct: fraction of available cash to use when buying
+    Simulates order execution over historical data by feeding
+    sequential bar history into a strategy instance. Tracks
+    portfolio value, trade history, and performance metrics.
     """
 
     def __init__(
@@ -26,6 +25,15 @@ class Backtester:
         initial_cash: float = 10000,
         position_size_pct: float = 0.95,
     ):
+        """
+        Initialize backtester with strategy and capital settings.
+
+        Args:
+            config: Application configuration object.
+            strategy: Strategy instance to evaluate.
+            initial_cash: Starting capital for the simulation.
+            position_size_pct: Fraction of cash allocated per buy.
+        """
         self._config = config
         self._initial_cash = initial_cash
         self._position_size_pct = position_size_pct
@@ -74,9 +82,20 @@ class Backtester:
 
     def _calculate_quantity(self, signal: SideSignal, cash: float, position_qty: int, current_price: float) -> int:
         """
-        Calculate trade quantity.
+        Determine trade size based on signal and capital.
 
-        For buy, use position_size_pct of cash; for sell, return current holding qty.
+        For BUY, allocates a percentage of available cash.
+        For SELL, returns the current held quantity.
+        HOLD results in zero quantity.
+
+        Args:
+            signal: Trading signal (BUY, SELL, HOLD).
+            cash: Available capital.
+            position_qty: Current held shares.
+            current_price: Latest market price.
+
+        Returns:
+            int: Quantity to execute.
         """
         if signal == SideSignal.BUY:
             max_value = cash * self._position_size_pct
@@ -90,6 +109,19 @@ class Backtester:
         return 0
 
     async def run_strategy(self, backtesting_days: int) -> pd.DataFrame:
+        """
+        Execute strategy over historical bars.
+
+        Iteratively feeds expanding price history into the
+        strategy, simulates trades, and tracks portfolio value
+        throughout the testing window.
+
+        Args:
+            backtesting_days: Number of recent days to evaluate.
+
+        Returns:
+            pd.DataFrame: Time series of portfolio values.
+        """
         symbol = self._datapipeline.symbol
         min_lookback = self._config.min_lookback
 
@@ -215,11 +247,19 @@ class Backtester:
 
     def calculate_metrics(self, results: pd.DataFrame) -> Dict[str, float]:
         """
-        Calculate performance metrics from the portfolio time series.
+        Compute performance metrics from backtest results.
 
-        Returns a dictionary with:
-            total_return_pct, final_value, sharpe_ratio, max_drawdown_pct, num_trades, win_rate_pct
+        Calculates total return, Sharpe ratio, maximum drawdown,
+        trade count, and win rate using the portfolio value
+        time series and recorded trades.
+
+        Args:
+            results: Portfolio value time series DataFrame.
+
+        Returns:
+            Dict[str, float]: Summary performance statistics.
         """
+
         if results.empty or len(results) < 2:
             return {}
 

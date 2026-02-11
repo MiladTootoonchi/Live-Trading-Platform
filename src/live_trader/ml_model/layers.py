@@ -24,11 +24,11 @@ class Patchify(tf.keras.layers.Layer):
     Splits a temporal sequence into non-overlapping patches.
 
     This layer converts a time-series tensor of shape
-    `(batch_size, time_steps, n_features)` into a patch-based
+    '(batch_size, time_steps, n_features)' into a patch-based
     representation suitable for Transformer-style models such as
     PatchTST.
 
-    If the number of time steps is not divisible by `patch_len`,
+    If the number of time steps is not divisible by 'patch_len',
     the sequence is zero-padded along the time dimension to ensure
     an integer number of patches.
     """
@@ -43,19 +43,19 @@ class Patchify(tf.keras.layers.Layer):
                 per patch).
             **kwargs:
                 Additional keyword arguments passed to the base
-                `tf.keras.layers.Layer` class.
+                'tf.keras.layers.Layer' class.
         """
         super().__init__(**kwargs)
         self.patch_len = patch_len
 
-    def call(self, inputs, training: bool = False):
+    def call(self, inputs: tf.Tensor, training: bool = False) -> tf.Tensor:
         """
         Applies patchification to the input time series.
 
         Args:
             inputs (tf.Tensor):
                 Input tensor of shape
-                `(batch_size, time_steps, n_features)`.
+                '(batch_size, time_steps, n_features)'.
             training (bool, optional):
                 Whether the layer is being executed in training mode.
                 This argument is included for API consistency and does
@@ -64,8 +64,8 @@ class Patchify(tf.keras.layers.Layer):
         Returns:
             tf.Tensor:
                 Patchified tensor of shape
-                `(batch_size, n_patches, patch_len * n_features)`,
-                where `n_patches = ceil(time_steps / patch_len)`.
+                '(batch_size, n_patches, patch_len * n_features)',
+                where 'n_patches = ceil(time_steps / patch_len)'.
         """
         batch_size = tf.shape(inputs)[0]
         time_steps = tf.shape(inputs)[1]
@@ -88,7 +88,7 @@ class Patchify(tf.keras.layers.Layer):
 
         return x
 
-    def get_config(self):
+    def get_config(self) -> dict:
         """
         Returns the configuration of the layer for serialization.
 
@@ -142,7 +142,7 @@ class GraphMessagePassing(tf.keras.layers.Layer):
         self.hidden_dim = hidden_dim
         self.dropout = dropout
 
-    def build(self, input_shape):
+    def build(self, input_shape: tf.TensorShape) -> None:
         """
         Creates the layer weights based on input shape.
 
@@ -168,7 +168,7 @@ class GraphMessagePassing(tf.keras.layers.Layer):
 
         super().build(input_shape)
 
-    def call(self, inputs, training: bool = False):
+    def call(self, inputs: tf.Tensor, training: bool = False) -> tf.Tensor:
         """
         Applies graph message passing to the input nodes.
 
@@ -196,7 +196,7 @@ class GraphMessagePassing(tf.keras.layers.Layer):
 
         return self.drop(x, training=training)
 
-    def get_config(self):
+    def get_config(self) -> dict:
         """
         Returns the configuration of the layer for serialization.
 
@@ -216,7 +216,7 @@ class GraphMessagePassing(tf.keras.layers.Layer):
 @register_keras_serializable(package="LiveTrader")
 class ExpandDims(tf.keras.layers.Layer):
     """
-    Layer wrapper around `tf.expand_dims` for safe model serialization.
+    Layer wrapper around 'tf.expand_dims' for safe model serialization.
 
     Used to replace Lambda layers in functional models to ensure
     compatibility with Keras model saving and loading.
@@ -236,7 +236,7 @@ class ExpandDims(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self.axis = axis
 
-    def call(self, inputs):
+    def call(self, inputs: tf.Tensor) -> tf.Tensor:
         """
         Expands the input tensor along the specified axis.
 
@@ -250,7 +250,13 @@ class ExpandDims(tf.keras.layers.Layer):
         """
         return tf.expand_dims(inputs, axis=self.axis)
 
-    def get_config(self):
+    def get_config(self) -> dict:
+        """
+        Return serializable configuration.
+
+        Returns:
+            dict: Layer configuration.
+        """
         config = super().get_config()
         config.update({"axis": self.axis})
         return config
@@ -261,9 +267,11 @@ class ExpandDims(tf.keras.layers.Layer):
 @register_keras_serializable(package="LiveTrader")
 class AutoencoderClassifierLite(tf.keras.Model):
     """
-    Autoencoder + Classifier with internal reconstruction loss.
+    Hybrid autoencoder-classifier with reconstruction regularization.
 
-    Keras 3-safe implementation using subclassed Model.
+    Encodes pooled sequence features into a latent space,
+    reconstructs inputs for auxiliary loss, and predicts
+    binary probabilities via a classification head.
     """
 
     expects_sequence = True
@@ -304,7 +312,20 @@ class AutoencoderClassifierLite(tf.keras.Model):
         self.cls_drop = Dropout(dropout)
         self.output_head = Dense(1, activation="sigmoid")
 
-    def call(self, inputs, training=False):
+    def call(self, inputs: tf.Tensor, training=False) -> tf.Tensor:
+        """
+        Forward pass through encoder, decoder, and classifier.
+
+        Adds reconstruction loss during training
+        using pooled sequence features.
+
+        Args:
+            inputs: Input tensor (B, T, F).
+            training: Enables dropout and reconstruction loss.
+
+        Returns:
+            tf.Tensor: Predicted probability (B, 1).
+        """
         # -------- Pool --------
         pooled = self.pool(inputs)
 
@@ -331,7 +352,13 @@ class AutoencoderClassifierLite(tf.keras.Model):
 
         return prob
     
-    def get_config(self):
+    def get_config(self) -> dict:
+        """
+        Return serializable model configuration.
+
+        Returns:
+            dict: Model configuration.
+        """
         config = super().get_config()
         config.update({
             "n_features": self.n_features,
@@ -343,6 +370,15 @@ class AutoencoderClassifierLite(tf.keras.Model):
         return config
     
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config: dict) -> "AutoencoderClassifierLite":
+        """
+        Recreate model from serialized configuration.
+
+        Args:
+            config: Configuration dictionary.
+
+        Returns:
+            AutoencoderClassifierLite: Instantiated model.
+        """
         return cls(**config)
 

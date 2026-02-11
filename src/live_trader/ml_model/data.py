@@ -15,6 +15,13 @@ from sklearn.preprocessing import StandardScaler
 
 
 class MLDataPipeline(MarketDataPipeline):
+    """
+    Machine learning data pipeline for feature engineering and sequencing.
+
+    Extends MarketDataPipeline by computing technical indicators,
+    preparing training and inference datasets, and constructing
+    rolling time-series sequences for ML models.
+    """
     def __init__(
                 self,
                 config: Config,
@@ -26,7 +33,18 @@ class MLDataPipeline(MarketDataPipeline):
                     "vwap", "SMA5", "SMA20", "SMA50",
                     "price_change", "RSI", "MACD", "MACD_Signal"],
                 ):
-        
+        """
+        Initialize the ML data pipeline.
+
+        Loads ML-related configuration values, prepares historical
+        training data, and builds the prediction dataframe.
+
+        Args:
+            config: Application configuration object.
+            symbol: Ticker symbol to process.
+            position_data: Position metadata or backtest payload.
+            feature_columns: Optional list of feature column names.
+        """
         super().__init__(config, symbol, position_data)
 
         self._feature_columns = feature_columns
@@ -146,11 +164,13 @@ class MLDataPipeline(MarketDataPipeline):
 
     def _compute_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Compute all technical indicators consistently for both
-        training and inference.
+        Compute technical indicators for training and inference.
+
+        Adds SMA, RSI, MACD, price change, and rolling
+        z-score features using past-only information.
 
         Args:
-            df (pd.DataFrame): OHLCV dataframe indexed by timestamp.
+            df: Raw OHLCV dataframe.
 
         Returns:
             pd.DataFrame: Feature-enriched dataframe.
@@ -189,14 +209,17 @@ class MLDataPipeline(MarketDataPipeline):
     @staticmethod
     def _rolling_zscore(series: pd.Series, window: int) -> pd.Series:
         """
-        Compute a rolling z-score using only past information.
+        Compute rolling z-score without lookahead bias.
+
+        Uses shifted rolling mean and standard deviation
+        to ensure only past information is applied.
 
         Args:
-            series (pd.Series): Input time series.
-            window (int): Rolling window length.
+            series: Input time series.
+            window: Rolling window length.
 
         Returns:
-            pd.Series: Z-scored series with no lookahead bias.
+            pd.Series: Z-scored series.
         """
         mean = series.rolling(window).mean().shift(1)
         std = series.rolling(window).std().shift(1)
@@ -205,15 +228,16 @@ class MLDataPipeline(MarketDataPipeline):
     @staticmethod
     def _create_target(df: pd.DataFrame) -> pd.Series:
         """
-        Create a binary classification target with no leakage.
+        Create binary next-step price movement target.
 
-        Target = 1 if next close is higher than current close.
+        Target equals 1 if the next close is higher
+        than the current close, otherwise 0.
 
         Args:
-            df (pd.DataFrame): Feature dataframe.
+            df: Feature dataframe.
 
         Returns:
-            pd.Series: Binary target aligned with features.
+            pd.Series: Binary classification target.
         """
         return (df["close"].shift(-1) > df["close"]).astype(int)
 
@@ -222,22 +246,22 @@ class MLDataPipeline(MarketDataPipeline):
         X: np.ndarray,
         y: np.ndarray,
         time_steps: int,
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Create rolling time-window sequences.
 
-        For N = time_steps:
-        - Training: multiple overlapping sequences
-        - Inference: exactly ONE valid sequence
+        Generates overlapping sequences of fixed length
+        for time-series model training or inference.
 
         Args:
-            X: (N, F) feature matrix
-            y: (N,) targets (dummy allowed for inference)
-            time_steps: sequence length
+            X: Feature matrix of shape (N, F).
+            y: Target vector of shape (N,).
+            time_steps: Sequence length.
 
         Returns:
-            X_seq: (N - T + 1, T, F)
-            y_seq: (N - T + 1,)
+            Tuple[np.ndarray, np.ndarray]:
+                X_seq of shape (N-T+1, T, F),
+                y_seq of shape (N-T+1,).
         """
         Xs, ys = [], []
 
@@ -254,19 +278,23 @@ class MLDataPipeline(MarketDataPipeline):
         time_steps: int = 50,
         train_ratio: float = 0.7,
         val_ratio: float = 0.15,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Convert features into time sequences and split chronologically.
+        Convert features into sequences and split chronologically.
+
+        Performs rolling window creation followed by
+        train/validation/test chronological splitting.
 
         Args:
-            X (np.ndarray): Feature matrix.
-            y (np.ndarray): Target vector.
-            time_steps (int): Sequence length.
-            train_ratio (float): Fraction used for training.
-            val_ratio (float): Fraction used for validation.
+            X: Feature matrix.
+            y: Target vector.
+            time_steps: Sequence length.
+            train_ratio: Fraction used for training.
+            val_ratio: Fraction used for validation.
 
         Returns:
-            tuple: X_train, X_val, X_test, y_train, y_val, y_test
+            Tuple of X_train, X_val, X_test,
+            y_train, y_val, y_test.
         """
 
         X_seq, y_seq = self.create_sequences(X, y, time_steps)
@@ -289,6 +317,21 @@ class MLDataPipeline(MarketDataPipeline):
 
     @staticmethod
     def _ensure_clean_timestamp(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Normalize and validate timestamp column or index.
+
+        Ensures timestamps are UTC-aware, removes invalid
+        entries, and raises if dataframe becomes empty.
+
+        Args:
+            df: Dataframe containing timestamp data.
+
+        Returns:
+            pd.DataFrame: Cleaned dataframe with DatetimeIndex.
+
+        Raises:
+            RuntimeError: If no valid timestamps remain.
+        """
         if "timestamp" in df.columns:
             def unwrap(x):
                 if isinstance(x, tuple):
@@ -409,12 +452,15 @@ class MLDataPipeline(MarketDataPipeline):
         return np.asarray(X)
 
 
-    def _build_prediction_dataframe(self) -> None:
+    def _build_prediction_dataframe(self) -> pd.DataFrame:
         """
-        Fetches and prepares historical and realtime market data for prediction.
+        Build combined historical and realtime dataframe.
 
-        Combines historical bars from `pred_start_date` to now with the latest
-        realtime bar, normalizes timestamps, and ensures required raw columns exist.
+        Fetches training history, appends latest realtime
+        bar when not in backtest mode, and ensures clean timestamps.
+
+        Returns:
+            pd.DataFrame: Prepared prediction dataframe.
         """
 
         if self._is_backtest:
@@ -467,7 +513,16 @@ class MLDataPipeline(MarketDataPipeline):
         self._pred_df = pred_df
         return pred_df
     
-    def _create_df(self):
+    def _create_df(self) -> pd.DataFrame:
+        """
+        Fetch and prepare historical training data.
+
+        Retrieves sufficient lookback data for model training,
+        normalizes timestamps, and validates time index.
+
+        Returns:
+            pd.DataFrame: Cleaned historical training dataset.
+        """
         if self.is_backtest:
             # last available bar timestamp
             current_ts = pd.to_datetime(self._position_data["history"][-1]["t"], utc=True)

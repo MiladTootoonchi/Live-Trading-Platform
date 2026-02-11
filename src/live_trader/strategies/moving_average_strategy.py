@@ -12,15 +12,6 @@ class MovingAverageStrategy(BaseStrategy):
             - Sell when price < MA20 < MA50 < MA200
             - Hold when neither condition is met
 
-        Args:
-            symbol (str): The symbol of the stock we want to calculate for.
-            position (dict):
-                Contains at minimum:
-                {
-                    "symbol": "AAPL",
-                    "history": DataFrame | List | None
-                }
-
         Returns:
             Tuple[SideSignal, int]:
                 - A SideSignal (BUY, SELL, HOLD)
