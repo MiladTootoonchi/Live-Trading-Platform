@@ -1,6 +1,7 @@
 <h1 align = "center"> Live-Trading-Platform </h1>
 
-**Year:** 2025
+**Created:**         April 2025  
+**Last Edited:**     February 2026  
 
 **Team members:** \
 Milad Tootoonchi \
@@ -612,6 +613,7 @@ This projects pipeline applies structured and repeatable transformations:
    If you suspect your keys have been exposed, you can select **Regenerate** to create new ones.  
 
 <br>
+<br>
 
 **How to Install the Required Python Packages:**
 
@@ -641,6 +643,7 @@ Follow these short steps to set up your environment:
     poetry update
     ```
 
+<br>
 <br>
 
 **Strategies:** \
@@ -675,6 +678,7 @@ These are the AI strategies (tree-based machine learning models) you can choose 
 *Warning: the name of the strategy should be exactly similar to one of the strategy names above.*
 
 <br>
+<br>
 
 **Watchlist:** \
 This feature is optional. If you want the program to always analyze specific stocks, even when you do not currently hold a position, you can define a watchlist.
@@ -688,6 +692,23 @@ Important:
 - Separate symbols with commas
 
 <br>
+<br>
+
+**Backtesting Settings** \
+To perform a backtest, you need to provide the following variables:
+- *backtesting_days* – The number of days in the past you want to include in the backtest.
+- *initial_cash* – The starting capital you want to simulate during the backtest.
+- *strategy_list* – The strategies you want to evaluate.
+We recommend running a backtest on the strategies you are considering using before deploying them live.
+
+Important:
+- The strategy list must be enclosed in quotation marks.
+- Separate multiple strategies with commas.
+- *backtesting_days* and *initial_cash* must be integers.
+
+<br>
+<br>
+
 
 ### **User Guide:**
 
@@ -703,45 +724,53 @@ The steps below explain how to use its different command-line options.
     poetry run trade [flag]
     ```
 
-3. First you need to place an buy-order (if you do not have any positions in your portfolio).
-    - *--buy* or *-b*
+- If you need to place an buy-order.
+    - `--buy` or `-b`
     ```bash
     poetry run trade --buy
     ```
 - If you need to place an sell-order.
-    - *--sell* or *-s*
+    - `--sell` or `-s`
     ```bash
     poetry run trade --sell
     ```
 
 - Cancel last given order (if you regret sending the last given orders)
-    - *--cancel-last* or *-cl*
+    - `--cancel-last` or `-cl`
     ```bash
     poetry run trade --cancel-last
     ```
 
 - Cancel all open orders (if you regret sending every recent order)
     - This will cancel **all** open orders.
-    - *--cancel* or *-c*
+    - `--cancel` or `-c`
     ```bash
     poetry run trade --cancel
     ```
 
 * Update a specific position or all positions
     - Evaluates specifies / all positions using a strategy chosen at startup. Makes an order based on the evaluation.
-    - *--update* or *-u*
+    - `--update` or `-u`
     ```bash
     poetry run trade --update [stock symbol, or 'ALL' for all positions]
     ```
 
+* Perform a Backtest
+   - Before starting a live trading loop, we recommend running a backtest to evaluate which strategy performs best over your selected time period.
+   - `--backtest` or `-bt`
+   ```bash
+   poetry run trade --backtest
+   ```
+
 * Run the Live Trading Loop
     - This will run an update every 60 seconds on ALL positions, in addition to the stocks in the watchlist.
-    - *--live* or *-l*
+    - `--live` or `-l`
     ```bash
     poetry run trade --live
     ```
 
 
+<br>
 <br>
 
 ***
