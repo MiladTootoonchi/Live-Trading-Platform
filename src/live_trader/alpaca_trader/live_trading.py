@@ -73,7 +73,8 @@ class AlpacaTrader:
 
         self._APCA_API_BASE_URL =  config.apca_url
 
-        self._strategy = self._find_strategy()
+        self._strategybase = self._find_strategy()
+        self._strategy = self._strategybase(self._config)
 
 
 
