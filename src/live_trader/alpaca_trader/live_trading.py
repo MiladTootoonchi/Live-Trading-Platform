@@ -111,6 +111,92 @@ class AlpacaTrader:
         response = await asyncio.to_thread(requests.get, url, headers = self._HEADERS)
         return response.json()
     
+    async def get_buying_power(self) -> float:
+        """
+        Retrieves the account's current buying power.
+
+        Returns:
+            float: Available buying power in USD.
+        """
+
+        url = f"{self._APCA_API_BASE_URL}/v2/account"
+
+        response = await asyncio.to_thread(
+            requests.get, url, headers=self._HEADERS
+        )
+
+        if response.status_code != 200:
+            self._config.log_error(
+                f"Failed to fetch account info: {response.text}"
+            )
+            return 0.0
+
+        data = response.json()
+        return float(data.get("buying_power", 0))
+    
+    async def get_latest_price(self, symbol: str) -> float:
+        """
+        Fetch the latest trade price for a symbol.
+
+        Args:
+            symbol: Stock ticker.
+
+        Returns:
+            float: Latest trade price.
+        """
+        DATA_URL = "https://data.alpaca.markets/v2/stocks"
+
+        url = f"{DATA_URL}/{symbol}/trades/latest"
+
+        response = await asyncio.to_thread(
+            requests.get, url, headers=self._HEADERS
+        )
+
+        if response.status_code != 200:
+            self._config.log_error(
+                f"Failed to fetch latest price for {symbol}: {response.text}"
+            )
+            return 0.0
+
+        data = response.json()
+
+        return float(data["trade"]["p"])
+    
+    async def adjust_quantity_to_buying_power(self, symbol: str, requested_qty: int) -> int:
+        """ 
+        Ensures the order quantity fits within available buying power.
+
+        If the requested quantity exceeds buying power, it calculates
+        the maximum quantity that can be purchased.
+
+        Args:
+            symbol: Stock ticker.
+            requested_qty: Desired quantity.
+
+        Returns:
+            int: Adjusted quantity that can be afforded (0 if none).
+        """
+
+        buying_power = await self.get_buying_power()
+        price = await self.get_latest_price(symbol)
+
+        if price <= 0:
+            return 0
+
+        required_cash = requested_qty * price
+
+        if required_cash <= buying_power:
+            return requested_qty
+
+        max_affordable_qty = round(buying_power / price, 6)
+
+        self._config.log_warning(
+            f"Not enough buying power for {requested_qty} shares of {symbol}. "
+            f"Price = ${price:.2f}, Buying Power = ${buying_power:.2f}. "
+            f"Adjusted quantity -> {max_affordable_qty}"
+        )
+
+        return max_affordable_qty
     
     async def is_market_open(self) -> bool:
         """
@@ -166,6 +252,17 @@ class AlpacaTrader:
                                     execute a trade order (e.g., symbol, quantity,
                                     side, type).
         """
+        if order_data.side == "buy":
+            adjusted_qty = await self.adjust_quantity_to_buying_power(
+                order_data.symbol, order_data.quantity
+            )
+
+            if adjusted_qty <= 0:
+                self._config.log_warning("Order skipped — insufficient buying power.")
+                return
+
+            order_data.quantity = adjusted_qty
+
         data = order_data.get_dict()
 
         ORDERS_URL = f"{self._APCA_API_BASE_URL}/v2/orders"

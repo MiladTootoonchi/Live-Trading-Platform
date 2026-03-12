@@ -21,7 +21,7 @@ class OrderData:
     """
 
     symbol: str
-    quantity: int
+    quantity: float
     side: str
     type: str
     time_in_force: str = "day"
