@@ -1264,13 +1264,7 @@ Another important lesson is that increased model complexity does not automatical
 
 There are several clear directions for future improvement. It is advised that anyone attempting to recreate the program should keep the following points in mind for their own versions:
 
-1. **Enhanced program architecture**  
-   The current system could benefit from a cleaner object oriented structure. Improving communication between modules would make the codebase easier to extend, debug, and maintain. A more modular design would also support plugging in additional strategies or ML models without restructuring large parts of the system.
-
-2. **Improving the ML pipeline**  
-   Adding stronger regularization, experimenting with different window sizes, and applying better validation techniques (e.g., walk-forward validation) would likely make the ML predictions more robust. Additionally, integrating early stopping could prevent overfitting and improve the model's stability during training.
-
-3. **Graphical user interface and visualization tools**
+* **Graphical user interface and visualization tools**
    - Develop a frontend dashboard to reduce reliance on command-line interaction.
    - Display real-time information about open positions, executed trades, and portfolio value.
    - Visualize performance using graphs such as:
@@ -1285,7 +1279,7 @@ There are several clear directions for future improvement. It is advised that an
    - Improve overall usability, monitoring, and debugging during development and experimentation.
 
 
-Overall, while the platform already demonstrates the core functionality of an algorithmic trading system, there is significant potential for refinement. With improvements in model design, program structure, and risk management, the system could evolve into a more reliable and realistic trading environment capable of supporting more advanced strategies and tools in the future.
+Overall, while the platform already demonstrates the core functionality of an algorithmic trading system, there is significant potential for refinement. With improvements in visualizations and risk management, the system could evolve into a more reliable and realistic trading environment capable of supporting more advanced strategies and tools in the future.
 
 <br>
 
