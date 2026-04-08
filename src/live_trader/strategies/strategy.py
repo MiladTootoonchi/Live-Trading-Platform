@@ -91,13 +91,6 @@ class RuleBasedStrategy(BaseStrategy):
             avg_entry_price = float(pd.get("avg_entry_price", 0.0))
             current_price = float(pd.get("market_price", 0.0))
             change_today = float(pd.get("change_today", 0.0))
-            
-            avg_entry_price = float(self._datapipeline.position_data["avg_entry_price"])
-            current_price = float(self._datapipeline.position_data["current_price"])
-            change_today = float(self._datapipeline.position_data["change_today"])
-
-            if qty == 0:
-                return None, 0  # Nothing to do
 
             unrealized_return_pct = (current_price - avg_entry_price) / avg_entry_price * 100
 
@@ -111,10 +104,10 @@ class RuleBasedStrategy(BaseStrategy):
 
             return SideSignal.HOLD, 0  # Hold
 
-        except KeyError:
-            self._config.log_error("Missing key in position data\n")
+        except KeyError as e:
+            self._config.log_error(f"Missing key in position data: {e}\n")
             return SideSignal.HOLD, 0
-        
-        except Exception:
-            self._config.log_error("Error evaluating position\n")
+
+        except Exception as e:
+            self._config.log_error(f"Error evaluating position: {e}\n")
             return SideSignal.HOLD, 0

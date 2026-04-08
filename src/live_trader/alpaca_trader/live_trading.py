@@ -75,6 +75,7 @@ class AlpacaTrader:
 
         self._strategybase = self._find_strategy()
         self._strategy = self._strategybase(self._config)
+        self._watchlist_strat = GNN(self._config)  # This is just temporary, we can make this dynamic later by allowing users to specify a different strategy for the watchlist
 
 
 
@@ -614,12 +615,9 @@ class AlpacaTrader:
                 continue
 
             try:
-                self._strategy.prepare_data(symbol, {})
-                result = self._strategy.run()
-                if inspect.isawaitable(result):
-                    signal, qty = await result
-                else:
-                    signal, qty = result
+                self._watchlist_strat.prepare_data(symbol, {})
+                result = self._watchlist_strat.run()
+                signal, qty = await result
 
                 if signal is None:
                     signal = SideSignal.HOLD
