@@ -615,7 +615,14 @@ class AlpacaTrader:
 
             try:
                 self._strategy.prepare_data(symbol, {})
-                signal, qty = await self._strategy.run()    # The ML strategy need awaiting
+                result = self._strategy.run()
+                if inspect.isawaitable(result):
+                    signal, qty = await result
+                else:
+                    signal, qty = result
+
+                if signal is None:
+                    signal = SideSignal.HOLD
 
                 self._config.log_info(f"{symbol}: {signal.value}")
 
