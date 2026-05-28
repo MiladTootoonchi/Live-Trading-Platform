@@ -65,7 +65,7 @@ class MLDataPipeline(MarketDataPipeline):
 
         self._min_lookback = config.min_lookback
 
-        self._pred_history = self._time_steps + self._min_lookback + self._safety_margin
+        self._pred_history = self._time_steps + self._min_lookback + self._safety_margin + 100
         self._ml_training_lookback = config.load_ml_variable("ml_training_lookback")
         self._is_backtest = self._position_data.get("backtest", False)
         self._data = self._create_df()
@@ -263,10 +263,16 @@ class MLDataPipeline(MarketDataPipeline):
                 X_seq of shape (N-T+1, T, F),
                 y_seq of shape (N-T+1,).
         """
+        if hasattr(X, "to_numpy"):
+            X = X.to_numpy()
+
+        if hasattr(y, "to_numpy"):
+            y = y.to_numpy()
+
         Xs, ys = [], []
 
         for i in range(len(X) - time_steps + 1):
-            Xs.append(X[i : i + time_steps])
+            Xs.append(X[i:i + time_steps])
             ys.append(y[i + time_steps - 1])
 
         return np.asarray(Xs), np.asarray(ys)

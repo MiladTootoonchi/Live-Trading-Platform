@@ -5,6 +5,7 @@ from live_trader.ml_model.ml_pipeline import MLStrategyBase
 
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+warnings.simplefilter("ignore")
 
 # Ignoring info + warning + errors: the user do not need to see this
 import os

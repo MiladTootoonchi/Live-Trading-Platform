@@ -88,7 +88,10 @@ async def main():
         await trader.run_backtest()
 
 def cli():
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
 
 if __name__ == "__main__":
     asyncio.run(main())

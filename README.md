@@ -624,23 +624,34 @@ Follow these short steps to set up your environment:
     ```bash
     python --version
     ```
-2. Install Poetry
-    - If you do not already have Poetry installed:
+2. Install uv
+    - If you do not already have uv installed:
     ```bash
-    pip install poetry
+    curl -LsSf https://astral.sh/uv/install.sh | sh
     ```
     - Verify installation
     ```bash
-    poetry --version
+    uv --version
     ```
+
+3. Create a Viritual Enviroment
+   ```bash
+   uv venv
+   ```
+   - Activate the enviroment
+   ```bash
+   source .venv/bin/activate
+   ```
+
 4. Install dependencies
-    - This will create a virtual environment and install the locked dependencies:
+    - This will install the locked dependencies from uv.lock:
     ```bash
-    poetry install
+    uv sync
     ```
     - To update dependencies to newer compatible versions:
     ```bash
-    poetry update
+    uv lock --upgrade
+    uv sync
     ```
 
 <br>
@@ -721,52 +732,52 @@ The steps below explain how to use its different command-line options.
     - The program accepts several command-line flags.  
     - Use this format:
     ```bash
-    poetry run trade [flag]
+    uv run trade [flag]
     ```
 
 - If you need to place an buy-order.
     - `--buy` or `-b`
     ```bash
-    poetry run trade --buy
+    uv run trade --buy
     ```
 - If you need to place an sell-order.
     - `--sell` or `-s`
     ```bash
-    poetry run trade --sell
+    uv run trade --sell
     ```
 
 - Cancel last given order (if you regret sending the last given orders)
     - `--cancel-last` or `-cl`
     ```bash
-    poetry run trade --cancel-last
+    uv run trade --cancel-last
     ```
 
 - Cancel all open orders (if you regret sending every recent order)
     - This will cancel **all** open orders.
     - `--cancel` or `-c`
     ```bash
-    poetry run trade --cancel
+    uv run trade --cancel
     ```
 
 * Update a specific position or all positions
     - Evaluates specifies / all positions using a strategy chosen at startup. Makes an order based on the evaluation.
     - `--update` or `-u`
     ```bash
-    poetry run trade --update [stock symbol, or 'ALL' for all positions]
+    uv run trade --update [stock symbol, or 'ALL' for all positions]
     ```
 
 * Perform a Backtest
    - Before starting a live trading loop, we recommend running a backtest to evaluate which strategy performs best over your selected time period.
    - `--backtest` or `-bt`
    ```bash
-   poetry run trade --backtest
+   uv run trade --backtest
    ```
 
 * Run the Live Trading Loop
     - This will run an update every 60 seconds on ALL positions, in addition to the stocks in the watchlist.
     - `--live` or `-l`
     ```bash
-    poetry run trade --live
+    uv run trade --live
     ```
 
 
