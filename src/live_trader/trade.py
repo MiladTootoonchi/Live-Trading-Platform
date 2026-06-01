@@ -63,7 +63,7 @@ def parseInput():
 
 async def main():
     args = parseInput()
-    conf = Config("settings.toml")
+    conf = Config()
     trader = AlpacaTrader(conf)
 
     

@@ -4,6 +4,11 @@ import toml
 import logging
 from typing import Tuple, List
 
+from pathlib import Path
+
+config_path = Path(__file__).parent / "settings.toml"
+config_path = str(config_path)
+
 load_dotenv()
 
 
@@ -16,7 +21,7 @@ class Config:
     ML-related parameters used across the system.
     """
 
-    def __init__(self, config_file_path: str = "settings.toml"):
+    def __init__(self, config_file_path: str = config_path):
         """
         Initialize configuration and compute derived values.
 
