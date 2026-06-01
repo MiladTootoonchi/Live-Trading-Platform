@@ -45,3 +45,16 @@ def get_logs(offset: int = 0):
         "logs": [line.rstrip() for line in logs],
         "has_log": True
     }
+
+
+EVAL_DIR = Path("logfiles/evaluations")
+
+@app.get("/evaluation")
+async def list_evaluations():
+    files = []
+
+    for file in EVAL_DIR.rglob("*"):
+        if file.is_file():
+            files.append(str(file.relative_to(EVAL_DIR)))
+
+    return {"files": files}
