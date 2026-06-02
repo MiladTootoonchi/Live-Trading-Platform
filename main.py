@@ -1,6 +1,14 @@
 from live_trader import AlpacaTrader, SideSignal, Config
 from fastapi import FastAPI
 from pathlib import Path
+from pydantic import BaseModel
+
+
+class OrderRequest(BaseModel):
+    symbol: str
+    qty: int
+    side: str
+    order_type: str
 
 app = FastAPI()
 
@@ -36,6 +44,21 @@ async def is_market_open():
     return {"is_open": is_open}
 
 
+
+@app.post("/place_order")
+async def place_order(order: OrderRequest):
+
+    order_id = await trader.place_order(
+        symbol=order.symbol,
+        qty=order.qty,
+        side=order.side,
+        order_type=order.order_type,
+    )
+
+    return {
+        "success": True,
+        "order_id": order_id,
+    }
 
 @app.post("/start")
 async def start():

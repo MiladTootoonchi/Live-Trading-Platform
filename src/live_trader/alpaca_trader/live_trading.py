@@ -333,7 +333,7 @@ class AlpacaTrader:
 
 
 
-    async def place_order(self, order_data: OrderData) -> None:
+    async def place_order(self, symbol: str, qty: int, side: str, order_type: str) -> None:
         """
         Submits an order to buy or sell assets based on the provided order data.
 
@@ -342,10 +342,14 @@ class AlpacaTrader:
         action, including specifics such as symbol, quantity, and order type.
 
         Args:
-            order_data (OrderData): An object containing all necessary fields to
-                                    execute a trade order (e.g., symbol, quantity,
-                                    side, type).
+            symbol (str): The stock symbol for the order.
+            qty (int): The quantity of shares to trade.
+            side (str): The side of the order ("buy" or "sell").
+            order_type (str): The type of the order (e.g., "market", "limit").
         """
+
+        order_data = OrderData(symbol = symbol, quantity = qty, side = side, type = order_type)
+
         if order_data.side == "buy":
             adjusted_qty = await self.adjust_quantity_to_buying_power(
                 order_data.symbol, order_data.quantity
@@ -509,9 +513,7 @@ class AlpacaTrader:
 
             print("Invalid order type. Please enter one of the following:", ", ".join(valid_order_types))
 
-
-        order = OrderData(symbol = symbol, quantity = qty, side = "buy", type = order_type)
-        await self.place_order(order)
+        await self.place_order(symbol, qty, "buy", order_type)
 
     async def create_sell_order(self) -> None:
         """
@@ -578,9 +580,7 @@ class AlpacaTrader:
 
             print("Invalid order type. Please enter one of the following:", ", ".join(valid_order_types))
 
-
-        order = OrderData(symbol = symbol, quantity = qty, side = "sell", type = order_type)
-        await self.place_order(order)
+        await self.place_order(symbol, qty, "sell", order_type)
 
 
 
@@ -655,13 +655,7 @@ class AlpacaTrader:
                 self._config.log_info(f"{symbol_i}: {signal.value}")
 
                 if signal != SideSignal.HOLD:
-                    order = OrderData(
-                        symbol = symbol_i,
-                        quantity = qty,
-                        side = signal.value,
-                        type = "market"
-                    )
-                    tasks.append(self.place_order(order))
+                    tasks.append(self.place_order(symbol_i, qty, signal.value, "market"))
 
             watchlist_tasks = await self._analyze_watchlist()
             tasks.extend(watchlist_tasks)
@@ -718,14 +712,8 @@ class AlpacaTrader:
                 self._config.log_info(f"{symbol}: {signal.value}")
 
                 if signal != SideSignal.HOLD:
-                    order = OrderData(
-                        symbol = symbol,
-                        quantity = qty,
-                        side = signal.value,
-                        type = "market"
-                    )
-                    tasks.append(self.place_order(order))
-                    
+                    tasks.append(self.place_order(symbol, qty, signal.value, "market"))
+
             except Exception:
                 self._config.log_expectation(f"Failed to analyze {symbol} from watchlist")
         
