@@ -2,7 +2,6 @@
 name = "live-trading-platform"
 version = "0.3.1"
 description = "Creating new solutions based on the Alpaca platform that can help traders make better-informed decisions and execute trades more efficiently."
-readme = "README.md"
 requires-python = ">=3.11,<3.12"
 
 authors = [

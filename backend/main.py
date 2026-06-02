@@ -2,15 +2,23 @@ from live_trader import AlpacaTrader, SideSignal, Config
 from fastapi import FastAPI
 from pathlib import Path
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class OrderRequest(BaseModel):
     symbol: str
     qty: int
     side: str
     order_type: str
-
-app = FastAPI()
 
 config = Config()
 
