@@ -80,9 +80,17 @@ async def main():
     if args.update:
         symbol = args.update
         await trader.update(symbol)
+        
     
     if args.live:
-        await trader.live()
+        await trader.start_live()
+
+        try:
+            while True:
+                await asyncio.sleep(60)  # Sleep for 60 seconds before the next update
+        except KeyboardInterrupt:
+            await trader.stop_live()
+
 
     if args.backtest:
         await trader.run_backtest()

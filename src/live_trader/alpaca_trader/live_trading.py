@@ -76,6 +76,9 @@ class AlpacaTrader:
         self._strategybase = self._find_strategy()
         self._strategy = self._strategybase(self._config)
         self._watchlist_strat = GNN(self._config)  # This is just temporary, we can make this dynamic later by allowing users to specify a different strategy for the watchlist
+        
+        self._live_task = None
+        self._stop_event = asyncio.Event()
 
 
 
@@ -730,7 +733,7 @@ class AlpacaTrader:
 
 
 
-    async def live(self) -> None:
+    async def _live(self) -> None:
         """
         Runs the trader in continuous live-trading mode using a given strategy.
 
@@ -752,15 +755,52 @@ class AlpacaTrader:
                 Raised when the task running this method is cancelled.
         """
         try:
-            while True:
+            while not self._stop_event.is_set():
                 await self.update("ALL")
-                await asyncio.sleep(60) # sleep for a minute
 
-        except (KeyboardInterrupt, asyncio.CancelledError):
-            print("\nShutting down... ")
+                try:
+                    await asyncio.wait_for(
+                        self._stop_event.wait(),
+                        timeout=60,
+                    )
+                except asyncio.TimeoutError:
+                    pass
 
-        finally:
-            pass
+        except asyncio.CancelledError:
+            raise
+
+    async def start_live(self) -> None:
+        """
+        Starts the live trading loop in a background task.
+
+        This method checks if a live trading task is already running. If not, it
+        clears the stop event and creates a new asynchronous task to run the
+        live method, which contains the main live trading logic.
+
+        If a live trading task is already active, this method does nothing to
+        prevent multiple concurrent live loops from being started.
+        """
+        if self._live_task and not self._live_task.done():
+            return
+
+        self._stop_event.clear()
+        self._live_task = asyncio.create_task(self._live())
+
+    async def stop_live(self) -> None:
+        """
+        Signals the live trading loop to stop and waits for it to finish.
+
+        This method sets the stop event, which is checked by the live trading
+        loop to determine when to exit. After signaling the loop to stop, it
+        awaits the completion of the live task to ensure a graceful shutdown.
+
+        If no live trading task is currently running, this method does nothing.
+        """
+        self._stop_event.set()
+
+        if self._live_task:
+            await self._live_task
+            self._live_task = None
 
 
     def _find_strategy(self) -> Type[BaseStrategy]:

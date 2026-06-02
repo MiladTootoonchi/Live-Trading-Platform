@@ -8,10 +8,7 @@ config = Config()
 
 trader = AlpacaTrader(config)
 
-@app.get("/live")
-async def live():
-    await trader.live()
-    return {"message": "Live trading-bot started."}
+
 
 @app.get("/orders")
 async def get_orders():
@@ -37,6 +34,19 @@ async def get_account_info():
 async def is_market_open():
     is_open = await trader.is_market_open()
     return {"is_open": is_open}
+
+
+
+@app.post("/start")
+async def start():
+    await trader.start_live()
+    return {"status": "started"}
+
+@app.post("/stop")
+async def stop():
+    await trader.stop_live()
+    return {"status": "stopped"}
+
 
 
 LOG_FILE = Path("logfiles/live_trading.log")
