@@ -238,6 +238,96 @@ class AlpacaTrader:
             self._config.log_expectation("Error while checking market open status")
             return False
 
+    async def get_equity_history(self, period: str = "1M", timeframe: str = "1D",) -> List[Dict]:
+        """
+        Fetches historical equity data for the account.
+
+        This method retrieves the account's equity history from the Alpaca API,
+        which includes timestamps and equity values. The request is executed
+        asynchronously using a background thread to avoid blocking the event loop.
+
+        Args:
+            timeframe (str): The granularity of the historical data (e.g., "1Day").
+            limit (int): The maximum number of historical records to retrieve.
+
+        Returns:
+            list[dict]: A list of dictionaries, each containing 'timestamp' and 'equity
+        """
+
+        url = f"{self._APCA_API_BASE_URL}/v2/account/portfolio/history"
+
+        params = {
+            "period": period,
+            "timeframe": timeframe,
+        }
+
+        try:
+            response = await asyncio.to_thread(
+                requests.get,
+                url,
+                headers=self._HEADERS,
+                params=params,
+                timeout=10,
+            )
+
+            response.raise_for_status()
+
+            data = response.json()
+
+            timestamps = data.get("timestamp", [])
+            equities = data.get("equity", [])
+
+            equity_history = [
+                {
+                    "timestamp": timestamp,
+                    "equity": float(equity),
+                }
+                for timestamp, equity in zip(timestamps, equities)
+                if equity is not None
+            ]
+
+            self._config.log_debug(
+                f"Fetched {len(equity_history)} equity history records"
+            )
+
+            return equity_history
+
+        except requests.RequestException as e:
+            self._config.log_error(
+                f"Failed to fetch equity history: {e}"
+            )
+            return []
+
+        except Exception as e:
+            self._config.log_error(
+                f"Unexpected error fetching equity history: {e}"
+            )
+            return []
+
+    async def get_account_info(self) -> Dict[str, Any]:
+        """
+        Retrieves comprehensive account information from the Alpaca API.
+
+        This method sends an asynchronous request to the Alpaca API's account
+        endpoint to fetch details such as cash balance, equity, buying power,
+        and margin status. The response is returned as a dictionary for easy
+        access to various account attributes.
+
+        Returns:
+            dict: A dictionary containing account information and metrics.
+        """
+
+        url = f"{self._APCA_API_BASE_URL}/v2/account"
+        response = await asyncio.to_thread(requests.get, url, headers=self._HEADERS)
+
+        if response.status_code != 200:
+            self._config.log_error(
+                f"Failed to fetch account info: {response.status_code} - {response.text}"
+            )
+            return {}
+
+        return response.json()
+
 
 
     async def place_order(self, order_data: OrderData) -> None:
