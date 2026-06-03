@@ -36,59 +36,13 @@ body {
   margin-bottom: 1rem;
 }
 
-.container {
-  max-width: 95vw;
-  margin: 1rem;
-  padding: 1rem;
-  background-color: rgba(55, 0, 173, 0.586);
-  border: 1px solid red;
-}
 
-.header{
-  border: 1px solid yellow;
-  max-width: 95vw;
-}
-
-.navbar{
-  border: 1px solid purple;
-}
-
-.content{
-  border: 1px solid green;
-  max-width: 95vw;
-}
-
-.sidebar{
-  border: 1px solid orange;
-  max-width: 5vw;
-}
-
-.footer{
-  border: 1px solid cyan;
-}
-
-.equity-chart {
-  margin-top: 2rem;
-  margin-bottom: 2rem;
-  border: 1px solid #333;
-  padding: 1rem;
-  border-radius: 8px;
-}
-
-.equity-summary {
-  margin-top: 1rem;
-  margin-bottom: 1rem;
-}
-
-.equity-summary h2 {
-  font-size: 2.5rem;
-  font-weight: 700;
-}
+/* Profit and Loss Styles */
 
 .profit {
   color: #00ff66;
   font-size: 1.1rem;
-}
+} 
 
 .loss {
   color: #ff4444;

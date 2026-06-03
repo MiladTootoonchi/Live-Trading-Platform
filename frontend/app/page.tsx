@@ -1,15 +1,27 @@
 "use client";
 import { useEffect, useState } from "react";
 import EquityChart from "./components/EquityChart";
+import PositionsList from "./components/PositionsList";
+import styles from "./main.module.css";
 
 type EquityPoint = {
-  date: string;
+  timestamp: number;
   equity: number;
+};
+
+type Position = {
+  symbol: string;
+  qty: string;
+  current_price: string;
+  avg_entry_price: string;
+  market_value: string;
+  unrealized_pl: string;
 };
 
 
 export default function Home() {
   const [equityData, setEquityData] = useState<EquityPoint[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
 
   const currentEquity =
     equityData.length > 0
@@ -28,83 +40,78 @@ export default function Home() {
       : 0;
 
   useEffect(() => {
-  fetch("http://localhost:8000/equity_history")
-    .then((res) => res.json())
-    .then((data) => {
-      const chartData = data.equity_history.map(
-        (point: { timestamp: number; equity: number }) => {
-          const date = new Date(point.timestamp * 1000);
+    const fetchData = async () => {
+      try {
+        // Equity data
+        const equityRes = await fetch(
+          "http://localhost:8000/equity_history"
+        );
 
-          return {
-            date: `${date.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })}\n${date.toLocaleTimeString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}`,
+        const equityJson = await equityRes.json();
+
+        const chartData = equityJson.equity_history.map(
+          (point: { timestamp: number; equity: number }) => ({
+            timestamp: point.timestamp * 1000,
             equity: point.equity,
-          };
-        }
-      );
+          })
+        );
+        
+        setEquityData(chartData);
 
-      console.log(chartData);
-      setEquityData(chartData);
-    })
-    .catch(console.error);
+        // Positions
+        const positionsRes = await fetch(
+          "http://localhost:8000/positions"
+        );
+
+        const positionsJson = await positionsRes.json();
+
+        setPositions(positionsJson.positions);
+
+      } catch (err) {
+        console.error(err);
+      }
+
+      console.log("Refreshing dashboard...");
+    };
+
+    fetchData();
+
+    const interval = setInterval(fetchData, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
     <main>
       <div className="main">
-        <div className="container">
+        <div className={styles.container}>
 
-          <div className="header">
-            <h1 className="Title">Dashboard</h1>
+          <div className={styles.header}>
+            <h1 className={"Title"}>Dashboard</h1>
 
-            <div className="navbar">
+            <div className={styles.navbar}>
 
             </div>
           </div>
 
 
 
-          <div className="content">
-            <div className="equity-summary">
-              <h2>
-                ${currentEquity.toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </h2>
+          <div className={styles.content}>
+            <EquityChart data={equityData} currentEquity={currentEquity} pnl={pnl} pnlPct={pnlPct} />
 
-              <p className={pnl >= 0 ? "profit" : "loss"}>
-                {pnl >= 0 ? "+" : ""}
-                ${pnl.toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-                {" "}
-                ({pnlPct.toFixed(2)}%)
-              </p>
+            <div className={styles.content_grid}>
+              <PositionsList positions={positions} />
+
+              <div className={styles.sidebar}>
+                <h3>Order Here</h3>
+              </div>
+
             </div>
-
-            <div className="equity-chart">
-              <EquityChart data={equityData} />
-            </div>
-
-            <p className="description">
-              Welcome to the dashboard! Here you can find an overview of your data and insights.
-            </p>
-          </div>
-
-
-          <div className="sidebar">
           </div>
 
 
 
-          <div className="footer">
+          <div className={styles.footer}>
           </div>
         </div>
       </div>

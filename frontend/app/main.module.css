@@ -1,0 +1,39 @@
+/* Layout Styles */
+
+.container {
+  max-width: 95vw;
+  margin: 1rem;
+  padding: 1rem;
+  background-color: rgba(55, 0, 173, 0.586);
+  border: 1px solid red;
+}
+
+.header{
+  border: 1px solid yellow;
+  max-width: 95vw;
+}
+
+.navbar{
+  border: 1px solid purple;
+}
+
+.content{
+  border: 1px solid green;
+}
+
+.content_grid{
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 1rem;
+}
+
+.sidebar{ 
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #0000005c;
+}
+
+.footer{
+  border: 1px solid cyan;
+}
