@@ -83,36 +83,34 @@ export default function Home() {
 
   return (
     <main>
-      <div className="main">
-        <div className={styles.container}>
+      <div className={styles.container}>
 
-          <div className={styles.header}>
-            <h1 className={"Title"}>Dashboard</h1>
+        <div className={styles.header}>
+          <h1 className={"Title"}>Dashboard</h1>
 
-            <div className={styles.navbar}>
+          <div className={styles.navbar}>
 
+          </div>
+        </div>
+
+
+
+        <div className={styles.content}>
+          <EquityChart data={equityData} currentEquity={currentEquity} pnl={pnl} pnlPct={pnlPct} />
+
+          <div className={styles.content_grid}>
+            <PositionsList positions={positions} />
+
+            <div className={styles.sidebar}>
+              <h3>Order Here</h3>
             </div>
+
           </div>
+        </div>
 
 
 
-          <div className={styles.content}>
-            <EquityChart data={equityData} currentEquity={currentEquity} pnl={pnl} pnlPct={pnlPct} />
-
-            <div className={styles.content_grid}>
-              <PositionsList positions={positions} />
-
-              <div className={styles.sidebar}>
-                <h3>Order Here</h3>
-              </div>
-
-            </div>
-          </div>
-
-
-
-          <div className={styles.footer}>
-          </div>
+        <div className={styles.footer}>
         </div>
       </div>
     </main>
