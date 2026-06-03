@@ -1,0 +1,42 @@
+/* Positions List Styles */
+
+.positionsPanel {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #0000005c;
+}
+
+.positionsPanel h3 {
+  font-size: 1.5rem;
+  font-weight: bolder;
+  margin-bottom: 12px;
+}
+
+.positionRowHeader {
+  font-weight: bold;
+  background-color: #333;
+}
+
+.positionsList {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.positionRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid #333;
+  align-items: center;
+}
+
+.positionRow.content {
+  font-weight: bold;
+  background-color: #333;
+}
+
+.positionRow:last-child {
+  border-bottom: none;
+}
