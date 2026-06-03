@@ -71,13 +71,26 @@ async def place_order(order: OrderRequest):
 @app.post("/start")
 async def start():
     await trader.start_live()
-    return {"status": "started"}
+
+    return {
+        "status": "started",
+        "live": trader.is_live_running
+    }
 
 @app.post("/stop")
 async def stop():
     await trader.stop_live()
-    return {"status": "stopped"}
 
+    return {
+        "status": "stopped",
+        "live": trader.is_live_running
+    }
+
+@app.get("/status")
+async def status():
+    return {
+        "live": await trader.get_live_status()
+    }
 
 
 LOG_FILE = Path("logfiles/live_trading.log")
