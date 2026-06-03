@@ -31,7 +31,7 @@ body {
 }
 
 .Title {
-  font-size: 3rem;
+  font-size: 5rem;
   font-weight: bold;
   margin-bottom: 1rem;
 }
@@ -47,4 +47,36 @@ body {
 .loss {
   color: #ff4444;
   font-size: 1.1rem;
+}
+
+
+/* Live Button Styles */
+
+.live-button {
+  width: 100%;
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: 0.2s;
+}
+
+.live-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.live-button.start {
+  background-color: #22c55e;
+}
+
+.live-button.stop {
+  background-color: #ef4444;
+}
+
+.live-button:hover {
+  opacity: 0.9;
 }

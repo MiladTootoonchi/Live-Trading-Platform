@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
+import styles from "./home.module.css";
 import EquityChart from "./components/EquityChart";
 import PositionsList from "./components/PositionsList";
-import styles from "./main.module.css";
+import LiveButton from "./components/LiveButton";
 
 type EquityPoint = {
   timestamp: number;
@@ -22,6 +23,8 @@ type Position = {
 export default function Home() {
   const [equityData, setEquityData] = useState<EquityPoint[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [liveRunning, setLiveRunning] = useState(false);
+  const [loadingLive, setLoadingLive] = useState(false);
 
   const currentEquity =
     equityData.length > 0
@@ -38,6 +41,41 @@ export default function Home() {
     startEquity > 0
       ? (pnl / startEquity) * 100
       : 0;
+
+
+  const fetchLiveStatus = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/status");
+      const data = await res.json();
+
+      setLiveRunning(data.live);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const toggleLive = async () => {
+    try {
+      setLoadingLive(true);
+
+      const endpoint = liveRunning ? "stop" : "start";
+
+      const res = await fetch(
+        `http://localhost:8000/${endpoint}`,
+        {
+          method: "POST",
+        }
+      );
+
+      const data = await res.json();
+
+      setLiveRunning(data.live);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingLive(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -75,8 +113,12 @@ export default function Home() {
     };
 
     fetchData();
+    fetchLiveStatus();
 
-    const interval = setInterval(fetchData, 5000);
+    const interval = setInterval(() => {
+      fetchData();
+      fetchLiveStatus();
+    }, 5000);
 
     return () => clearInterval(interval);
   }, []);
@@ -86,7 +128,7 @@ export default function Home() {
       <div className={styles.container}>
 
         <div className={styles.header}>
-          <h1 className={"Title"}>Dashboard</h1>
+          <h1 className={"Title"}> Portfolio Dashboard</h1>
 
           <div className={styles.navbar}>
 
@@ -102,6 +144,7 @@ export default function Home() {
             <PositionsList positions={positions} />
 
             <div className={styles.sidebar}>
+              <LiveButton liveRunning={liveRunning} loadingLive={loadingLive} toggleLive={toggleLive} />
               <h3>Order Here</h3>
             </div>
 

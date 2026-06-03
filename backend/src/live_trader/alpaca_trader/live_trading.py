@@ -790,7 +790,6 @@ class AlpacaTrader:
             await self._live_task
             self._live_task = None
 
-    @property
     async def get_live_status(self) -> bool:
         return (
             self._live_task is not None
