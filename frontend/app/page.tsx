@@ -157,6 +157,7 @@ export default function Home() {
 
 
         <div className={styles.footer}>
+          <p>© 2024 Live Trader Too</p>
         </div>
       </div>
     </main>

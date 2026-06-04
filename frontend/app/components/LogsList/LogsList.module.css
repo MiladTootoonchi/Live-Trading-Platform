@@ -1,0 +1,51 @@
+.logsPanel {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #0000005c;
+}
+
+.logsPanel h3 {
+  font-size: 1.5rem;
+  font-weight: bolder;
+  margin-bottom: 12px;
+}
+
+.logsList {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.logRow {
+  padding: 10px 12px;
+  border-bottom: 1px solid #333;
+
+  font-family: monospace;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.logRow:last-child {
+  border-bottom: none;
+}
+
+/* Scrollbar */
+
+.logsList::-webkit-scrollbar {
+  width: 8px;
+}
+
+.logsList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.logsList::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 999px;
+}
+
+.logsList::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
