@@ -1,5 +1,295 @@
-export default function SettingsPage(){
-    return(
-        <div>lol</div>
-    );
+"use client";
+
+import { useEffect, useState } from "react";
+
+import styles from "./settings.module.css";
+
+import NavBar from "../components/NavBar/NavBar";
+import LiveButton from "../components/LiveButton/LiveButton";
+import IsMarketOpen from "../components/IsMarketOpen/IsMarketOpen";
+
+import SettingsCard from "../components/SettingsCard/SettingsCard";
+import SaveSettingsButton from "../components/SaveSettingsButton/SaveSettingsButton";
+
+export default function SettingsPage() {
+  const [liveRunning, setLiveRunning] = useState(false);
+  const [marketOpen, setMarketOpen] = useState(false);
+
+  const [saving, setSaving] = useState(false);
+
+  const [strategy, setStrategy] = useState("");
+
+  const [watchlist, setWatchlist] = useState("");
+
+  const [initialCash, setInitialCash] = useState(0);
+  const [days, setDays] = useState(0);
+
+  const [sma1, setSma1] = useState(0);
+  const [sma2, setSma2] = useState(0);
+  const [sma3, setSma3] = useState(0);
+
+  const [rsi, setRsi] = useState(0);
+  const [zscore, setZscore] = useState(0);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch(
+        "http://localhost:8000/config"
+      );
+
+      const data = await res.json();
+
+      setStrategy(data.strategy_name);
+
+      setWatchlist(data.watchlist.join(", "));
+
+      setInitialCash(
+        data.backtesting.initial_cash
+      );
+
+      setDays(
+        data.backtesting.days
+      );
+
+      setSma1(data.ml.sma_windows[0]);
+      setSma2(data.ml.sma_windows[1]);
+      setSma3(data.ml.sma_windows[2]);
+
+      setRsi(data.ml.rsi_window);
+      setZscore(data.ml.zscore_window);
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchStatus = async () => {
+    try {
+      const res = await fetch(
+        "http://localhost:8000/status"
+      );
+
+      const data = await res.json();
+
+      setLiveRunning(data.live);
+      setMarketOpen(data.market_open);
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const saveSettings = async () => {
+    try {
+      setSaving(true);
+
+      await fetch(
+        "http://localhost:8000/config",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            section: "live",
+            key: "strategy",
+            value: strategy,
+          }),
+        }
+      );
+
+      alert("Settings saved");
+
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+    fetchStatus();
+  }, []);
+
+  return (
+    <main>
+      <div className={styles.container}>
+
+        <div className={styles.header}>
+          <h1 className="Title">
+            Settings
+          </h1>
+
+          <NavBar />
+        </div>
+
+        <div className={styles.content}>
+
+          <div className={styles.settingsArea}>
+
+            <SettingsCard title="Trading">
+
+              <label>
+                Strategy
+              </label>
+
+              <input
+                value={strategy}
+                onChange={(e) =>
+                  setStrategy(
+                    e.target.value
+                  )
+                }
+              />
+
+              <label>
+                Watchlist
+              </label>
+
+              <input
+                value={watchlist}
+                onChange={(e) =>
+                  setWatchlist(
+                    e.target.value
+                  )
+                }
+              />
+
+            </SettingsCard>
+
+            <SettingsCard title="Backtesting">
+
+              <label>
+                Initial Cash
+              </label>
+
+              <input
+                type="number"
+                value={initialCash}
+                onChange={(e) =>
+                  setInitialCash(
+                    Number(
+                      e.target.value
+                    )
+                  )
+                }
+              />
+
+              <label>
+                Days
+              </label>
+
+              <input
+                type="number"
+                value={days}
+                onChange={(e) =>
+                  setDays(
+                    Number(
+                      e.target.value
+                    )
+                  )
+                }
+              />
+
+            </SettingsCard>
+
+            <SettingsCard title="ML Settings">
+
+              <label>SMA 1</label>
+              <input
+                type="number"
+                value={sma1}
+                onChange={(e) =>
+                  setSma1(
+                    Number(
+                      e.target.value
+                    )
+                  )
+                }
+              />
+
+              <label>SMA 2</label>
+              <input
+                type="number"
+                value={sma2}
+                onChange={(e) =>
+                  setSma2(
+                    Number(
+                      e.target.value
+                    )
+                  )
+                }
+              />
+
+              <label>SMA 3</label>
+              <input
+                type="number"
+                value={sma3}
+                onChange={(e) =>
+                  setSma3(
+                    Number(
+                      e.target.value
+                    )
+                  )
+                }
+              />
+
+              <label>RSI</label>
+              <input
+                type="number"
+                value={rsi}
+                onChange={(e) =>
+                  setRsi(
+                    Number(
+                      e.target.value
+                    )
+                  )
+                }
+              />
+
+              <label>ZScore</label>
+              <input
+                type="number"
+                value={zscore}
+                onChange={(e) =>
+                  setZscore(
+                    Number(
+                      e.target.value
+                    )
+                  )
+                }
+              />
+
+            </SettingsCard>
+
+            <SaveSettingsButton
+              onClick={saveSettings}
+              loading={saving}
+            />
+
+          </div>
+
+          <div className={styles.sidebar}>
+            <IsMarketOpen
+              isOpen={marketOpen}
+            />
+
+            <LiveButton
+              liveRunning={liveRunning}
+              loadingLive={false}
+              toggleLive={() => {}}
+            />
+          </div>
+
+        </div>
+
+        <div className="footer">
+          <p>© 2024 Live Trader Too</p>
+        </div>
+
+      </div>
+    </main>
+  );
 }
