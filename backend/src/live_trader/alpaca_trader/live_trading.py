@@ -582,7 +582,62 @@ class AlpacaTrader:
 
         await self.place_order(symbol, qty, "sell", order_type)
 
+    async def validate_order(self, symbol: str, qty: int, order_type: str) -> tuple[bool, str]:
+        """
+        Validates order data before submission.
 
+        Args:
+            symbol (str): The stock symbol for the order.
+            qty (int): The quantity of shares to trade.
+            order_type (str): The type of the order (e.g., "market", "limit").
+
+        Returns:
+            tuple[bool, str]:
+                (True, success_message) if valid
+                (False, error_message) if invalid
+        """
+
+        # Validate quantity
+        if not isinstance(qty, int):
+            return False, "Quantity must be an integer."
+
+        if qty <= 0:
+            return False, "Quantity must be greater than 0."
+
+        # Validate order type
+        valid_order_types = {
+            "market",
+            "limit",
+            "stop",
+            "stop_limit",
+            "trailing_stop",
+        }
+
+        if order_type.lower() not in valid_order_types:
+            return (
+                False,
+                f"Invalid order type '{order_type}'. "
+                f"Valid types: {', '.join(valid_order_types)}"
+            )
+
+        # Validate symbol
+        url = f"{self._APCA_API_BASE_URL}/v2/assets/{symbol.upper()}"
+
+        response = await asyncio.to_thread(
+            requests.get,
+            url,
+            headers=self._HEADERS
+        )
+
+        if response.status_code != 200:
+            return False, f"Symbol '{symbol}' was not found."
+
+        asset = response.json()
+
+        if not asset.get("tradable", False):
+            return False, f"Symbol '{symbol}' is not tradable."
+
+        return True, "Order validated successfully."
 
     async def _wait_until_order_filled(self, order_id: str) -> None:
         """

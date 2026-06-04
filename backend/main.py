@@ -68,6 +68,11 @@ async def place_order(order: OrderRequest):
         "order_id": order_id,
     }
 
+@app.get("/validate_order")
+async def validate_order(symbol: str, qty: int, order_type: str):
+    is_valid, message = await trader.validate_order(symbol, qty, order_type)
+    return {"is_valid": is_valid, "message": message}
+
 @app.post("/start")
 async def start():
     await trader.start_live()
