@@ -3,7 +3,6 @@
 .navBar{
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  border: 1px solid purple;
   align-items: center;
 }
 

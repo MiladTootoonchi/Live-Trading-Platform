@@ -76,7 +76,7 @@ export default function HistoryPage() {
           </div>
         </div>
 
-        <div className={styles.footer}>
+        <div className = "footer">
           <p>© 2024 Live Trader Too</p>
         </div>
       </div>
