@@ -6,6 +6,7 @@ import PositionsList from "./components/PositionsList/PositionsList";
 import LiveButton from "./components/LiveButton/LiveButton";
 import IsMarketOpen from "./components/IsMarketOpen/IsMarketOpen";
 import OrderingPanel from "./components/OrderingPanel/OrderingPanel";
+import NavBar from "./components/NavBar/NavBar";
 
 type EquityPoint = {
   timestamp: number;
@@ -133,10 +134,7 @@ export default function Home() {
 
         <div className={styles.header}>
           <h1 className={"Title"}> Portfolio Dashboard</h1>
-
-          <div className={styles.navbar}>
-
-          </div>
+          <NavBar />
         </div>
 
 

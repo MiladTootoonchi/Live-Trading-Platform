@@ -1,0 +1,24 @@
+/* Navigation Styles */
+
+.navBar{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  border: 1px solid purple;
+  align-items: center;
+}
+
+.navButton {
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: #5d7da9d6;
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  height: 40px;
+  width: 100px;
+  text-align: center;
+}
+
+.navButton:hover {
+  opacity: 0.9;
+}
