@@ -4,6 +4,7 @@ import styles from "./home.module.css";
 import EquityChart from "./components/EquityChart";
 import PositionsList from "./components/PositionsList";
 import LiveButton from "./components/LiveButton";
+import IsMarketOpen from "./components/IsMarketOpen";
 
 type EquityPoint = {
   timestamp: number;
@@ -25,6 +26,7 @@ export default function Home() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [liveRunning, setLiveRunning] = useState(false);
   const [loadingLive, setLoadingLive] = useState(false);
+  const [marketOpen, setMarketOpen] = useState(false);
 
   const currentEquity =
     equityData.length > 0
@@ -49,6 +51,7 @@ export default function Home() {
       const data = await res.json();
 
       setLiveRunning(data.live);
+      setMarketOpen(data.market_open);
     } catch (err) {
       console.error(err);
     }
@@ -144,6 +147,7 @@ export default function Home() {
             <PositionsList positions={positions} />
 
             <div className={styles.sidebar}>
+              <IsMarketOpen isOpen={marketOpen} /> 
               <LiveButton liveRunning={liveRunning} loadingLive={loadingLive} toggleLive={toggleLive} />
               <h3>Order Here</h3>
             </div>
