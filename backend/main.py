@@ -44,6 +44,14 @@ class ConfigUpdateRequest(BaseModel):
     rsi: int
     zscore: int
 
+    ml_training_lookback: int
+
+    macd_fast: int
+    macd_slow: int
+    macd_signal: int
+
+    time_steps: int
+
 config = Config()
 
 trader = AlpacaTrader(config)
@@ -177,6 +185,36 @@ def update_all_settings(
         "keys",
         "alpaca_secret_key",
         request.alpaca_secret,
+    )
+
+    config.update_variable(
+    "ml-variables",
+    "ml_training_lookback",
+    request.ml_training_lookback,
+    )
+
+    config.update_variable(
+        "ml-variables",
+        "macd_fast",
+        request.macd_fast,
+    )
+
+    config.update_variable(
+        "ml-variables",
+        "macd_slow",
+        request.macd_slow,
+    )
+
+    config.update_variable(
+        "ml-variables",
+        "macd_signal",
+        request.macd_signal,
+    )
+
+    config.update_variable(
+        "ml-variables",
+        "time_steps",
+        request.time_steps,
     )
 
     return {

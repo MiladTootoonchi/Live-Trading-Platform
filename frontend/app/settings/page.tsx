@@ -36,6 +36,14 @@ export default function SettingsPage() {
   const [rsi, setRsi] = useState(0);
   const [zscore, setZscore] = useState(0);
 
+  const [mlTrainingLookback, setMlTrainingLookback] = useState(0);
+
+  const [macdFast, setMacdFast] = useState(0);
+  const [macdSlow, setMacdSlow] = useState(0);
+  const [macdSignal, setMacdSignal] = useState(0);
+
+  const [timeSteps, setTimeSteps] = useState(0);
+
   const fetchStrategies = async () => {
     try {
       const res = await fetch(
@@ -77,9 +85,22 @@ export default function SettingsPage() {
         data.backtesting.days
       );
 
-      setSma1(data.ml.sma_windows[0]);
-      setSma2(data.ml.sma_windows[1]);
-      setSma3(data.ml.sma_windows[2]);
+      setMlTrainingLookback(
+        data.ml.ml_training_lookback
+      );
+
+      setSma1(data.ml.sma_window1);
+      setSma2(data.ml.sma_window2);
+      setSma3(data.ml.sma_window3);
+
+      setMacdFast(data.ml.macd_fast);
+      setMacdSlow(data.ml.macd_slow);
+      setMacdSignal(data.ml.macd_signal);
+
+      setTimeSteps(data.ml.time_steps);
+
+      setRsi(data.ml.rsi_window);
+      setZscore(data.ml.zscore_window);
 
       setRsi(data.ml.rsi_window);
       setZscore(data.ml.zscore_window);
@@ -142,6 +163,14 @@ export default function SettingsPage() {
 
             rsi,
             zscore,
+
+            ml_training_lookback: mlTrainingLookback,
+
+            macd_fast: macdFast,
+            macd_slow: macdSlow,
+            macd_signal: macdSignal,
+
+            time_steps: timeSteps,
           }),
         }
       );
@@ -332,16 +361,21 @@ export default function SettingsPage() {
 
             <SettingsCard title="ML Settings">
 
+              <label>ML Training Lookback</label>
+              <input
+                type="number"
+                value={mlTrainingLookback}
+                onChange={(e) =>
+                  setMlTrainingLookback(Number(e.target.value))
+                }
+              />
+
               <label>SMA 1</label>
               <input
                 type="number"
                 value={sma1}
                 onChange={(e) =>
-                  setSma1(
-                    Number(
-                      e.target.value
-                    )
-                  )
+                  setSma1(Number(e.target.value))
                 }
               />
 
@@ -350,11 +384,7 @@ export default function SettingsPage() {
                 type="number"
                 value={sma2}
                 onChange={(e) =>
-                  setSma2(
-                    Number(
-                      e.target.value
-                    )
-                  )
+                  setSma2(Number(e.target.value))
                 }
               />
 
@@ -363,37 +393,61 @@ export default function SettingsPage() {
                 type="number"
                 value={sma3}
                 onChange={(e) =>
-                  setSma3(
-                    Number(
-                      e.target.value
-                    )
-                  )
+                  setSma3(Number(e.target.value))
                 }
               />
 
-              <label>RSI</label>
+              <label>RSI Window</label>
               <input
                 type="number"
                 value={rsi}
                 onChange={(e) =>
-                  setRsi(
-                    Number(
-                      e.target.value
-                    )
-                  )
+                  setRsi(Number(e.target.value))
                 }
               />
 
-              <label>ZScore</label>
+              <label>MACD Fast</label>
+              <input
+                type="number"
+                value={macdFast}
+                onChange={(e) =>
+                  setMacdFast(Number(e.target.value))
+                }
+              />
+
+              <label>MACD Slow</label>
+              <input
+                type="number"
+                value={macdSlow}
+                onChange={(e) =>
+                  setMacdSlow(Number(e.target.value))
+                }
+              />
+
+              <label>MACD Signal</label>
+              <input
+                type="number"
+                value={macdSignal}
+                onChange={(e) =>
+                  setMacdSignal(Number(e.target.value))
+                }
+              />
+
+              <label>Time Steps</label>
+              <input
+                type="number"
+                value={timeSteps}
+                onChange={(e) =>
+                  setTimeSteps(Number(e.target.value))
+                }
+              />
+
+              <label>ZScore Window</label>
               <input
                 type="number"
                 value={zscore}
                 onChange={(e) =>
-                  setZscore(
-                    Number(
-                      e.target.value
-                    )
-                  )
+                  setZscore(Number(e.target.value))
                 }
               />
 

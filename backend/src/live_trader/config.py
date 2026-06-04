@@ -503,12 +503,22 @@ class Config:
             },
 
             "ml": {
-                "macd_stabilization": self.macd_stabilization,
-                "sma_windows": self.sma_windows,
-                "min_lookback": self.min_lookback,
+                "ml_training_lookback": self.load_ml_variable("ml_training_lookback"),
+
+                "sma_window1": self.load_ml_variable("sma_window1"),
+                "sma_window2": self.load_ml_variable("sma_window2"),
+                "sma_window3": self.load_ml_variable("sma_window3"),
+
                 "rsi_window": self.load_ml_variable("rsi_window"),
+
+                "macd_fast": self.load_ml_variable("macd_fast"),
+                "macd_slow": self.load_ml_variable("macd_slow"),
+                "macd_signal": self.load_ml_variable("macd_signal"),
+
+                "time_steps": self.load_ml_variable("time_steps"),
+
                 "zscore_window": self.load_ml_variable("zscore_window"),
-            },
+            }
         }
 
 
