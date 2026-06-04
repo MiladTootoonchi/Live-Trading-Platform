@@ -1,4 +1,4 @@
-from .alpaca_trader.live_trading import AlpacaTrader
+from .alpaca_trader.live_trading import AlpacaTrader, STRATEGIES
 from .alpaca_trader.order import SideSignal
 from .config import Config
 
@@ -8,4 +8,4 @@ __author__ = [
     "Makka Dulgaeva"
 ]
 __description__ = "A small package for analyzing and updating posistions in Alpaca"
-__all__ = ["AlpacaTrader", "SideSignal", "Config"]
+__all__ = ["AlpacaTrader", "SideSignal", "Config", "STRATEGIES"]

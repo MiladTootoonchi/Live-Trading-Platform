@@ -18,6 +18,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
 
   const [strategy, setStrategy] = useState("");
+  const [strategies, setStrategies] = useState<{ id: string; name: string }[]>([]);
 
   const [watchlist, setWatchlist] = useState("");
 
@@ -30,6 +31,23 @@ export default function SettingsPage() {
 
   const [rsi, setRsi] = useState(0);
   const [zscore, setZscore] = useState(0);
+
+  const fetchStrategies = async () => {
+    try {
+      const res = await fetch(
+        "http://localhost:8000/strategies"
+      );
+
+      const data = await res.json();
+
+      console.log("Strategies response:", data);
+
+      setStrategies(data);
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -111,6 +129,7 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchSettings();
     fetchStatus();
+    fetchStrategies();
   }, []);
 
   return (
@@ -135,14 +154,19 @@ export default function SettingsPage() {
                 Strategy
               </label>
 
-              <input
+              <select
                 value={strategy}
-                onChange={(e) =>
-                  setStrategy(
-                    e.target.value
-                  )
-                }
-              />
+                onChange={(e) => setStrategy(e.target.value)}
+              >
+                {strategies.map((s) => (
+                  <option
+                    key={s.id}
+                    value={s.id}
+                  >
+                    {s.name}
+                  </option>
+                ))}
+              </select>
 
               <label>
                 Watchlist

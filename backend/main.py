@@ -1,4 +1,4 @@
-from live_trader import AlpacaTrader, Config
+from live_trader import AlpacaTrader, Config, STRATEGIES
 from fastapi import FastAPI, HTTPException
 from pathlib import Path
 from pydantic import BaseModel
@@ -57,6 +57,9 @@ async def is_market_open():
     is_open = await trader.is_market_open()
     return {"is_open": is_open}
 
+
+
+
 @app.get("/config")
 def get_config():
     return config.to_dict()
@@ -81,6 +84,17 @@ def update_config(data: ConfigUpdate):
             status_code=400,
             detail=str(e)
         )
+
+@app.get("/strategies")
+def get_strategies():
+    return [
+        {
+            "id": key,
+            "name": key.replace("_", " ").title()
+        }
+        for key in list(STRATEGIES.keys())
+    ]
+
 
 
 @app.post("/place_order")
