@@ -436,6 +436,83 @@ class Config:
         return int(variable)
 
 
+    def _reload(self):
+        self.watchlist = self._load_watchlist()
+        self.strategy_name = self._load_strategy_name()
+
+        self.macd_stabilization = self.load_ml_variable("macd_slow") * 3
+
+        self.sma_windows = [
+            self.load_ml_variable(f"sma_window{i}")
+            for i in range(1, self.number_of_sma_windows + 1)
+        ]
+
+        self.min_lookback = max(
+            *self.sma_windows,
+            self.load_ml_variable("rsi_window"),
+            self.macd_stabilization,
+            self.load_ml_variable("zscore_window"),
+        )
+
+    def update_variable(self, section: str, key: str, value) -> None:
+        """
+        Update a value in the TOML configuration file.
+
+        Args:
+            section: TOML section name (e.g. 'live', 'backtesting')
+            key: Variable name inside the section
+            value: New value
+        """
+
+        try:
+            with open(self._config_file_path, "r") as file:
+                conf = toml.load(file)
+
+            if section not in conf:
+                conf[section] = {}
+
+            conf[section][key] = value
+
+            with open(self._config_file_path, "w") as file:
+                toml.dump(conf, file)
+
+            self.log_info(
+                f"Updated config: [{section}] {key} = {value}"
+            )
+
+            # Refresh derived values if ML variables changed
+            self._reload()
+
+        except Exception as e:
+            self.log_error(f"Failed updating config: {e}")
+            raise
+
+    def to_dict(self) -> dict:
+        return {
+            "strategy_name": self.strategy_name,
+            "watchlist": self.watchlist,
+            "apca_url": self.apca_url,
+
+            "alpaca_key": self._alpaca_key,
+            "alpaca_secret": self._alpaca_secret,
+
+            "backtesting": {
+                "days": self._load_days(),
+                "initial_cash": self._load_initial_cash(),
+                "strategy_list": self._load_strategy_list(),
+            },
+
+            "ml": {
+                "macd_stabilization": self.macd_stabilization,
+                "sma_windows": self.sma_windows,
+                "min_lookback": self.min_lookback,
+                "rsi_window": self.load_ml_variable("rsi_window"),
+                "zscore_window": self.load_ml_variable("zscore_window"),
+            },
+        }
+
+
+
 if __name__ == "__main__":
     conf = Config()
 

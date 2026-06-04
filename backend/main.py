@@ -1,8 +1,9 @@
-from live_trader import AlpacaTrader, SideSignal, Config
-from fastapi import FastAPI
+from live_trader import AlpacaTrader, Config
+from fastapi import FastAPI, HTTPException
 from pathlib import Path
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Any
 
 app = FastAPI()
 
@@ -19,6 +20,11 @@ class OrderRequest(BaseModel):
     qty: int
     side: str
     order_type: str
+
+class ConfigUpdate(BaseModel):
+    section: str
+    key: str
+    value: Any
 
 config = Config()
 
@@ -51,6 +57,30 @@ async def is_market_open():
     is_open = await trader.is_market_open()
     return {"is_open": is_open}
 
+@app.get("/config")
+def get_config():
+    return config.to_dict()
+
+@app.put("/config")
+def update_config(data: ConfigUpdate):
+    try:
+        config.update_variable(
+            section=data.section,
+            key=data.key,
+            value=data.value
+        )
+
+        return {
+            "success": True,
+            "message": f"Updated [{data.section}] {data.key}",
+            "value": data.value
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
 
 
 @app.post("/place_order")
