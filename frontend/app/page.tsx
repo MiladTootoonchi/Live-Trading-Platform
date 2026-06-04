@@ -5,6 +5,7 @@ import EquityChart from "./components/EquityChart";
 import PositionsList from "./components/PositionsList";
 import LiveButton from "./components/LiveButton";
 import IsMarketOpen from "./components/IsMarketOpen";
+import OrderingPanel from "./components/OrderingPanel";
 
 type EquityPoint = {
   timestamp: number;
@@ -149,7 +150,7 @@ export default function Home() {
             <div className={styles.sidebar}>
               <IsMarketOpen isOpen={marketOpen} /> 
               <LiveButton liveRunning={liveRunning} loadingLive={loadingLive} toggleLive={toggleLive} />
-              <h3>Order Here</h3>
+              <OrderingPanel />
             </div>
 
           </div>
