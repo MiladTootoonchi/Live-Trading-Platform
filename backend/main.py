@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException
 from pathlib import Path
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Any
+from typing import Any, List
 
 app = FastAPI()
 
@@ -25,6 +25,24 @@ class ConfigUpdate(BaseModel):
     section: str
     key: str
     value: Any
+
+class ConfigUpdateRequest(BaseModel):
+    strategy: str
+    watchlist: List[str]
+
+    alpaca_key: str
+    alpaca_secret: str
+
+    initial_cash: int
+    days: int
+    strategy_list: List[str]
+
+    sma1: int
+    sma2: int
+    sma3: int
+
+    rsi: int
+    zscore: int
 
 config = Config()
 
@@ -84,6 +102,86 @@ def update_config(data: ConfigUpdate):
             status_code=400,
             detail=str(e)
         )
+
+@app.put("/config/all")
+def update_all_settings(
+    request: ConfigUpdateRequest,
+):
+    config.update_variable(
+        "live",
+        "strategy",
+        request.strategy,
+    )
+
+    config.update_variable(
+        "live",
+        "watchlist",
+        ", ".join(request.watchlist),
+    )
+
+    config.update_variable(
+        "backtesting",
+        "initial_cash",
+        request.initial_cash,
+    )
+
+    config.update_variable(
+        "backtesting",
+        "backtesting_days",
+        request.days,
+    )
+
+    config.update_variable(
+        "backtesting",
+        "strategy_list",
+        ", ".join(request.strategy_list),
+    )
+
+    config.update_variable(
+        "ml-variables",
+        "sma_window1",
+        request.sma1,
+    )
+
+    config.update_variable(
+        "ml-variables",
+        "sma_window2",
+        request.sma2,
+    )
+
+    config.update_variable(
+        "ml-variables",
+        "sma_window3",
+        request.sma3,
+    )
+
+    config.update_variable(
+        "ml-variables",
+        "rsi_window",
+        request.rsi,
+    )
+
+    config.update_variable(
+        "ml-variables",
+        "zscore_window",
+        request.zscore,
+    )
+
+    config.update_variable(
+        "keys",
+        "alpaca_key",
+        request.alpaca_key,
+    )
+
+    config.update_variable(
+        "keys",
+        "alpaca_secret_key",
+        request.alpaca_secret,
+    )
+
+    return {
+        "success": True
+    }
 
 @app.get("/strategies")
 def get_strategies():

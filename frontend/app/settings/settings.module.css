@@ -62,3 +62,37 @@
 
   font-size: 1rem;
 }
+
+
+/* StrategyItems */
+
+.strategyPicker,
+.selectedStrategies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.strategyItem,
+.selectedStrategy {
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.strategyItem {
+  background: #2d3748;
+}
+
+.strategyItem:hover {
+  background: #4a5568;
+}
+
+.selectedStrategy {
+  background: #2563eb;
+}
+
+.selectedStrategy:hover {
+  background: #dc2626;
+}

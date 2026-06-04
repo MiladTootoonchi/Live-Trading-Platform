@@ -19,6 +19,10 @@ export default function SettingsPage() {
 
   const [strategy, setStrategy] = useState("");
   const [strategies, setStrategies] = useState<{ id: string; name: string }[]>([]);
+  const [strategyList, setStrategyList] = useState<string[]>([]);
+
+  const [alpacaKey, setAlpacaKey] = useState("");
+  const [alpacaSecret, setAlpacaSecret] = useState("");
 
   const [watchlist, setWatchlist] = useState("");
 
@@ -40,8 +44,6 @@ export default function SettingsPage() {
 
       const data = await res.json();
 
-      console.log("Strategies response:", data);
-
       setStrategies(data);
 
     } catch (err) {
@@ -58,8 +60,14 @@ export default function SettingsPage() {
       const data = await res.json();
 
       setStrategy(data.strategy_name);
+      setStrategyList(
+        data.backtesting.strategy_list
+      );
+      console.log(data.backtesting.strategy_list);
 
       setWatchlist(data.watchlist.join(", "));
+      setAlpacaKey(data.alpaca_key);
+      setAlpacaSecret(data.alpaca_secret);
 
       setInitialCash(
         data.backtesting.initial_cash
@@ -75,6 +83,11 @@ export default function SettingsPage() {
 
       setRsi(data.ml.rsi_window);
       setZscore(data.ml.zscore_window);
+
+      console.log("CONFIG DATA:", data);
+
+      setStrategy(data.strategy_name);
+      setStrategyList(data.backtesting.strategy_list);
 
     } catch (err) {
       console.error(err);
@@ -102,17 +115,33 @@ export default function SettingsPage() {
       setSaving(true);
 
       await fetch(
-        "http://localhost:8000/config",
+        "http://localhost:8000/config/all",
         {
           method: "PUT",
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            section: "live",
-            key: "strategy",
-            value: strategy,
+            strategy,
+            strategy_list: strategyList,
+
+            watchlist: watchlist
+              .split(",")
+              .map(s => s.trim())
+              .filter(Boolean),
+
+            alpaca_key: alpacaKey,
+            alpaca_secret: alpacaSecret,
+
+            initial_cash: initialCash,
+            days,
+
+            sma1,
+            sma2,
+            sma3,
+
+            rsi,
+            zscore,
           }),
         }
       );
@@ -124,6 +153,23 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const addStrategy = (strategyId: string) => {
+    if (strategyList.includes(strategyId)) return;
+
+    setStrategyList([
+      ...strategyList,
+      strategyId,
+    ]);
+  };
+
+  const removeStrategy = (strategyId: string) => {
+    setStrategyList(
+      strategyList.filter(
+        (s) => s !== strategyId
+      )
+    );
   };
 
   useEffect(() => {
@@ -147,6 +193,27 @@ export default function SettingsPage() {
         <div className={styles.content}>
 
           <div className={styles.settingsArea}>
+
+            <SettingsCard title="API Keys">
+
+              <label>Alpaca Key</label>
+              <input
+                value={alpacaKey}
+                onChange={(e) =>
+                  setAlpacaKey(e.target.value)
+                }
+              />
+
+              <label>Alpaca Secret</label>
+              <input
+                type="password"
+                value={alpacaSecret}
+                onChange={(e) =>
+                  setAlpacaSecret(e.target.value)
+                }
+              />
+
+            </SettingsCard>
 
             <SettingsCard title="Trading">
 
@@ -216,6 +283,50 @@ export default function SettingsPage() {
                   )
                 }
               />
+
+              <label>Available Strategies</label>
+
+              <div className={styles.strategyPicker}>
+                {strategies
+                  .filter(
+                    (s) =>
+                      !strategyList.includes(s.id)
+                  )
+                  .map((s) => (
+                    <div
+                      key={s.id}
+                      className={styles.strategyItem}
+                      onClick={() =>
+                        addStrategy(s.id)
+                      }
+                    >
+                      {s.name}
+                    </div>
+                  ))}
+              </div>
+
+              <label>Strategy List</label>
+
+              <div className={styles.selectedStrategies}>
+                {strategyList.map((strategyId) => {
+                  const strategy =
+                    strategies.find(
+                      (s) => s.id === strategyId
+                    );
+
+                  return (
+                    <div
+                      key={strategyId}
+                      className={styles.selectedStrategy}
+                      onClick={() =>
+                        removeStrategy(strategyId)
+                      }
+                    >
+                      {strategy?.name}
+                    </div>
+                  );
+                })}
+              </div>
 
             </SettingsCard>
 
