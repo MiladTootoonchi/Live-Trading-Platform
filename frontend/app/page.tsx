@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import styles from "./home.module.css";
-import EquityChart from "./components/EquityChart";
-import PositionsList from "./components/PositionsList";
-import LiveButton from "./components/LiveButton";
-import IsMarketOpen from "./components/IsMarketOpen";
-import OrderingPanel from "./components/OrderingPanel";
+import EquityChart from "./components/EquityChart/EquityChart";
+import PositionsList from "./components/PositionsList/PositionsList";
+import LiveButton from "./components/LiveButton/LiveButton";
+import IsMarketOpen from "./components/IsMarketOpen/IsMarketOpen";
+import OrderingPanel from "./components/OrderingPanel/OrderingPanel";
 
 type EquityPoint = {
   timestamp: number;
