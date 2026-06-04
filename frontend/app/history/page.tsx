@@ -7,6 +7,7 @@ import NavBar from "../components/NavBar/NavBar";
 import LiveButton from "../components/LiveButton/LiveButton";
 import IsMarketOpen from "../components/IsMarketOpen/IsMarketOpen";
 import LogsList from "../components/LogsList/LogsList";
+import OrdersList from "../components/OrdersList/OrdersList";
 
 
 export default function HistoryPage() {
@@ -73,6 +74,7 @@ export default function HistoryPage() {
           <div className={styles.sidebar}>
             <IsMarketOpen isOpen={marketOpen} />
             <LiveButton liveRunning={liveRunning} loadingLive={loadingLive} toggleLive={toggleLive} />
+            <OrdersList />
           </div>
         </div>
 
