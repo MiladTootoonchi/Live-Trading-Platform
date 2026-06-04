@@ -1,3 +1,5 @@
+import styles from "./SaveSettingsButton.module.css"
+
 type SaveSettingsButtonProps = {
   onClick: () => void;
   loading: boolean;
@@ -9,10 +11,11 @@ export default function SaveSettingsButton({
 }: SaveSettingsButtonProps) {
   return (
     <button
-      onClick={onClick}
-      disabled={loading}
+        className={styles.saveButton}
+        onClick={onClick}
+        disabled={loading}
     >
-      {loading ? "Saving..." : "Save Changes"}
+        {loading ? "Saving..." : "Save Changes"}
     </button>
   );
 }

@@ -1,3 +1,5 @@
+import styles from "./SettingsCard.module.css"
+
 type SettingsCardProps = {
   title: string;
   children: React.ReactNode;
@@ -5,8 +7,8 @@ type SettingsCardProps = {
 
 export default function SettingsCard({title,children,}: SettingsCardProps) {
   return (
-    <div className="card">
-      <h2>{title}</h2>
+    <div className={styles.card}>
+      <h2 className={styles.settingsTitle}>{title}</h2>
       {children}
     </div>
   );

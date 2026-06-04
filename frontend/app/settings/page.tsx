@@ -264,11 +264,6 @@ export default function SettingsPage() {
 
             </SettingsCard>
 
-            <SaveSettingsButton
-              onClick={saveSettings}
-              loading={saving}
-            />
-
           </div>
 
           <div className={styles.sidebar}>
@@ -280,6 +275,11 @@ export default function SettingsPage() {
               liveRunning={liveRunning}
               loadingLive={false}
               toggleLive={() => {}}
+            />
+
+            <SaveSettingsButton
+              onClick={saveSettings}
+              loading={saving}
             />
           </div>
 
