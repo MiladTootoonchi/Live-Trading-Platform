@@ -11,11 +11,16 @@ import IsMarketOpen from "../components/IsMarketOpen/IsMarketOpen";
 import SettingsCard from "../components/SettingsCard/SettingsCard";
 import SaveSettingsButton from "../components/SaveSettingsButton/SaveSettingsButton";
 
+import BacktestButton from "../components/BacktestButton/BacktestButton";
+
 export default function SettingsPage() {
   const [liveRunning, setLiveRunning] = useState(false);
   const [marketOpen, setMarketOpen] = useState(false);
 
   const [saving, setSaving] = useState(false);
+  
+  const [backtestRunning, setBacktestRunning] = useState(false);
+  const [loadingBacktest, setLoadingBacktest] = useState(false);
 
   const [strategy, setStrategy] = useState("");
   const [strategies, setStrategies] = useState<{ id: string; name: string }[]>([]);
@@ -43,6 +48,40 @@ export default function SettingsPage() {
   const [macdSignal, setMacdSignal] = useState(0);
 
   const [timeSteps, setTimeSteps] = useState(0);
+
+
+  const fetchBacktestStatus = async () => {
+    try {
+      const res = await fetch(
+        "http://localhost:8000/backtest/status"
+      );
+
+      const data = await res.json();
+
+      setBacktestRunning(data.running);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const runBacktest = async () => {
+      try {
+        setLoadingBacktest(true);
+
+        await fetch(
+          "http://localhost:8000/backtest/start",
+          {
+            method: "POST",
+          }
+        );
+
+        setBacktestRunning(true);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingBacktest(false);
+      }
+  };
 
   const fetchStrategies = async () => {
     try {
@@ -205,6 +244,12 @@ export default function SettingsPage() {
     fetchSettings();
     fetchStatus();
     fetchStrategies();
+    
+    const interval = setInterval(() => {
+      fetchBacktestStatus();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -466,6 +511,8 @@ export default function SettingsPage() {
               toggleLive={() => {}}
             />
 
+           <BacktestButton backtestRunning={backtestRunning} loadingBacktest={loadingBacktest} runBacktest={runBacktest}/>
+            
             <SaveSettingsButton
               onClick={saveSettings}
               loading={saving}
