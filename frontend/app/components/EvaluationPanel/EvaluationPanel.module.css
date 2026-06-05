@@ -21,9 +21,13 @@
     background-color: #140033;
 }
 
+.resultsTable td {
+    background-color: #14004485;
+}
+
 .resultsTable th,
 .resultsTable td {
-    border: 1px solid #444;
+    border: 1px solid #ffffff29;
     padding: 0.75rem 1rem;
     text-align: center;
 }
