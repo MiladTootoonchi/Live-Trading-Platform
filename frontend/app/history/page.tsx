@@ -8,6 +8,7 @@ import LiveButton from "../components/LiveButton/LiveButton";
 import IsMarketOpen from "../components/IsMarketOpen/IsMarketOpen";
 import LogsList from "../components/LogsList/LogsList";
 import OrdersList from "../components/OrdersList/OrdersList";
+import Footer from "../components/Footer/Footer";
 
 
 export default function HistoryPage() {
@@ -78,9 +79,7 @@ export default function HistoryPage() {
           </div>
         </div>
 
-        <div className = "footer">
-          <p>© 2024 Live Trader Too</p>
-        </div>
+        <Footer />
       </div>
     </main>
   );

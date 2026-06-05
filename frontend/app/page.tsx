@@ -7,6 +7,7 @@ import LiveButton from "./components/LiveButton/LiveButton";
 import IsMarketOpen from "./components/IsMarketOpen/IsMarketOpen";
 import OrderingPanel from "./components/OrderingPanel/OrderingPanel";
 import NavBar from "./components/NavBar/NavBar";
+import Footer from "./components/Footer/Footer";
 
 type EquityPoint = {
   timestamp: number;
@@ -154,11 +155,7 @@ export default function Home() {
           </div>
         </div>
 
-
-
-        <div className="footer">
-          <p>© 2024 Live Trader Too</p>
-        </div>
+        <Footer />
       </div>
     </main>
   );

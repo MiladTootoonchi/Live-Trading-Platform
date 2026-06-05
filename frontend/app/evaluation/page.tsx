@@ -8,6 +8,7 @@ import EvaluationPanel from "../components/EvaluationPanel/EvaluationPanel"
 import IsMarketOpen from "../components/IsMarketOpen/IsMarketOpen"
 import LiveButton from "../components/LiveButton/LiveButton"
 import BacktestButton from "../components/BacktestButton/BacktestButton";
+import Footer from "../components/Footer/Footer";
 
 export default function EvaluationPage(){
     const [liveRunning, setLiveRunning] = useState(false);
@@ -113,9 +114,7 @@ export default function EvaluationPage(){
             </div>
           </div>
 
-          <div className = "footer">
-            <p>© 2024 Live Trader Too</p>
-          </div>
+          <Footer />
         </div>
       </main>
     )

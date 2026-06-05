@@ -13,6 +13,8 @@ import SaveSettingsButton from "../components/SaveSettingsButton/SaveSettingsBut
 
 import BacktestButton from "../components/BacktestButton/BacktestButton";
 
+import Footer from "../components/Footer/Footer";
+
 export default function SettingsPage() {
   const [liveRunning, setLiveRunning] = useState(false);
   const [marketOpen, setMarketOpen] = useState(false);
@@ -521,9 +523,7 @@ export default function SettingsPage() {
 
         </div>
 
-        <div className="footer">
-          <p>© 2024 Live Trader Too</p>
-        </div>
+        <Footer />
 
       </div>
     </main>
