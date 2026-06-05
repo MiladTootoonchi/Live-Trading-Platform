@@ -57,8 +57,6 @@ export default function EvaluationPanel() {
 
 					setResults(backtestData.data || []);
 					setFiles(evalData.files || []);
-          setResults(backtestData.data || []);
-          setFiles(evalData.files || []);
 
           const reportFiles = (evalData.files || []).filter(
               (file: string) => file.endsWith(".txt")
@@ -79,16 +77,24 @@ export default function EvaluationPanel() {
           setReports(loadedReports);
 
 					if (
-							(!backtestData.data || backtestData.data.length === 0) &&
-							(!evalData.files || evalData.files.length === 0)
-					) {
-							setMessage(
-									"No backtesting or machine learning evaluation results are available yet."
-							);
-					}
+              (!backtestData.data || backtestData.data.length === 0) &&
+              (!evalData.files || evalData.files.length === 0)
+          ) {
+              setMessage(
+                  "No backtesting or machine learning evaluation results are available yet."
+              );
+          } else {
+              setMessage("");
+          }
 			}
 
 			loadData();
+
+      const interval = setInterval(() => {
+          loadData();
+      }, 5000);
+
+      return () => clearInterval(interval);
 		}, []);
     if (message) {
       return (
