@@ -5,6 +5,7 @@ import joblib
 from alpaca.trading.client import TradingClient
 from abc import abstractmethod
 from typing import Union
+import asyncio
 
 from live_trader.alpaca_trader.order import SideSignal
 from live_trader.strategies.strategy import BaseStrategy
@@ -406,7 +407,9 @@ class MLStrategyBase(BaseStrategy):
             tuple[SideSignal, int]: Recommended side and quantity.
         """
         
-        artifact = self._check_model_existence()
+        artifact = await asyncio.to_thread(
+            self._check_model_existence
+        )
         model = artifact.model
         calibrator = artifact.calibrator
 
