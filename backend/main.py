@@ -82,12 +82,6 @@ async def get_account_info():
     account_info = await trader.get_account_info()
     return {"account_info": account_info}
 
-@app.get("/ismarketopen")
-async def is_market_open():
-    is_open = await trader.is_market_open()
-    return {"is_open": is_open}
-
-
 
 
 @app.get("/config")
@@ -276,9 +270,11 @@ async def stop():
     }
 
 @app.get("/status")
+@app.get("/status")
 async def status():
     return {
-        "live": await trader.get_live_status()
+        "live": await trader.get_live_status(),
+        "market_open": await trader.is_market_open()
     }
 
 
