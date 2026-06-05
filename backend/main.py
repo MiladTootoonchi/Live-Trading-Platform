@@ -263,7 +263,7 @@ async def start():
 
     return {
         "status": "started",
-        "live": trader.is_live_running
+        "live": await trader.get_live_status()
     }
 
 @app.post("/stop")
@@ -272,7 +272,7 @@ async def stop():
 
     return {
         "status": "stopped",
-        "live": trader.is_live_running
+        "live": await trader.get_live_status()
     }
 
 @app.get("/status")
