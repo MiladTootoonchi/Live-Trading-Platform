@@ -4,6 +4,7 @@ from pathlib import Path
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from multiprocessing import Process
 import csv
 from typing import Any, List
 import asyncio
@@ -391,27 +392,28 @@ def get_backtest_results():
     }
 
 
-backtest_task = None
-async def run_backtest_task():
-    try:
-        await trader.run_backtest()
-    except Exception as e:
-        print(f"Backtest failed: {e}")
-
+backtest_process = None
+def run_backtest_process():
+    asyncio.run(trader.run_backtest())
 
 @app.post("/backtest/start")
 async def start_backtest():
-    global backtest_task
+    global backtest_process
 
-    if backtest_task and not backtest_task.done():
+    if (
+        backtest_process is not None
+        and backtest_process.is_alive()
+    ):
         return {
             "success": False,
             "message": "Backtest already running"
         }
 
-    backtest_task = asyncio.create_task(
-        run_backtest_task()
+    backtest_process = Process(
+        target=run_backtest_process
     )
+
+    backtest_process.start()
 
     return {
         "success": True,
@@ -420,13 +422,11 @@ async def start_backtest():
 
 @app.get("/backtest/status")
 async def backtest_status():
-    global backtest_task
-
-    running = (
-        backtest_task is not None
-        and not backtest_task.done()
-    )
+    global backtest_process
 
     return {
-        "running": running
+        "running": (
+            backtest_process is not None
+            and backtest_process.is_alive()
+        )
     }
