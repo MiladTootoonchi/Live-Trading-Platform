@@ -1,0 +1,81 @@
+/* Titles */
+
+.sectionTitle {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
+
+/* Backtest Results */
+
+.resultsTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2rem;
+    table-layout: auto;
+}
+
+.resultsTable th {
+    background-color: #140033;
+}
+
+.resultsTable th,
+.resultsTable td {
+    border: 1px solid #444;
+    padding: 0.75rem 1rem;
+    text-align: center;
+}
+
+
+/* ML Evaluation Cards */
+
+.modelCard {
+    background-color: #140033;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.modelSummary {
+    padding: 1rem;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.symbolSummary {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.symbolContent {
+    padding: 1rem;
+}
+
+
+/* Evaluation Content */
+
+.evaluationContent {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    margin-top: 1rem;
+    margin-bottom: 2rem;
+}
+
+.confusionMatrix {
+    max-width: 600px;
+    border-radius: 8px;
+}
+
+.report {
+    background-color: #140033;
+    padding: 1rem;
+    border-radius: 8px;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    min-width: 500px;
+}

@@ -3,6 +3,8 @@ from fastapi import FastAPI, HTTPException
 from pathlib import Path
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+import csv
 from typing import Any, List
 
 app = FastAPI()
@@ -305,10 +307,84 @@ EVAL_DIR = Path("logfiles/evaluations")
 
 @app.get("/evaluation")
 async def list_evaluations():
+    if not EVAL_DIR.exists():
+        return {
+            "success": False,
+            "message": "No evaluations found.",
+            "files": []
+        }
+
     files = []
 
     for file in EVAL_DIR.rglob("*"):
         if file.is_file():
             files.append(str(file.relative_to(EVAL_DIR)))
 
-    return {"files": files}
+    if not files:
+        return {
+            "success": False,
+            "message": "No evaluations found.",
+            "files": []
+        }
+
+    return {
+        "success": True,
+        "message": "",
+        "files": files
+    }
+
+@app.get("/evaluation/image")
+def get_evaluation_image(path: str):
+    file_path = EVAL_DIR / path
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Image not found"
+        )
+
+    return FileResponse(file_path)
+
+@app.get("/evaluation/report")
+def get_evaluation_report(path: str):
+    file_path = EVAL_DIR / path
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Report not found"
+        )
+
+    return {
+        "success": True,
+        "content": file_path.read_text(encoding="utf-8")
+    }
+
+
+BACKTEST_RESULTS = Path("backtest_results.csv")
+
+@app.get("/backtest_results")
+def get_backtest_results():
+    if not BACKTEST_RESULTS.exists():
+        return {
+            "success": False,
+            "message": "No backtest results found. Run a backtest first.",
+            "data": []
+        }
+
+    with open(BACKTEST_RESULTS, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+
+    if not rows:
+        return {
+            "success": False,
+            "message": "The backtest results file is empty.",
+            "data": []
+        }
+
+    return {
+        "success": True,
+        "message": "",
+        "data": rows
+    }
