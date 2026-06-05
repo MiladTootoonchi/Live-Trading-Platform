@@ -12,6 +12,9 @@ export default function NavBar() {
         <Link href="/history" className={styles.navButton}>
             <button>History</button>
         </Link>
+        <Link href="/evaluations" className={styles.navButton}>
+            <button>Evaluations</button>
+        </Link>
         <Link href="/settings" className={styles.navButton}>
             <button>Settings</button>
         </Link>
