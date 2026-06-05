@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 import csv
 from typing import Any, List
+import asyncio
 
 app = FastAPI()
 
@@ -387,4 +388,45 @@ def get_backtest_results():
         "success": True,
         "message": "",
         "data": rows
+    }
+
+
+backtest_task = None
+async def run_backtest_task():
+    try:
+        await trader.run_backtest()
+    except Exception as e:
+        print(f"Backtest failed: {e}")
+
+
+@app.post("/backtest/start")
+async def start_backtest():
+    global backtest_task
+
+    if backtest_task and not backtest_task.done():
+        return {
+            "success": False,
+            "message": "Backtest already running"
+        }
+
+    backtest_task = asyncio.create_task(
+        run_backtest_task()
+    )
+
+    return {
+        "success": True,
+        "status": "started"
+    }
+
+@app.get("/backtest/status")
+async def backtest_status():
+    global backtest_task
+
+    running = (
+        backtest_task is not None
+        and not backtest_task.done()
+    )
+
+    return {
+        "running": running
     }
