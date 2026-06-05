@@ -259,7 +259,7 @@ export default function SettingsPage() {
                     key={s.id}
                     value={s.id}
                   >
-                    {s.name}
+                    {s.name.toUpperCase()}
                   </option>
                 ))}
               </select>
@@ -329,7 +329,7 @@ export default function SettingsPage() {
                         addStrategy(s.id)
                       }
                     >
-                      {s.name}
+                      {s.name.toUpperCase()}
                     </div>
                   ))}
               </div>
@@ -351,7 +351,7 @@ export default function SettingsPage() {
                         removeStrategy(strategyId)
                       }
                     >
-                      {strategy?.name}
+                      {strategy?.name.toUpperCase()}
                     </div>
                   );
                 })}

@@ -33,6 +33,12 @@
   gap: 1rem;
 }
 
+.settingsArea label {
+  display: block;
+  margin-bottom: 0.4rem;
+  margin-top: 1.2rem;
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;
