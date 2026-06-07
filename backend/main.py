@@ -82,6 +82,40 @@ async def get_account_info():
     account_info = await trader.get_account_info()
     return {"account_info": account_info}
 
+@app.get("/account_metrics")
+async def get_account_metrics():
+    account = await trader.get_account_info()
+
+    equity = float(account.get("equity", 0))
+    maintenance_margin = float(
+        account.get("maintenance_margin", 0)
+    )
+
+    return {
+        "equity": equity,
+        "cash": float(account.get("cash", 0)),
+        "unrealized_pnl": float(
+            account.get("unrealized_pl", 0)
+        ),
+        "realized_pnl": (
+            equity - float(account.get("last_equity", 0))
+        ),
+        "buying_power": float(
+            account.get("buying_power", 0)
+        ),
+        "maintenance_margin": maintenance_margin,
+        "initial_margin": float(
+            account.get("initial_margin", 0)
+        ),
+        "account_leverage": float(
+            account.get("multiplier", 1)
+        ),
+        "margin_cushion": (
+            (equity - maintenance_margin) / equity * 100
+            if equity > 0
+            else 0
+        ),
+    }
 
 
 @app.get("/config")

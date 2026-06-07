@@ -8,6 +8,7 @@ import IsMarketOpen from "./components/IsMarketOpen/IsMarketOpen";
 import OrderingPanel from "./components/OrderingPanel/OrderingPanel";
 import NavBar from "./components/NavBar/NavBar";
 import Footer from "./components/Footer/Footer";
+import AccountMetricsPanel from "./components/AccountMetricsPanel/AccountMetricsPanel";
 
 type EquityPoint = {
   timestamp: number;
@@ -31,6 +32,17 @@ export default function Home() {
   const [loadingLive, setLoadingLive] = useState(false);
   const [marketOpen, setMarketOpen] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState("1M");
+  const [accountMetrics, setAccountMetrics] = useState({
+    equity: 0,
+    cash: 0,
+    unrealized_pnl: 0,
+    realized_pnl: 0,
+    buying_power: 0,
+    maintenance_margin: 0,
+    initial_margin: 0,
+    account_leverage: 0,
+    margin_cushion: 0,
+  });
 
   const currentEquity =
     equityData.length > 0
@@ -144,6 +156,16 @@ export default function Home() {
 
         setPositions(positionsJson.positions);
 
+        
+        // Account metrics
+        const accountRes = await fetch(
+          "http://localhost:8000/account_metrics"
+        );
+
+        const accountJson = await accountRes.json();
+
+        setAccountMetrics(accountJson);
+
       } catch (err) {
         console.error(err);
       }
@@ -179,6 +201,8 @@ export default function Home() {
             pnl={pnl} pnlPct={pnlPct} 
             selectedPeriod={selectedPeriod} 
             onPeriodChange={setSelectedPeriod}/>
+
+          <AccountMetricsPanel metrics={accountMetrics} />
 
           <div className={styles.content_grid}>
             <PositionsList positions={positions} onClosePosition={closePosition}/>
