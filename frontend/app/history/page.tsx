@@ -8,6 +8,7 @@ import LiveButton from "../components/LiveButton/LiveButton";
 import IsMarketOpen from "../components/IsMarketOpen/IsMarketOpen";
 import LogsList from "../components/LogsList/LogsList";
 import OrdersList from "../components/OrdersList/OrdersList";
+import BacktestButton from "../components/BacktestButton/BacktestButton";
 import Footer from "../components/Footer/Footer";
 
 
@@ -15,6 +16,42 @@ export default function HistoryPage() {
   const [liveRunning, setLiveRunning] = useState(false);
   const [loadingLive, setLoadingLive] = useState(false);
   const [marketOpen, setMarketOpen] = useState(false);
+
+  const [backtestRunning, setBacktestRunning] = useState(false);
+  const [loadingBacktest, setLoadingBacktest] = useState(false);
+
+  const fetchBacktestStatus = async () => {
+    try {
+      const res = await fetch(
+        "http://localhost:8000/backtest/status"
+      );
+
+      const data = await res.json();
+
+      setBacktestRunning(data.running);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const runBacktest = async () => {
+    try {
+      setLoadingBacktest(true);
+
+      await fetch(
+        "http://localhost:8000/backtest/start",
+        {
+          method: "POST",
+        }
+      );
+
+      setBacktestRunning(true);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingBacktest(false);
+    }
+  };
 
   const fetchLiveStatus = async () => {
     try {
@@ -53,9 +90,11 @@ export default function HistoryPage() {
 
   useEffect(() => {
     fetchLiveStatus();
+    fetchBacktestStatus();
 
     const interval = setInterval(() => {
       fetchLiveStatus();
+      fetchBacktestStatus();
     }, 5000);
 
     return () => clearInterval(interval);
@@ -75,6 +114,7 @@ export default function HistoryPage() {
           <div className={styles.sidebar}>
             <IsMarketOpen isOpen={marketOpen} />
             <LiveButton liveRunning={liveRunning} loadingLive={loadingLive} toggleLive={toggleLive} />
+            <BacktestButton backtestRunning={backtestRunning} loadingBacktest={loadingBacktest} runBacktest={runBacktest}/>
             <OrdersList />
           </div>
         </div>
