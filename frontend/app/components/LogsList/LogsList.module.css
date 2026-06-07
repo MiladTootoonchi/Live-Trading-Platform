@@ -31,6 +31,45 @@
   border-bottom: none;
 }
 
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 12px;
+}
+
+.header h3 {
+  margin: 0;
+}
+
+.clearButton {
+  padding: 8px 16px;
+
+  border: 1px solid #444;
+  border-radius: 8px;
+
+  background: #b84f4f;
+  color: white;
+
+  cursor: pointer;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+
+.clearButton:hover {
+  background: #c95a5a;
+}
+
+.clearButton:active {
+  transform: scale(0.98);
+}
+
 /* Scrollbar */
 
 .logsList::-webkit-scrollbar {

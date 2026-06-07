@@ -300,6 +300,22 @@ def get_logs(offset: int = 0):
         "has_log": True
     }
 
+@app.delete("/logs")
+def clear_logs():
+    try:
+        if LOG_FILE.exists():
+            LOG_FILE.unlink()
+
+        return {
+            "success": True,
+            "message": "Logs cleared"
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
 
 EVAL_DIR = Path("logfiles/evaluations")
 

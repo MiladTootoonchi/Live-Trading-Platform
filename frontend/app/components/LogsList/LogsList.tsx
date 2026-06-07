@@ -1,42 +1,70 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import styles from "./LogsList.module.css";
 
 export default function LogsList() {
     const [logs, setLogs] = useState<string[]>([]);
-    const [offset, setOffset] = useState(0);
+    const offsetRef = useRef(0);
 
-    useEffect(() => {
-    const fetchLogs = async () => {
+    const clearLogs = async () => {
       try {
         const res = await fetch(
-          `http://localhost:8000/logs?offset=${offset}`
+          "http://localhost:8000/logs",
+          {
+            method: "DELETE",
+          }
         );
 
-        const data = await res.json();
-
-        if (data.logs.length > 0) {
-          setLogs((prev) => [...prev, ...data.logs]);
+        if (!res.ok) {
+          throw new Error("Failed to clear logs");
         }
 
-        setOffset(data.offset);
+        setLogs([]);
+        offsetRef.current = 0;
       } catch (err) {
         console.error(err);
       }
     };
 
-    fetchLogs();
+    useEffect(() => {
+      const fetchLogs = async () => {
+        try {
+          const res = await fetch(
+            `http://localhost:8000/logs?offset=${offsetRef.current}`
+          );
 
-    const interval = setInterval(fetchLogs, 2000);
+          const data = await res.json();
 
-    return () => clearInterval(interval);
+          if (data.logs.length > 0) {
+            setLogs(prev => [...prev, ...data.logs]);
+          }
 
-  }, [offset]);
+          offsetRef.current = data.offset;
+        } catch (err) {
+          console.error(err);
+        }
+      };
+
+      fetchLogs();
+
+      const interval = setInterval(fetchLogs, 2000);
+
+      return () => clearInterval(interval);
+    }, []);
 
   return (
     <div className={styles.logsPanel}>
-      <h3>Logs</h3>
+      <div className={styles.header}>
+        <h3>Logs</h3>
+
+        <button
+          onClick={clearLogs}
+          className={styles.clearButton}
+        >
+          Clear Logs
+        </button>
+      </div>
 
       <div className={styles.logsList}>
         {[...logs].reverse().map((log, index) => (
