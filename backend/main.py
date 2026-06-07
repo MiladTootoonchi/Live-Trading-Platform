@@ -246,6 +246,15 @@ async def place_order(order: OrderRequest):
         "order_id": order_id,
     }
 
+@app.delete("/positions/{symbol}")
+async def close_position(symbol: str):
+    await trader.close_position(symbol)
+
+    return {
+        "success": True,
+        "message": f"Position {symbol} closed"
+    }
+
 @app.get("/validate_order")
 async def validate_order(symbol: str, qty: int, order_type: str):
     is_valid, message = await trader.validate_order(symbol, qty, order_type)

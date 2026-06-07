@@ -48,6 +48,33 @@ export default function Home() {
       : 0;
 
 
+  const closePosition = async (symbol: string) => {
+    try {
+      const res = await fetch(
+        `http://localhost:8000/positions/${symbol}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error("Failed to close position");
+      }
+
+      // Refresh positions immediately
+      const positionsRes = await fetch(
+        "http://localhost:8000/positions"
+      );
+
+      const positionsJson = await positionsRes.json();
+
+      setPositions(positionsJson.positions);
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const fetchLiveStatus = async () => {
     try {
       const res = await fetch("http://localhost:8000/status");
@@ -144,7 +171,7 @@ export default function Home() {
           <EquityChart data={equityData} currentEquity={currentEquity} pnl={pnl} pnlPct={pnlPct} />
 
           <div className={styles.content_grid}>
-            <PositionsList positions={positions} />
+            <PositionsList positions={positions} onClosePosition={closePosition}/>
 
             <div className={styles.sidebar}>
               <IsMarketOpen isOpen={marketOpen} /> 
