@@ -10,9 +10,7 @@ import IsMarketOpen from "../components/IsMarketOpen/IsMarketOpen";
 
 import SettingsCard from "../components/SettingsCard/SettingsCard";
 import SaveSettingsButton from "../components/SaveSettingsButton/SaveSettingsButton";
-
 import BacktestButton from "../components/BacktestButton/BacktestButton";
-
 import Footer from "../components/Footer/Footer";
 
 export default function SettingsPage() {
@@ -20,12 +18,14 @@ export default function SettingsPage() {
   const [marketOpen, setMarketOpen] = useState(false);
 
   const [saving, setSaving] = useState(false);
-  
+
   const [backtestRunning, setBacktestRunning] = useState(false);
   const [loadingBacktest, setLoadingBacktest] = useState(false);
 
   const [strategy, setStrategy] = useState("");
-  const [strategies, setStrategies] = useState<{ id: string; name: string }[]>([]);
+  const [strategies, setStrategies] = useState<
+    { id: string; name: string }[]
+  >([]);
   const [strategyList, setStrategyList] = useState<string[]>([]);
 
   const [alpacaKey, setAlpacaKey] = useState("");
@@ -43,14 +43,14 @@ export default function SettingsPage() {
   const [rsi, setRsi] = useState(0);
   const [zscore, setZscore] = useState(0);
 
-  const [mlTrainingLookback, setMlTrainingLookback] = useState(0);
+  const [mlTrainingLookback, setMlTrainingLookback] =
+    useState(0);
 
   const [macdFast, setMacdFast] = useState(0);
   const [macdSlow, setMacdSlow] = useState(0);
   const [macdSignal, setMacdSignal] = useState(0);
 
   const [timeSteps, setTimeSteps] = useState(0);
-
 
   const fetchBacktestStatus = async () => {
     try {
@@ -67,22 +67,22 @@ export default function SettingsPage() {
   };
 
   const runBacktest = async () => {
-      try {
-        setLoadingBacktest(true);
+    try {
+      setLoadingBacktest(true);
 
-        await fetch(
-          "http://localhost:8000/backtest/start",
-          {
-            method: "POST",
-          }
-        );
+      await fetch(
+        "http://localhost:8000/backtest/start",
+        {
+          method: "POST",
+        }
+      );
 
-        setBacktestRunning(true);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoadingBacktest(false);
-      }
+      setBacktestRunning(true);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingBacktest(false);
+    }
   };
 
   const fetchStrategies = async () => {
@@ -109,12 +109,15 @@ export default function SettingsPage() {
       const data = await res.json();
 
       setStrategy(data.strategy_name);
+
       setStrategyList(
         data.backtesting.strategy_list
       );
-      console.log(data.backtesting.strategy_list);
 
-      setWatchlist(data.watchlist.join(", "));
+      setWatchlist(
+        data.watchlist.join(", ")
+      );
+
       setAlpacaKey(data.alpaca_key);
       setAlpacaSecret(data.alpaca_secret);
 
@@ -142,14 +145,6 @@ export default function SettingsPage() {
 
       setRsi(data.ml.rsi_window);
       setZscore(data.ml.zscore_window);
-
-      setRsi(data.ml.rsi_window);
-      setZscore(data.ml.zscore_window);
-
-      console.log("CONFIG DATA:", data);
-
-      setStrategy(data.strategy_name);
-      setStrategyList(data.backtesting.strategy_list);
 
     } catch (err) {
       console.error(err);
@@ -181,7 +176,8 @@ export default function SettingsPage() {
         {
           method: "PUT",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
           body: JSON.stringify({
             strategy,
@@ -189,7 +185,7 @@ export default function SettingsPage() {
 
             watchlist: watchlist
               .split(",")
-              .map(s => s.trim())
+              .map((s) => s.trim())
               .filter(Boolean),
 
             alpaca_key: alpacaKey,
@@ -205,7 +201,8 @@ export default function SettingsPage() {
             rsi,
             zscore,
 
-            ml_training_lookback: mlTrainingLookback,
+            ml_training_lookback:
+              mlTrainingLookback,
 
             macd_fast: macdFast,
             macd_slow: macdSlow,
@@ -226,7 +223,10 @@ export default function SettingsPage() {
   };
 
   const addStrategy = (strategyId: string) => {
-    if (strategyList.includes(strategyId)) return;
+    if (
+      strategyList.includes(strategyId)
+    )
+      return;
 
     setStrategyList([
       ...strategyList,
@@ -243,16 +243,30 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    fetchSettings();
-    fetchStatus();
-    fetchStrategies();
-    
-    const interval = setInterval(() => {
-      fetchBacktestStatus();
-    }, 5000);
+    const loadPage = async () => {
+      await Promise.all([
+        fetchSettings(),
+        fetchStatus(),
+        fetchStrategies(),
+        fetchBacktestStatus(),
+      ]);
+    };
 
-    return () => clearInterval(interval);
+    loadPage();
   }, []);
+
+  useEffect(() => {
+    if (!backtestRunning) return;
+
+    const interval = setInterval(
+      fetchBacktestStatus,
+      5000
+    );
+
+    return () =>
+      clearInterval(interval);
+  }, [backtestRunning]);
+
 
   return (
     <main>
