@@ -11,11 +11,74 @@
 }
 
 .equityChart {
-  margin-top: 2rem;
+  margin-top: 0rem;
   margin-bottom: 2rem;
   padding: 1rem;
   border-radius: 8px;
   height: 500px;
   background-color: rgba(255, 255, 255, 0.08);
   border-radius: 8px;
+}
+
+
+/* PeriodSelector*/
+.summaryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.periodSelector {
+  display: flex;
+  gap: 6px;
+
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+
+  padding: 4px;
+  border-radius: 12px;
+
+  backdrop-filter: blur(8px);
+  margin-top: 4rem;
+}
+
+.periodButton {
+  border: none;
+  background: transparent;
+  color: #aaa;
+
+  padding: 8px 14px;
+  border-radius: 8px;
+
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+
+  transition: all 0.2s ease;
+}
+
+.periodButton:hover {
+  color: white;
+  background: rgba(255,255,255,0.08);
+}
+
+.activePeriod {
+  border: none;
+
+  background: #00ff88;
+  color: black;
+
+  padding: 8px 14px;
+  border-radius: 8px;
+
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 700;
+
+  box-shadow: 0 0 12px rgba(0,255,136,0.35);
+}
+
+.periodButton,
+.activePeriod {
+  padding: 6px 12px;
 }

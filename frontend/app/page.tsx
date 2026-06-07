@@ -30,6 +30,7 @@ export default function Home() {
   const [liveRunning, setLiveRunning] = useState(false);
   const [loadingLive, setLoadingLive] = useState(false);
   const [marketOpen, setMarketOpen] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState("1M");
 
   const currentEquity =
     equityData.length > 0
@@ -114,8 +115,13 @@ export default function Home() {
     const fetchData = async () => {
       try {
         // Equity data
+        const timeframe =
+          selectedPeriod === "1D"
+            ? "1Min"
+            : "1D";
+
         const equityRes = await fetch(
-          "http://localhost:8000/equity_history"
+          `http://localhost:8000/equity_history?period=${selectedPeriod}&timeframe=${timeframe}`
         );
 
         const equityJson = await equityRes.json();
@@ -154,7 +160,7 @@ export default function Home() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedPeriod]);
 
   return (
     <main>
@@ -168,7 +174,11 @@ export default function Home() {
 
 
         <div className={styles.content}>
-          <EquityChart data={equityData} currentEquity={currentEquity} pnl={pnl} pnlPct={pnlPct} />
+          <EquityChart data={equityData} 
+            currentEquity={currentEquity} 
+            pnl={pnl} pnlPct={pnlPct} 
+            selectedPeriod={selectedPeriod} 
+            onPeriodChange={setSelectedPeriod}/>
 
           <div className={styles.content_grid}>
             <PositionsList positions={positions} onClosePosition={closePosition}/>

@@ -22,29 +22,82 @@ type Props = {
   currentEquity: number;
   pnl: number;
   pnlPct: number;
+  selectedPeriod: string;
+  onPeriodChange: (period: string) => void;
 };
 
-export default function EquityChart({data, currentEquity, pnl, pnlPct,}: Props) {
+export default function EquityChart({data, currentEquity, pnl, pnlPct, selectedPeriod, onPeriodChange,}: Props) {
   return (
     <div className = {styles.equitySection}>
-        <div className={styles.equitySummary}>
-            <h2 className = {styles.equityValue}>
-            ${currentEquity.toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-            })}
-            </h2>
+        <div className={styles.summaryHeader}>
+            
+            <div className={styles.equitySummary}>
+                <h2 className = {styles.equityValue}>
+                ${currentEquity.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                })}
+                </h2>
 
-            <p className={pnl >= 0 ? "profit" : "loss"}>
-            {pnl >= 0 ? "+" : ""}
-            ${pnl.toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-            })}
-            {" "}
-            ({pnlPct.toFixed(2)}%)
-            </p>
+                <p className={pnl >= 0 ? "profit" : "loss"}>
+                {pnl >= 0 ? "+" : ""}
+                ${pnl.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                })}
+                {" "}
+                ({pnlPct.toFixed(2)}%)
+                </p>
+            </div>
+
+            <div className={styles.periodSelector}>
+                <button
+                className={
+                    selectedPeriod === "1D"
+                    ? styles.activePeriod
+                    : styles.periodButton
+                }
+                onClick={() => onPeriodChange("1D")}
+                >
+                Today
+                </button>
+
+                <button
+                className={
+                    selectedPeriod === "1M"
+                    ? styles.activePeriod
+                    : styles.periodButton
+                }
+                onClick={() => onPeriodChange("1M")}
+                >
+                Month
+                </button>
+
+                <button
+                className={
+                    selectedPeriod === "1Y"
+                    ? styles.activePeriod
+                    : styles.periodButton
+                }
+                onClick={() => onPeriodChange("1Y")}
+                >
+                Year
+                </button>
+
+                <button
+                className={
+                    selectedPeriod === "ALL"
+                    ? styles.activePeriod
+                    : styles.periodButton
+                }
+                onClick={() => onPeriodChange("ALL")}
+                >
+                All
+                </button>
+            </div>
         </div>
+
+
         <div className={styles.equityChart}>
             <ResponsiveContainer width="100%" height="100%">
             <LineChart 
