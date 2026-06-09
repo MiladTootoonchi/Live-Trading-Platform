@@ -231,18 +231,20 @@ class Config:
                 alpaca_secret = keys.get("alpaca_secret_key", alpaca_secret)
 
         except:
-            if not alpaca_key:
-                alpaca_key = os.getenv("alpaca_key")
+            pass
+        
+        if not alpaca_key:
+            alpaca_key = os.getenv("alpaca_key")
 
-            if not alpaca_secret:
-                alpaca_secret = os.getenv("alpaca_secret_key")
+        if not alpaca_secret:
+            alpaca_secret = os.getenv("alpaca_secret_key")
 
-            if not alpaca_key:
-                alpaca_key = ""
+        if not alpaca_key:
+            alpaca_key = ""
 
-            if not alpaca_secret:
-                alpaca_secret = ""
-                self.log_critical("Missing Alpaca API credentials. Provide them in the config file or as environment variables.")
+        if not alpaca_secret:
+            alpaca_secret = ""
+            self.log_critical("Missing Alpaca API credentials. Provide them in the config file or as environment variables.")
 
             
         return alpaca_key, alpaca_secret
