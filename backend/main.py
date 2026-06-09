@@ -8,6 +8,8 @@ from multiprocessing import Process
 import csv
 from typing import Any, List
 import asyncio
+import traceback
+
 
 app = FastAPI()
 
@@ -56,34 +58,85 @@ class ConfigUpdateRequest(BaseModel):
 
     time_steps: int
 
-config = Config()
+config = None
+trader = None
 
-trader = AlpacaTrader(config)
+try:
+    config = Config()
+    trader = AlpacaTrader(config)
+except Exception:
+    traceback.print_exc()
 
+
+def trader_ready():
+    return trader is not None
 
 
 @app.get("/orders")
 async def get_orders():
+    if not trader_ready():
+        return {"orders": []}
+
     orders = await trader.get_orders()
+
+    if not isinstance(orders, list):
+        return {"orders": []}
+
     return {"orders": orders}
 
 @app.get("/positions")
 async def get_positions():
+    if not trader:
+        return {"positions": []}
+
     positions = await trader.get_positions()
+
+    if not isinstance(positions, list):
+        return {"positions": []}
+
     return {"positions": positions}
 
 @app.get("/equity_history")
 async def get_equity_history(period: str = "1D", timeframe: str = "1Min"):
-    equity_history = await trader.get_equity_history(period=period, timeframe=timeframe)
-    return {"equity_history": equity_history}
+    if not trader_ready():
+        return {"equity_history": []}
+
+    history = await trader.get_equity_history(
+        period=period,
+        timeframe=timeframe,
+    )
+
+    if not isinstance(history, list):
+        return {"equity_history": []}
+
+    return {"equity_history": history}
 
 @app.get("/account_info")
 async def get_account_info():
+    if not trader_ready():
+        return {"account_info": {}}
+
     account_info = await trader.get_account_info()
+
+    if not isinstance(account_info, dict):
+        return {"account_info": {}}
+
     return {"account_info": account_info}
 
 @app.get("/account_metrics")
 async def get_account_metrics():
+    if not trader_ready():
+        return {
+            "equity": 0,
+            "cash": 0,
+            "unrealized_pnl": 0,
+            "realized_pnl": 0,
+            "buying_power": 0,
+            "maintenance_margin": 0,
+            "initial_margin": 0,
+            "account_leverage": 0,
+            "margin_cushion": 0,
+        }
     account = await trader.get_account_info()
 
     equity = float(account.get("equity", 0))
@@ -120,10 +173,17 @@ async def get_account_metrics():
 
 @app.get("/config")
 def get_config():
+    if config is None:
+        return {}
+
     return config.to_dict()
 
 @app.put("/config")
 def update_config(data: ConfigUpdate):
+    global config
+
+    if config is None:
+        config = Config()
     try:
         config.update_variable(
             section=data.section,
@@ -144,9 +204,10 @@ def update_config(data: ConfigUpdate):
         )
 
 @app.put("/config/all")
-def update_all_settings(
-    request: ConfigUpdateRequest,
-):
+def update_all_settings(request: ConfigUpdateRequest):
+    global config
+    global trader
+
     config.update_variable(
         "live",
         "strategy",
@@ -249,6 +310,13 @@ def update_all_settings(
         request.time_steps,
     )
 
+    try:
+        config = Config()
+        trader = AlpacaTrader(config)
+    except Exception:
+        traceback.print_exc()
+        trader = None
+
     return {
         "success": True
     }
@@ -267,6 +335,11 @@ def get_strategies():
 
 @app.post("/place_order")
 async def place_order(order: OrderRequest):
+    if not trader:
+        return {
+            "success": False,
+            "order_id": None
+        }
 
     order_id = await trader.place_order(
         symbol=order.symbol,
@@ -282,6 +355,11 @@ async def place_order(order: OrderRequest):
 
 @app.delete("/positions/{symbol}")
 async def close_position(symbol: str):
+    if not trader:
+        return {
+            "success": False,
+            "message": "Trader not initialized"
+        }
     await trader.close_position(symbol)
 
     return {
@@ -291,11 +369,22 @@ async def close_position(symbol: str):
 
 @app.get("/validate_order")
 async def validate_order(symbol: str, qty: int, order_type: str):
+    if not trader:
+        return {
+            "is_valid": False,
+            "message": "Trader not initialized"
+        }
+    
     is_valid, message = await trader.validate_order(symbol, qty, order_type)
     return {"is_valid": is_valid, "message": message}
 
 @app.post("/start")
 async def start():
+    if not trader:
+        return {
+            "status": "not_initialized",
+            "live": False
+        }
     await trader.start_live()
 
     return {
@@ -305,6 +394,11 @@ async def start():
 
 @app.post("/stop")
 async def stop():
+    if not trader:
+        return {
+            "status": "not_initialized",
+            "live": False
+        }   
     await trader.stop_live()
 
     return {
@@ -312,9 +406,14 @@ async def stop():
         "live": await trader.get_live_status()
     }
 
-@app.get("/status")
+
 @app.get("/status")
 async def status():
+    if not trader:
+        return {
+            "live": False,
+            "market_open": False
+        }
     return {
         "live": await trader.get_live_status(),
         "market_open": await trader.is_market_open()
@@ -449,10 +548,19 @@ def get_backtest_results():
 
 backtest_process = None
 def run_backtest_process():
+    if not trader:
+        return
+    
     asyncio.run(trader.run_backtest())
 
 @app.post("/backtest/start")
 async def start_backtest():
+    if not trader:
+        return {
+            "success": False,
+            "message": "Trader not initialized"
+        }
+    
     global backtest_process
 
     if (
