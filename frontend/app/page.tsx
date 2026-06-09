@@ -81,6 +81,26 @@ export default function Home() {
 
       const positionsJson = await positionsRes.json();
 
+      console.log("/positions", positionsJson);
+      console.log(
+        "/positions.positions",
+        positionsJson?.positions
+      );
+      console.log(
+        "isArray",
+        Array.isArray(positionsJson?.positions)
+      );
+
+      if (!Array.isArray(positionsJson?.positions)) {
+        console.error(
+          "BAD POSITIONS RESPONSE",
+          positionsJson
+        );
+
+        setPositions([]);
+        return;
+      }
+
       setPositions(positionsJson.positions);
 
     } catch (err) {
@@ -137,6 +157,18 @@ export default function Home() {
         );
 
         const equityJson = await equityRes.json();
+
+        console.log("/equity_history", equityJson);
+
+        if (!Array.isArray(equityJson.equity_history)) {
+          console.error(
+            "equity_history is not an array",
+            equityJson
+          );
+
+          setEquityData([]);
+          return;
+        }
 
         const chartData = equityJson.equity_history.map(
           (point: { timestamp: number; equity: number }) => ({
