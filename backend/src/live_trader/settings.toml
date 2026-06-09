@@ -3,13 +3,13 @@ alpaca_key = ""
 alpaca_secret_key = ""
 
 [live]
-strategy = ""
-watchlist = ""
+strategy = "gnn"
+watchlist = "AAPL, MSFT"
 
 [backtesting]
-backtesting_days = ""
-initial_cash = ""
-strategy_list = ""
+backtesting_days = 365
+initial_cash = 100000
+strategy_list = "gnn"
 
 [ml-variables]
 ml_training_lookback = 750

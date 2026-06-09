@@ -110,9 +110,6 @@ class Config:
 
         Returns:
             str: Name of the selected strategy.
-
-        Raises:
-            RuntimeError: If no strategy is defined.
         """
 
         try:
@@ -121,20 +118,13 @@ class Config:
                 live = conf.get("live", {})
                 strategy = live.get("strategy")
 
-        except FileNotFoundError:
-            self.log_info(f"Config file not found: {self._config_file_path}, falling back to environment variables.")
-            strategy = None
-
         except Exception:
-            self.log_info(f"Could not find strategy from {self._config_file_path}, falling back to environment variables.")
-            strategy = None
+            if not strategy:
+                strategy = os.getenv("strategy")
 
-        if not strategy:
-            strategy = os.getenv("strategy")
-
-        if not strategy:
-            self.log_critical("Strategy name missing from both config and environment variables.")
-            raise RuntimeError("Missing strategy name")
+            if not strategy:
+                self.log_critical("Strategy name missing from both config and environment variables.")
+                strategy = ""
     
         return strategy
 
@@ -228,9 +218,6 @@ class Config:
 
         Returns:
             Tuple[str, str]: Alpaca API key and secret key.
-
-        Raises:
-            RuntimeError: If credentials are not provided.
         """
 
         alpaca_key = None
@@ -243,21 +230,20 @@ class Config:
                 alpaca_key = keys.get("alpaca_key", alpaca_key)
                 alpaca_secret = keys.get("alpaca_secret_key", alpaca_secret)
 
-        except FileNotFoundError:
-            self.log_info(f"Config file not found: {self._config_file_path}, falling back to environment variables.")
+        except:
+            if not alpaca_key:
+                alpaca_key = os.getenv("alpaca_key")
 
-        except Exception:
-            self.log_info(f"Could not find Alpaca API credentials in {self._config_file_path}, falling back to environment variables.")
+            if not alpaca_secret:
+                alpaca_secret = os.getenv("alpaca_secret_key")
 
-        if not alpaca_key:
-            alpaca_key = os.getenv("alpaca_key")
+            if not alpaca_key:
+                alpaca_key = ""
 
-        if not alpaca_secret:
-            alpaca_secret = os.getenv("alpaca_secret_key")
+            if not alpaca_secret:
+                alpaca_secret = ""
+                self.log_critical("Missing Alpaca API credentials. Provide them in the config file or as environment variables.")
 
-        if not alpaca_key or not alpaca_secret:
-            self.log_critical("Missing Alpaca API credentials. Provide them in the config file or as environment variables.")
-            raise RuntimeError("Missing Alpaca API credentials")
             
         return alpaca_key, alpaca_secret
     
@@ -296,9 +282,7 @@ class Config:
                     return normalized
 
         except Exception:
-            self.log_info(
-                f"Could not find strategy_list in {self._config_file_path}, falling back to environment variables.\n"
-            )
+            pass
 
         # Fallback to env var
         env_list = os.getenv("strategy_list")
@@ -318,9 +302,6 @@ class Config:
 
         Returns:
             int: Initial cash amount.
-
-        Raises:
-            RuntimeError: If the value is not defined.
         """
 
         try:
@@ -329,12 +310,7 @@ class Config:
                 backtesting = conf.get("backtesting", {})
                 cash = backtesting.get("initial_cash")
 
-        except FileNotFoundError:
-            self.log_info(f"Config file not found: {self._config_file_path}, falling back to environment variables.")
-            cash = None
-
         except Exception:
-            self.log_info(f"Could not find initial_cash from {self._config_file_path}, falling back to environment variables.")
             cash = None
 
         if not cash:
@@ -342,7 +318,7 @@ class Config:
 
         if not cash:
             self.log_critical("initial_cash missing from both config and environment variables.")
-            raise RuntimeError("Missing initial cash")
+            cash = 100000
     
         return int(cash)
 
@@ -355,9 +331,6 @@ class Config:
 
         Returns:
             int: Number of days for backtesting.
-
-        Raises:
-            RuntimeError: If the value is not defined.
         """
 
         try:
@@ -366,12 +339,7 @@ class Config:
                 backtesting = conf.get("backtesting", {})
                 days = backtesting.get("backtesting_days")
 
-        except FileNotFoundError:
-            self.log_info(f"Config file not found: {self._config_file_path}, falling back to environment variables.")
-            days = None
-
         except Exception:
-            self.log_info(f"Could not find backtesting_days from {self._config_file_path}, falling back to environment variables.")
             days = None
 
         if not days:
@@ -379,8 +347,8 @@ class Config:
 
         if not days:
             self.log_critical("backtesting_days missing from both config and environment variables.")
-            raise RuntimeError("Missing backtesting days")
-    
+            days = 365
+
         return int(days)
     
     def load_backtesting_variables(self) -> Tuple[int, int, List[str]]:
@@ -408,9 +376,6 @@ class Config:
 
         Returns:
             int: Parsed ML variable value.
-
-        Raises:
-            RuntimeError: If the variable is not defined.
         """
         try:
             with open(self._config_file_path, "r") as file:
@@ -418,12 +383,7 @@ class Config:
                 ml_variables = conf.get("ml-variables", {})
                 variable = ml_variables.get(variable_name)
 
-        except FileNotFoundError:
-            self.log_info(f"Config file not found: {self._config_file_path}, falling back to environment variables.")
-            variable = None
-
         except Exception:
-            self.log_info(f"Could not find {variable_name} from {self._config_file_path}, falling back to environment variables.")
             variable = None
 
         if not variable:
@@ -431,7 +391,7 @@ class Config:
 
         if not variable:
             self.log_critical(f"{variable_name} missing from both config and environment variables.")
-            raise RuntimeError(f"Missing {variable_name}")
+            variable = 0
     
         return int(variable)
 

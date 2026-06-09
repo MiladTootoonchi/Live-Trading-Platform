@@ -22,7 +22,6 @@ from live_trader.strategies.backtest import Backtester
 
 
 STRATEGIES = {
-        "rule_based_strategy": RuleBasedStrategy,
         "bollinger_bands_strategy": BollingerBandsStrategy,
         "macd_strategy": MACDStrategy,
         "mean_reversion_strategy": MeanReversionStrategy,
