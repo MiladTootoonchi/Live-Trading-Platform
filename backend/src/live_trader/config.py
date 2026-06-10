@@ -119,12 +119,14 @@ class Config:
                 strategy = live.get("strategy")
 
         except Exception:
-            if not strategy:
-                strategy = os.getenv("strategy")
+            strategy = None
 
-            if not strategy:
-                self.log_critical("Strategy name missing from both config and environment variables.")
-                strategy = ""
+        if not strategy:
+            strategy = os.getenv("strategy")
+
+        if not strategy:
+            self.log_critical("Strategy name missing from both config and environment variables.")
+            strategy = ""
     
         return strategy
 
