@@ -580,6 +580,8 @@ This projects pipeline applies structured and repeatable transformations:
 
 ## User Manual (How to use the program)
 
+* This application is still under development. At this stage, you may need to launch or run the application in developer mode to use it.
+
 ### **Prerequisites**
 
 **How to Locate Your Alpaca API Keys:**
@@ -634,7 +636,12 @@ Follow these short steps to set up your environment:
     uv --version
     ```
 
-3. Create a Viritual Enviroment
+3. Navigate to backend
+   ```bash
+   cd backend
+   ```
+
+3. Create a Virtual Enviroment
    ```bash
    uv venv
    ```
@@ -654,132 +661,92 @@ Follow these short steps to set up your environment:
     uv sync
     ```
 
-<br>
-<br>
-
-**Strategies:** \
-This prerequisite is not necessary since the program will ask you for your perfered strategy if the program can not find it in the *settings.toml* file. If you wish to write down your perfered strategy, store the name of the strategy under the *[live]* section as strategy (e.g. strategy = "ai"). **Remember to put quote marks around the strategy name**.  
-
-These are the strategy names you can choose from:  
-- rule_based_strategy
-- bollinger_bands_strategy
-- macd_strategy
-- mean_reversion_strategy
-- momentum_strategy
-- moving_average_strategy
-- rsi_strategy
-
-These are the AI strategies (Neural nettwork architecture) you can choose from:
-- lstm
-- bilstm
-- tcn
-- patchtst
-- gnn
-- nad
-- cnn_gru
-
-These are the AI strategies (tree-based machine learning models) you can choose from:
-- xgboost
-- random_forest
-- lightgbm
-- catboost
-
-<br>
-
-*Warning: the name of the strategy should be exactly similar to one of the strategy names above.*
+5. Run backend API
+   ```bash
+   uv run main.py
+   ```
 
 <br>
 <br>
 
-**Watchlist:** \
-This feature is optional. If you want the program to always analyze specific stocks, even when you do not currently hold a position, you can define a watchlist.
-Add the stock symbols to the [live] section as a Python list, for example:
-```toml
-[live]
-watchlist = "AAPL, GOOG, SPY"
-```
-Important:
-- The list must be enclosed in quotation marks
-- Separate symbols with commas
+### **How to open app**
+
+Follow the short steps to open your app in another terminal while the first terminal runs (DO NOT CLOSE THE FIRST TERMINAL):
+
+1. Navigate to frontend
+   * If you are located in backend run:
+   ```bash
+   cd ../frontend
+   ```
+   * If you are located in the root file run:
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies
+   ```bash
+   npm install
+   ```
+
+3. Run application with:
+   ```bash
+   npm run dev
+   ```
+
+4. Open your favorite web browser and enter the following URL in the address bar to open the application:
+   * <http://localhost:3000/>
 
 <br>
 <br>
-
-**Backtesting Settings** \
-To perform a backtest, you need to provide the following variables:
-- *backtesting_days* – The number of days in the past you want to include in the backtest.
-- *initial_cash* – The starting capital you want to simulate during the backtest.
-- *strategy_list* – The strategies you want to evaluate.
-We recommend running a backtest on the strategies you are considering using before deploying them live.
-
-Important:
-- The strategy list must be enclosed in quotation marks.
-- Separate multiple strategies with commas.
-- *backtesting_days* and *initial_cash* must be integers.
-
-<br>
-<br>
-
 
 ### **User Guide:**
 
-The steps below explain how to use its different command-line options.
+The steps below explain how to use the app:
 
-1. Open a Terminal
-    - Navigate to the main directory where the program is located.
+1. Navigate to settings page  
+   ![](figures/ums/ums1.png)
 
-2. Run the Program with a Command.
-    - The program accepts several command-line flags.  
-    - Use this format:
-    ```bash
-    uv run trade [flag]
-    ```
+2. Paste your Alpaca key and secret-key  
+   ![](figures/ums/ums2.png)
 
-- If you need to place an buy-order.
-    - `--buy` or `-b`
-    ```bash
-    uv run trade --buy
-    ```
-- If you need to place an sell-order.
-    - `--sell` or `-s`
-    ```bash
-    uv run trade --sell
-    ```
+3. Choose the strategy you would like to use  
+   ![](figures/ums/ums3.png)
 
-- Cancel last given order (if you regret sending the last given orders)
-    - `--cancel-last` or `-cl`
-    ```bash
-    uv run trade --cancel-last
-    ```
+4. Enter the stock symbols you want the AI to analyze
+   * *If this list is empty, the AI will only make predictions for stocks in which you already hold a position.*
+   * **Remember to separate the symbols with commas, as shown in the image below:**
+   ![](figures/ums/ums4.png)
 
-- Cancel all open orders (if you regret sending every recent order)
-    - This will cancel **all** open orders.
-    - `--cancel` or `-c`
-    ```bash
-    uv run trade --cancel
-    ```
+5. In the Backtesting card, you can configure the following settings:
+   1. Initial Cash: the amount of cash available at the start of the backtest.
+   2. Days: the number of days to include in the backtest, counting backward from today.
+   3. Strategies: click a strategy to add it to the backtest. Click it again to remove it from the list.
+   ![](figures/ums/ums5.png)
 
-* Update a specific position or all positions
-    - Evaluates specifies / all positions using a strategy chosen at startup. Makes an order based on the evaluation.
-    - `--update` or `-u`
-    ```bash
-    uv run trade --update [stock symbol, or 'ALL' for all positions]
-    ```
+6. These settings control the AI configuration. Adjust them as needed, although the default values are suitable for most users
+   * *All values must be entered as integers.*
+   ![](figures/ums/ums6.png)
 
-* Perform a Backtest
-   - Before starting a live trading loop, we recommend running a backtest to evaluate which strategy performs best over your selected time period.
-   - `--backtest` or `-bt`
-   ```bash
-   uv run trade --backtest
-   ```
+* Remember to save changes!
+   ![](figures/ums/ums6,5.png)
 
-* Run the Live Trading Loop
-    - This will run an update every 60 seconds on ALL positions, in addition to the stocks in the watchlist.
-    - `--live` or `-l`
-    ```bash
-    uv run trade --live
-    ```
+7. On all pages, you will find a green button that starts live automated trading when clicked. Click the button again to stop live trading
+   ![](figures/ums/ums7.png)
 
+8. Below the equity chart located on the Home page there exists a ordering panel
+   1. Enter the symbol of the stock you want to place an order in.
+   2. Choose from buying or selling order.
+   3. Enter the amount of quantities you want to order.
+   4. Choose the order type.
+   5. Press the "Submit Order" button to send the order.
+   ![](figures/ums/ums8.png)
+
+9. The History page contains logs related to AI decisions, orders, and any errors that occur
+   * You will also find the Run Backtest button. The results and information generated by the backtest will be logged on this page:
+   ![](figures/ums/ums9.png)
+
+10. The Evaluation page contains the result of the backtesting and model-evaluations.
+   ![](figures/ums/ums10.png)
 
 <br>
 <br>
